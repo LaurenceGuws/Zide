@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B21` (`in_progress`, super-gate `CZH-GATE-75`).
+- Current active macro batch: `CZH-B21` (`architect_review_pending`, super-gate `CZH-GATE-75`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S16_TICKETS.md`
 
@@ -2098,7 +2098,7 @@ Checkpoint packet: `docs/todo/core/CZH_S15_CHECKPOINT.md`.
 - `Acceptance judgment:` host shared-surface attachment seam is explicit,
   behavior-neutral, and cleanly layered with generation/presentable ownership.
 
-### `CZH-B21` Long-Loop Surface Seams Convergence Pack (`in_progress`)
+### `CZH-B21` Long-Loop Surface Seams Convergence Pack (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -2158,6 +2158,27 @@ Execution source:
 - **Kept:** `logUnavailable` operator `app_logger` warning in presentation runtime;
   draw-path `renderer.font` warnings on glyph prep adopt (`terminal_widget_draw.zig`).
 - **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — `CZH-S16` widget/delta vocabulary (`CZH-709`).
+
+#### `CZH-S16` engineer validation (`CZH-710`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-701`..`CZH-710` (one commit each).  
+- **SL-0** `zig build` — **PASS**  
+- **SL-1** `zig build test` — **PASS**  
+- **SL-2** `zig build -Dmode=terminal` — **PASS**  
+- **SL-3** `zig build -Dmode=editor` — **PASS**  
+- **`zig build test-config`** — **PASS**  
+- **`zig build test-editor`** — **PASS**  
+- **`zig build test-terminal-replay-all`** — **PASS**  
+- **Android guard** — **SKIP** (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S16_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B21`
+- `Verdict: architect_review_pending`
+- `Engineer handoff:` `CZH-GATE-75` (see checkpoint packet)
 
 ## Response Contract
 

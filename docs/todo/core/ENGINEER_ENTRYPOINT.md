@@ -20,7 +20,7 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B21` — **`in_progress`** toward **`CZH-GATE-75`** (sprint `CZH-S16`):
+- `CZH-B21` — **`architect_review_pending`** toward **`CZH-GATE-75`** (sprint `CZH-S16`):
   generation-vs-attachment seam convergence long-loop
   (`docs/todo/core/CZH_S16_TICKETS.md`).
 
