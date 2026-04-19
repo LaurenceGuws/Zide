@@ -20,7 +20,7 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B31` — **`in_progress`** toward **`CZH-GATE-85`** (sprint `CZH-S26`):
+- `CZH-B31` — **`architect_review_pending`** at **`CZH-GATE-85`** (sprint `CZH-S26`):
   long-loop surface/result contraction follow-through to canonical helper routes
   across selected runtime/widget seams (`docs/todo/core/CZH_S26_TICKETS.md`).
 
