@@ -1973,10 +1973,19 @@ pub fn planUpdate(
         cursor_style,
     );
 
+    const publication_gen_mismatch = surface_contract.publicationGenerationDiffersFromLastSurfaceRender(
+        terminal_view.generation,
+        surface_state.lastRenderGeneration(),
+    );
+    const clear_gen_mismatch = surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear(
+        terminal_view.clear_generation,
+        surface_state.lastRenderClearGeneration(),
+    );
+
     var update_plan = draw_presentation.choosePresentationUpdatePlan(
         cache.dirty,
         recreated,
-        presentation_delta.clear_generation_changed,
+        clear_gen_mismatch,
         presentation_delta.cell_metrics_changed,
         presentation_delta.render_scale_changed,
         blink_requires_partial,
@@ -1997,7 +2006,7 @@ pub fn planUpdate(
     var shift_requires_fullwidth_partial = false;
     switch (draw_presentation.planViewportPresentShift(
         renderer.terminalPresentationShiftEnabled(),
-        presentation_delta.generation_changed,
+        publication_gen_mismatch,
         viewport_shift.rows,
         viewport_shift.exposed_only,
         scroll_offset,
