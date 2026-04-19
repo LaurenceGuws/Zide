@@ -1750,6 +1750,13 @@ Execution source:
 **`CZH-670`:** validation ladder + checkpoint packet + board/queue/handoff sync
 to `CZH-GATE-71`.
 
+**Engineer (CZH-661):** Confirmed plan: composite publication/clear pair seam in
+`surface_contract.zig`; route `buildTerminalPresentPlan.generation_matches_presented`
+and `presentationUpdateDelta` generation fields through that composite (`CZH-662`..`CZH-664`).
+Hygiene sweep scope for `CZH-668`: `surface_contract.zig`,
+`terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`
+only.
+
 ## Response Contract
 
 Every batch update must include:
