@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-77`): `CZH-B23` in
+- Active macro batch (`architect_review_pending`, super-gate `CZH-GATE-77`): `CZH-B23` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -24,6 +24,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S14_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S15_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S16_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S17_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S18_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -49,7 +50,7 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B23`, in progress toward `CZH-GATE-77`):
+Current batch intent (`CZH-B23`, architect review pending at `CZH-GATE-77`):
 
 - lock shared vocabulary for pipeline leg vs full attachment vs generation
   terms in selected widget/runtime/state paths

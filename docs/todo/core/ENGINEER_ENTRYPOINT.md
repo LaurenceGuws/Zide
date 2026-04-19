@@ -20,7 +20,7 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B23` — **`in_progress`** toward **`CZH-GATE-77`** (sprint `CZH-S18`):
+- `CZH-B23` — **`architect_review_pending`** toward **`CZH-GATE-77`** (sprint `CZH-S18`):
   surface state-vocabulary lock for pipeline vs attachment vs generation terms
   (`docs/todo/core/CZH_S18_TICKETS.md`).
 
