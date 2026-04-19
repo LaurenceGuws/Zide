@@ -1546,7 +1546,7 @@ pub fn logUnavailable(
         .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
         .{ .key = "presentable_refresh", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
-        .{ .key = "presentable_ready", .value = .{ .boolean = surface_state.presentableReady() } },
+        .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.presentableReady() } },
         .{ .key = "target_available", .value = .{ .boolean = present_state.target_available } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },

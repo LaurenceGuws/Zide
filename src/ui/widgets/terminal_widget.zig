@@ -168,7 +168,7 @@ pub const TerminalWidget = struct {
             const generation_state = latest_capture.generation_state;
             handoff_log.logf(
                 .info,
-                "stage=widget_prepare sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} presentable_ready={d} cache_dirty={s}",
+                "stage=widget_prepare sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} terminal_presentable_pipeline_ready={d} cache_dirty={s}",
                 .{
                     @intFromPtr(self.session),
                     self.surface.lastRenderGeneration(),
@@ -183,7 +183,7 @@ pub const TerminalWidget = struct {
             if (latest_capture.refreshed) {
                 handoff_log.logf(
                     .info,
-                    "stage=widget_prepare_latest sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} presentable_ready={d} cache_dirty={s}",
+                    "stage=widget_prepare_latest sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} terminal_presentable_pipeline_ready={d} cache_dirty={s}",
                     .{
                         @intFromPtr(self.session),
                         self.surface.lastRenderGeneration(),
