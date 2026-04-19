@@ -76,26 +76,12 @@ const TerminalPresentFollowupReason = @import("../renderer/presentable_contract.
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
 
-// Geometry types moved to terminal layer
+// Types and functions moved to terminal layer
 pub const PresentationGeometry = terminal_presentation_runtime.PresentationGeometry;
+pub const PresentationPresentState = terminal_presentation_runtime.PresentationPresentState;
 
-// Geometry computation delegated to terminal layer
+// Computation delegated to terminal layer
 const computePresentationSurfaceGeometry = terminal_presentation_runtime.computePresentationSurfaceGeometry;
-
-/// **Transient present-state snapshot:** captures conjunction from
-/// `refreshPresentState` via `notePresentableAvailability`; dominant carrier for operator JSON
-/// in `logUnavailable`. Never alias this conjunction onto result structs.
-pub const PresentationPresentState = struct {
-    updated: bool = false,
-    presentable_refresh: TerminalPresentableRefresh = .unsupported,
-    host_surface_target_available: bool = false,
-    /// Full shared-surface attachment for this tick (from `notePresentableAvailability`); not the host-target leg alone.
-    /// **Reporting carrier:** `logUnavailable` reads this field only; do not re-derive conjunction.
-    shared_surface_attachment_ready: bool = false,
-    visible: bool = false,
-    present: bool = false,
-    log_unavailable: bool = false,
-};
 
 pub const SurfaceUpdateMode = enum {
     none,
@@ -890,7 +876,7 @@ pub fn runRefreshedPresentablePresentation(
     const viewport_w = surface_update_plan.geometry.viewport_w;
     const viewport_h = surface_update_plan.geometry.viewport_h;
 
-    const present_state = refreshPresentState(
+    const present_state = terminal_presentation_runtime.refreshPresentState(
         &self.surface,
         renderer,
         terminal_view,
@@ -931,7 +917,7 @@ pub fn runRefreshedPresentablePresentation(
     }
     logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
     if (present_state.present) {
-        presentDraw(
+        terminal_presentation_runtime.presentDraw(
             renderer,
             self.surface.lastRenderGeneration(),
             self.surface.lastRenderGeneration(),
@@ -988,7 +974,7 @@ pub fn executeRefreshPresentFlow(
         has_kitty,
         surface_update_plan,
     );
-    const outcome_state = classifyRefreshOutcome(cycle.refresh);
+    const outcome_state = terminal_presentation_runtime.classifyRefreshOutcome(cycle.refresh);
     const refreshed = runRefreshedPresentablePresentation(
         self,
         renderer,
@@ -1006,7 +992,7 @@ pub fn executeRefreshPresentFlow(
         note_present_ctx,
         note_present,
     );
-    return presentResultFromRefreshOutcomeState(outcome_state, .{
+    return terminal_presentation_runtime.presentResultFromRefreshOutcomeState(outcome_state, .{
         .background_ms = refreshed.bg_ms,
         .glyph_ms = refreshed.glyph_ms,
         .kitty_ms = refreshed.kitty_ms,
@@ -1439,55 +1425,6 @@ pub fn beginViewportClip(
     );
 }
 
-/// **Canonical compute+store route for refresh path:** computes conjunction
-/// via `notePresentableAvailability`; stores snapshot on `PresentationPresentState` for tick.
-/// Only `logUnavailable()` should read the conjunction field from the returned state.
-pub fn refreshPresentState(
-    surface_state: anytype,
-    renderer: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    surface_geometry: PresentationGeometry,
-    presentable_refresh: TerminalPresentableRefresh,
-    draw_cursor: bool,
-    cursor: CursorPos,
-    cursor_style: terminal_types.CursorStyle,
-    hover_link_id: u32,
-    composing_active: bool,
-    composing_hash: u64,
-    visible_w: i32,
-    visible_h: i32,
-    view_cells_len: usize,
-) PresentationPresentState {
-    var state = PresentationPresentState{
-        .updated = presentable_refresh == .refreshed,
-        .presentable_refresh = presentable_refresh,
-        .visible = visible_w > 0 and visible_h > 0,
-    };
-
-    if (presentable_refresh == .refreshed) {
-        advancePresentationCache(
-            surface_state,
-            terminal_view,
-            surface_geometry,
-            draw_cursor,
-            cursor,
-            cursor_style,
-            hover_link_id,
-            composing_active,
-            composing_hash,
-        );
-    }
-
-    // **Canonical conjunction derivation ** consolidated via helper.
-    const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
-    state.host_surface_target_available = attachment_state.host_surface_target_available;
-    state.shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
-    state.present = state.shared_surface_attachment_ready and state.visible;
-    state.log_unavailable = !state.shared_surface_attachment_ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
-
-    return state;
-}
-
 /// Operator `renderer.terminal_present` JSON when present cannot proceed because the drawable
 /// shared-surface attachment is unavailable. **Conjunction key:** the full-attachment
 /// boolean is reported **only** from **`present_state.shared_surface_attachment_ready`** (same
@@ -1513,73 +1450,6 @@ pub fn logUnavailable(
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },
     });
-}
-
-pub fn presentDraw(
-    renderer: anytype,
-    sample_generation: u64,
-    surface_generation: u64,
-    view_geometry: TerminalViewGeometry,
-    viewport_w: f32,
-    viewport_h: f32,
-    note_present_ctx: anytype,
-    note_present: anytype,
-) void {
-    const Hooks = struct {
-        pub fn noteDirectReuse(
-            ctx: @TypeOf(note_present_ctx),
-            renderer_local: @TypeOf(renderer),
-            generation: u64,
-            geometry: TerminalViewGeometry,
-            width_local: f32,
-            height_local: f32,
-        ) void {
-            note_present(
-                ctx,
-                renderer_local,
-                .cached_presentable_reuse,
-                generation,
-                geometry.origin_x,
-                geometry.origin_y,
-                width_local,
-                height_local,
-                width_local,
-                height_local,
-            );
-        }
-
-        pub fn noteRetainedReuse(
-            ctx: @TypeOf(note_present_ctx),
-            renderer_local: @TypeOf(renderer),
-            generation: u64,
-            geometry: TerminalViewGeometry,
-            width_local: f32,
-            height_local: f32,
-        ) void {
-            note_present(
-                ctx,
-                renderer_local,
-                .refreshed_presentable,
-                generation,
-                geometry.origin_x,
-                geometry.origin_y,
-                width_local,
-                height_local,
-                width_local,
-                height_local,
-            );
-        }
-    };
-    renderer_presentable_host.presentExistingTerminalPresentable(
-        renderer,
-        sample_generation,
-        surface_generation,
-        view_geometry,
-        viewport_w,
-        viewport_h,
-        note_present_ctx,
-        Hooks,
-    );
 }
 
 /// **Canonical compute route for reuse path:** computes conjunction via
@@ -1623,7 +1493,7 @@ pub fn tryFastPresentExisting(
     }
 
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
-    presentDraw(
+    terminal_presentation_runtime.presentDraw(
         renderer,
         terminal_view.generation,
         surface_state.lastRenderGeneration(),

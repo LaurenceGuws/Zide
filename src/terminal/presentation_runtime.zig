@@ -17,8 +17,10 @@
 const std = @import("std");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
 const presentable_contract = @import("../ui/renderer/presentable_contract.zig");
+const layout_types = @import("../types/layout.zig");
 
 const TerminalPresentOutcome = presentable_contract.TerminalPresentOutcome;
+const TerminalViewGeometry = layout_types.TerminalViewGeometry;
 const TerminalPresentFollowupReason = presentable_contract.TerminalPresentFollowupReason;
 const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
 const TerminalPresentableRefresh = renderer_presentable_host.TerminalPresentableRefresh;
@@ -359,3 +361,153 @@ pub const RefreshedPresentablePresentationResult = struct {
     kitty_ms: f64 = 0.0,
     shared_surface_attachment_ready: bool = false,
 };
+
+/// **Presentation present state snapshot:** captures conjunction during refresh for operator reporting.
+/// Stores on transient snapshot; not report from result structs. Canonical carrier for conjunction field.
+pub const PresentationPresentState = struct {
+    updated: bool = false,
+    presentable_refresh: TerminalPresentableRefresh = .unsupported,
+    host_surface_target_available: bool = false,
+    shared_surface_attachment_ready: bool = false,
+    visible: bool = false,
+    present: bool = false,
+    log_unavailable: bool = false,
+};
+
+/// **Presentation state refresh:** computes conjunction via `notePresentableAvailability`; stores
+/// on transient `PresentationPresentState` for tick. **Canonical conjunction derivation.**
+pub fn refreshPresentState(
+    surface_state: anytype,
+    renderer: anytype,
+    terminal_view: anytype,
+    surface_geometry: PresentationGeometry,
+    presentable_refresh: TerminalPresentableRefresh,
+    draw_cursor: bool,
+    cursor: anytype,
+    cursor_style: anytype,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
+    visible_w: i32,
+    visible_h: i32,
+    view_cells_len: usize,
+) PresentationPresentState {
+    var state = PresentationPresentState{
+        .updated = presentable_refresh == .refreshed,
+        .presentable_refresh = presentable_refresh,
+        .visible = visible_w > 0 and visible_h > 0,
+    };
+
+    if (presentable_refresh == .refreshed) {
+        surface_state.notePresentationUpdated(
+            terminal_view,
+            surface_geometry,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            hover_link_id,
+            composing_active,
+            composing_hash,
+        );
+    }
+
+    const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
+    state.host_surface_target_available = attachment_state.host_surface_target_available;
+    state.shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
+    state.present = state.shared_surface_attachment_ready and state.visible;
+    state.log_unavailable = !state.shared_surface_attachment_ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
+
+    return state;
+}
+
+/// **Present draw callback:** invokes renderer present handling with hooks for present notifications.
+/// Terminal-owned orchestration of present acknowledgement.
+pub fn presentDraw(
+    renderer: anytype,
+    sample_generation: u64,
+    surface_generation: u64,
+    view_geometry: TerminalViewGeometry,
+    viewport_w: f32,
+    viewport_h: f32,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) void {
+    const Hooks = struct {
+        pub fn noteDirectReuse(
+            ctx: @TypeOf(note_present_ctx),
+            renderer_local: @TypeOf(renderer),
+            generation: u64,
+            geometry: TerminalViewGeometry,
+            width_local: f32,
+            height_local: f32,
+        ) void {
+            note_present(
+                ctx,
+                renderer_local,
+                .cached_presentable_reuse,
+                generation,
+                geometry.origin_x,
+                geometry.origin_y,
+                width_local,
+                height_local,
+                width_local,
+                height_local,
+            );
+        }
+
+        pub fn noteRetainedReuse(
+            ctx: @TypeOf(note_present_ctx),
+            renderer_local: @TypeOf(renderer),
+            generation: u64,
+            geometry: TerminalViewGeometry,
+            width_local: f32,
+            height_local: f32,
+        ) void {
+            note_present(
+                ctx,
+                renderer_local,
+                .refreshed_presentable,
+                generation,
+                geometry.origin_x,
+                geometry.origin_y,
+                width_local,
+                height_local,
+                width_local,
+                height_local,
+            );
+        }
+    };
+    renderer_presentable_host.presentExistingTerminalPresentable(
+        renderer,
+        sample_generation,
+        surface_generation,
+        view_geometry,
+        viewport_w,
+        viewport_h,
+        note_present_ctx,
+        Hooks,
+    );
+}
+
+/// **Refresh orchestration flow:** terminal-owned sequence for refresh path.
+/// Orchestrates: run refresh cycle → classify outcome → run presentation → fold result.
+/// Widget provides `runCycle` and `runPresentation` hooks for integration-only operations.
+pub fn executeRefreshPresentFlow(
+    rows: usize,
+    cols: usize,
+    ctx: anytype,
+    comptime Hooks: type,
+) TerminalPresentResult {
+    // Hooks must implement:
+    //   runCycle(ctx: anytype) -> TerminalPresentableRefreshExecutionResult
+    //   runPresentation(ctx: anytype, cycle: anytype) -> RefreshedPresentablePresentationResult
+    if (rows == 0 or cols == 0) return .{};
+    const cycle = Hooks.runCycle(ctx);
+    const outcome_state = classifyRefreshOutcome(cycle.refresh);
+    const refreshed = Hooks.runPresentation(ctx, cycle);
+    return presentResultFromRefreshOutcomeState(outcome_state, .{
+        .background_ms = refreshed.bg_ms,
+        .glyph_ms = refreshed.glyph_ms,
+        .kitty_ms = refreshed.kitty_ms,
+    }, refreshed.shared_surface_attachment_ready);
+}
