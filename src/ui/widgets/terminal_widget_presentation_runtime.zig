@@ -28,6 +28,11 @@
 //! `logUnavailable`). For ad-hoc reads without a present-state snapshot, the **dominant** carrier is
 //! **`readSharedSurfaceAttachmentReady`** on `TerminalWidgetSurfaceState` — do not log the
 //! conjunction from the getter when a `PresentationPresentState` is already in scope for that tick.
+//!
+//! **Reporting/result cohesion (`CZH-S24`):** operator **reporting** uses transient `PresentationPresentState`
+//! and widget **read** APIs; **`TerminalPresentResult`** is the host-facing **aggregation** struct (leg +
+//! conjunction fields). Do not merge those roles: logs are not populated from `TerminalPresentResult`
+//! alone, and present results are not interchangeable with per-tick present-state snapshots.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");

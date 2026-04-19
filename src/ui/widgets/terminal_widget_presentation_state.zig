@@ -17,6 +17,10 @@
 //! **Reporting-carrier (`CZH-S23`):** leg fields here **feed** `readSharedSurfaceAttachmentReady` /
 //! operator logs indirectly; this struct does **not** carry a standalone conjunction bool — do not
 //! use it as the reporting carrier for “full attachment” without going through the widget seam.
+//!
+//! **Reporting/result cohesion (`CZH-S24`):** leg **storage** only; **`TerminalPresentResult`**
+//! carries the parallel leg + conjunction **result** shape for host export — same vocabulary, distinct
+//! structs and roles.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");

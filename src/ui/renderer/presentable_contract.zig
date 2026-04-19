@@ -8,6 +8,10 @@
 //! **Reporting-carrier (`CZH-S23`):** on this struct, **`shared_surface_attachment_ready`** is the
 //! dominant conjunction field for **present-result aggregation** to hosts/consumers; **`host_surface_target_available`**
 //! reports the host-target **leg only** — never treat it as the conjunction carrier.
+//!
+//! **Reporting/result cohesion (`CZH-S24`):** this file defines **aggregation** payloads (`TerminalPresentResult`),
+//! not operator JSON or `PresentationPresentState` — keep host export fields aligned with runtime
+//! outcome folds and do not alias reporting snapshots onto this struct.
 
 pub const PresentableDraw = struct {
     x: f32,

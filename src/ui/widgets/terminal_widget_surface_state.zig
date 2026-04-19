@@ -21,6 +21,10 @@
 //! diagnostics outside the refreshed-present path). It must not be described as the operator-log
 //! carrier — that role is `PresentationPresentState.shared_surface_attachment_ready` in
 //! `logUnavailable`.
+//!
+//! **Reporting/result cohesion (`CZH-S24`):** stored legs here **feed** conjunction reads and deltas;
+//! they are **not** `TerminalPresentResult` fields — host aggregation uses `presentable_contract`
+//! after runtime folds outcomes.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");

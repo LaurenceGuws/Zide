@@ -114,6 +114,11 @@ reports the same conjunction field — not a re-derivation from unrelated state.
 caller computes pipeline ∧ host target). `ReusePresentOutcomeState` in the widget presentation
 runtime uses the same two identifiers before folding into `TerminalPresentResult` on reuse success.
 
+**Reporting/result cohesion (`CZH-S24`):** structured **logs** use `PresentationPresentState` / widget
+getters for attachment visibility; **host export** uses `TerminalPresentResult` after runtime folds
+outcomes — same field **names** where applicable, distinct **roles** (reporting snapshot vs aggregated
+result).
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
