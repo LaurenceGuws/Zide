@@ -3,6 +3,7 @@ const presentation_state_mod = @import("terminal_widget_presentation_state.zig")
 const view_state = @import("terminal_widget_view_state.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const std = @import("std");
+const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const surface_contract = @import("../../terminal/surface_contract.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 
@@ -189,7 +190,18 @@ pub const TerminalWidgetSurfaceState = struct {
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
         self.presentation.target_available = available;
-        return self.presentation.terminal_presentable_ready and self.presentation.target_available;
+        return surface_attachment_contract.hostSharedSurfaceAttachmentReady(
+            self.presentation.terminal_presentable_ready,
+            self.presentation.target_available,
+        );
+    }
+
+    /// Read-only: both attachment legs (same conjunction as `notePresentableAvailability` return).
+    pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
+        return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
+            .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_ready,
+            .host_surface_target_available = self.presentation.target_available,
+        });
     }
 
     pub fn ensurePartialDrawPlan(
