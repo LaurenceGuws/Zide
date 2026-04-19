@@ -1489,6 +1489,10 @@ changes.
 
 **`CZH-649`:** predicate test + `TERMINAL_SURFACE_CONTRACT.md` consumer note.
 
+**Landed (`CZH-647`..`CZH-649`):** `publicationGenerationDiffersFromLastSurfaceRender`;
+`buildTerminalPresentPlan` uses it; tests + `TERMINAL_SURFACE_CONTRACT.md` widget
+paragraph.
+
 ## Response Contract
 
 Every batch update must include:

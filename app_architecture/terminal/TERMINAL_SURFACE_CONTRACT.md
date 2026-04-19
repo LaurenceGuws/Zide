@@ -63,6 +63,10 @@ that helper (`CZH-S7`). Host `present_ack` generation admissibility (vs publicat
 truth and last ack) uses the same module (`presentAckGenerationAdmissible`;
 `CZH-S8`).
 
+**Widget draw consumer:** `terminal_widget_presentation_runtime` present-plan
+generation reuse uses `publicationGenerationDiffersFromLastSurfaceRender` for the
+publication vs last surface-render generation limb (`CZH-S9`).
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
