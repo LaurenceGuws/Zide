@@ -14,3 +14,16 @@ pub fn hostSharedSurfaceAttachmentReady(
 ) bool {
     return terminal_presentable_pipeline_ready and host_surface_target_available;
 }
+
+/// Snapshot of the two attachment legs for explicit ownership at widget seams.
+pub const SharedSurfaceAttachmentPipelinePair = struct {
+    terminal_presentable_pipeline_ready: bool,
+    host_surface_target_available: bool,
+};
+
+pub fn hostSharedSurfaceAttachmentReadyFromPair(pair: SharedSurfaceAttachmentPipelinePair) bool {
+    return hostSharedSurfaceAttachmentReady(
+        pair.terminal_presentable_pipeline_ready,
+        pair.host_surface_target_available,
+    );
+}
