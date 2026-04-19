@@ -190,6 +190,9 @@ pub const ReusePresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
+/// Fold runtime outcome fields into host-facing **`TerminalPresentResult`** (`CZH-S24` naming):
+/// `host_surface_target_available` is the **leg** only; `shared_surface_attachment_ready` is the
+/// **conjunction** when supplied — same roles as the struct fields, not reporting snapshots.
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
