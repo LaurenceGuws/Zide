@@ -75,6 +75,8 @@ Current batch status (`CZH-B40`, in progress toward `CZH-GATE-94`):
 - target: complete callback-based orchestration extraction so terminal runtime owns refresh/reuse/direct orchestration paths
 - keep widget layer as thin integration facade over terminal orchestrators
 - preserve behavior and host ABI while finishing ownership movement
+- landed in this sprint: `CZH-891`..`CZH-896`
+- remaining for gate: `CZH-897`..`CZH-900`
 
 ## First Read Order
 

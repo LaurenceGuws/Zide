@@ -48,6 +48,7 @@ Read in this exact order:
 - Compile/test at each seam boundary; keep the tree buildable.
 - Sprint `CZH-S35` tickets `CZH-891`..`CZH-900` are active; run to
   **`CZH-GATE-94`** unless blocked.
+- Current ticket frontier after architect review: start from `CZH-897`.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

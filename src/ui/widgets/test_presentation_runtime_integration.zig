@@ -177,3 +177,104 @@ test "Integration boundary: no outcome re-derivation in widget folding" {
     try std.testing.expect(result.outcome == outcome.outcome);
     try std.testing.expect(result.cache_state_advanced == outcome.cache_state_advanced);
 }
+
+test "Callback contract: reuse eligibility check integrates with outcome generation" {
+    // Simulate widget computing attachment state
+    const FakePlan = struct {
+        present_intent: enum { reuse, refresh, direct } = .reuse,
+    };
+    const plan = FakePlan{};
+
+    // Widget calls terminal eligibility check
+    const eligible = terminal_widget_presentation_runtime.checkReuseEligibility(
+        plan, 10, true, true, false
+    );
+
+    // If eligible, widget would execute and generate success outcome
+    const outcome = if (eligible)
+        terminal_widget_presentation_runtime.reuseSuccessOutcome()
+    else
+        terminal_widget_presentation_runtime.ReusePresentOutcomeState{};
+
+    // Verify outcome matches eligibility decision
+    try std.testing.expect(eligible == (outcome.reused == true));
+}
+
+test "Callback contract: direct eligibility check integrates with GPU execution path" {
+    const rows = 10;
+    const cols = 80;
+    const cells = 800;
+
+    // Widget calls terminal eligibility check
+    const eligible = terminal_widget_presentation_runtime.checkDirectPresentEligibility(rows, cols, cells);
+
+    // If eligible, widget executes GPU drawing and generates outcome
+    const outcome = if (eligible)
+        terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true)
+    else
+        terminal_widget_presentation_runtime.DirectPresentOutcomeState{
+            .outcome = .skipped,
+            .cache_state_advanced = false,
+            .host_surface_target_available = false,
+            .shared_surface_attachment_ready = false,
+        };
+
+    // Verify outcome consistency with eligibility
+    if (eligible) {
+        try std.testing.expect(outcome.outcome == .updated_and_presented or outcome.outcome == .presented);
+    }
+}
+
+test "Callback contract: outcome folding preserves attachment state through callback" {
+    // Simulate reuse callback contract
+    const eligible = true; // Widget eligibility check returned true
+
+    if (eligible) {
+        // Widget executes reuse presentation
+        const outcome = terminal_widget_presentation_runtime.reuseSuccessOutcome();
+        const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
+
+        // Widget folds outcome via terminal helper
+        const result = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(outcome, timing);
+
+        // Verify attachment state preserved through fold
+        try std.testing.expect(result.shared_surface_attachment_ready == true);
+        try std.testing.expect(result.outcome == .reused);
+    }
+}
+
+test "Callback contract: eligibility decision is terminal-owned, execution is widget-owned" {
+    const FakePlan = struct {
+        present_intent: enum { reuse, refresh, direct } = .reuse,
+    };
+
+    // Terminal-owned: eligibility decision
+    const plan = FakePlan{};
+    const eligible = terminal_widget_presentation_runtime.checkReuseEligibility(
+        plan, 10, true, true, false
+    );
+
+    // Widget-owned: outcome generation depends on execution
+    const outcome = if (eligible)
+        terminal_widget_presentation_runtime.reuseSuccessOutcome()
+    else
+        terminal_widget_presentation_runtime.ReusePresentOutcomeState{};
+
+    // Verify clean boundary
+    try std.testing.expect(eligible == true);
+    try std.testing.expect(outcome.reused == true);
+}
+
+test "Callback contract: terminal classification used regardless of widget execution path" {
+    // Refresh path uses terminal classification
+    const refresh_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    try std.testing.expect(refresh_outcome.outcome == .updated_and_presented);
+
+    // Direct path uses terminal classification
+    const direct_outcome = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
+    try std.testing.expect(direct_outcome.outcome == .updated_and_presented);
+
+    // Reuse path uses terminal outcome constructor
+    const reuse_outcome = terminal_widget_presentation_runtime.reuseSuccessOutcome();
+    try std.testing.expect(reuse_outcome.outcome == .reused);
+}
