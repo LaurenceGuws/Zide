@@ -1072,15 +1072,12 @@ fn buildTerminalPresentPlan(
     const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
     const presentable_ready = self.surface.presentableReady();
-    const publication_gen_mismatch_surface = surface_contract.publicationGenerationDiffersFromLastSurfaceRender(
+    const generation_matches_presented = surface_contract.publicationClearPairMatchesLastSurfaceRender(
         terminal_view.generation,
-        self.surface.lastRenderGeneration(),
-    );
-    const clear_gen_mismatch_surface = surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear(
         terminal_view.clear_generation,
+        self.surface.lastRenderGeneration(),
         self.surface.lastRenderClearGeneration(),
     );
-    const generation_matches_presented = !publication_gen_mismatch_surface and !clear_gen_mismatch_surface;
     const explicit_invalidation_blocks_reuse = delta.invalidation_flags.geometry or
         delta.invalidation_flags.content or
         delta.invalidation_flags.overlay or
