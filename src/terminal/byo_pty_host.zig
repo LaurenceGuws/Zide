@@ -2,12 +2,12 @@
 //! `resize`), encoded input, and host reports into `TerminalRuntimeShell`. VT core
 //! publication and query APIs are in `core_api.zig`.
 const std = @import("std");
-const host_queries = @import("../core/session/host_queries.zig");
-const session_input = @import("../core/session/input.zig");
-const session_runtime = @import("../core/session/runtime.zig");
-const scrollback_view = @import("../core/scrollback_view.zig");
-const types = @import("../model/types.zig");
-const shared = @import("shared.zig");
+const host_queries = @import("core/session/host_queries.zig");
+const session_input = @import("core/session/input.zig");
+const session_runtime = @import("core/session/runtime.zig");
+const scrollback_view = @import("core/scrollback_view.zig");
+const types = @import("model/types.zig");
+const shared = @import("ffi/shared.zig");
 
 /// Starts the session/runtime loop (optional shell argv). BYO-PTY seam.
 pub fn start(handle: ?*shared.ZideTerminalHandle, shell: ?[*:0]const u8) shared.Status {

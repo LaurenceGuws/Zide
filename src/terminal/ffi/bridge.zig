@@ -4,7 +4,7 @@
 //! runtime reports). Order below interleaves by host-facing surface, not by
 //! “single implementation center.”
 const shared = @import("shared.zig");
-const byo_pty_host = @import("byo_pty_host.zig");
+const byo_pty_host = @import("../byo_pty_host.zig");
 const core_api = @import("core_api.zig");
 
 // Forwards interleave BYO (`byo_pty_host`) and VT core (`core_api`) to mirror the
