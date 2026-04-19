@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B38` (in_progress, super-gate `CZH-GATE-92`).
+- Current active macro batch: `CZH-B38` (architect_review_pending, super-gate `CZH-GATE-92`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Completed sprint: `CZH-S32` (accepted). Checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`.
 - Active validation platforms: Linux desktop and the connected Android device
@@ -3469,7 +3469,7 @@ Execution source:
 - Corrective cut removed ticket-history wording from touched comments and removed unused callback path without behavior drift.
 - Validation spot-check stays green: core Zig ladder pass, bounded Linux GUI startup smoke pass, Android compile/deploy/start/logcat smoke pass.
 
-### `CZH-B38` Terminal Presentation Runtime Ownership Extraction (`in_progress`)
+### `CZH-B38` Terminal Presentation Runtime Ownership Extraction (`architect_review_pending`)
 
 Queue line (exact):
 
