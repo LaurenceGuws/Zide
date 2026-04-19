@@ -111,7 +111,9 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.terminal_presentable_ready;
     }
 
-    pub fn targetAvailable(self: *const TerminalWidgetSurfaceState) bool {
+    /// Host **drawable target** leg for `surface_attachment_contract` (same field as
+    /// `SharedSurfaceAttachmentPipelinePair.host_surface_target_available`).
+    pub fn hostSurfaceTargetAvailable(self: *const TerminalWidgetSurfaceState) bool {
         return self.presentation.target_available;
     }
 
