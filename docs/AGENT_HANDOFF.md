@@ -6,8 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-89`): `CZH-B35` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-90`): `CZH-B36` in
   `docs/todo/core/implementation.md`
+- Rejected sprint checkpoint: `docs/todo/core/CZH_S30_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S29_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S28_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S27_CHECKPOINT.md`
@@ -38,9 +39,10 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S30_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S31_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
+- Connected Android device for this checkpoint: `RF8M74JDWEK`.
 - Active queue authority: `docs/todo/core/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 
@@ -61,19 +63,23 @@ Current top priorities:
 4. remove compatibility/fallback/legacy residue instead of carrying it forward
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
+6. keep source comments present-tense: ownership, invariants, and constraints
+   only; ticket/progress history belongs in `docs/todo/`
 
-Current batch intent (`CZH-B35`, in progress toward `CZH-GATE-89`):
+Current batch intent (`CZH-B36`, in progress toward `CZH-GATE-90`):
 
-- continue concrete present/outcome seam consolidation follow-through edits
-  through canonical helper routes and invariant locks in selected scope
-- keep behavior stable and ABI unchanged while tightening names/tests/docs
+- fix the Linux terminal startup assertion regression from `CZH-B35`
+- validate the correction on Linux and the connected Android device
+- clean touched source comments so they describe current architecture, not sprint
+  history
+- keep Windows/macOS catch-up non-blocking unless their platform code is touched
 
 ## First Read Order
 
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 2. `docs/todo/core/implementation.md`
 3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/CZH_S30_TICKETS.md`
+4. `docs/todo/core/CZH_S31_TICKETS.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
@@ -85,14 +91,16 @@ Current batch intent (`CZH-B35`, in progress toward `CZH-GATE-89`):
 - Execute only the active macro batch marked in `docs/todo/core/implementation.md`
   (`in_progress` or `architect_review_pending` per batch state).
 - Engineer executes the current sprint tickets in `docs/todo/core/JIRA_BOARD.md`
-  and `docs/todo/core/CZH_S30_TICKETS.md` in listed order.
+  and `docs/todo/core/CZH_S31_TICKETS.md` in listed order.
 - Engineer batching target: **8–14 validated commits** per macro batch unless a
   real hard stop occurs.
 - Architect review cadence: avoid interim review loops; review once at the
   super-gate unless blocked.
-- Keep changes single-path and behavior-stable unless the batch explicitly
-  scopes behavior change.
+- Keep changes single-path. Behavior is frozen by default, but startup/runtime
+  regressions are correctness fixes and must be repaired directly.
 - Keep Android lane frozen except for blocker-class regressions.
+- Current FFI/caller placement is not a blocker. If fixing the runtime order
+  means moving callers or state ownership, do it cleanly and update Android.
 - Use human-readable update labels and role-specific blocked flags:
   - Architect: `Blocked by humain review needed: true|false`
   - Engineer: `Blocked by Archtect review needed: true|false`

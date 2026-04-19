@@ -11,9 +11,15 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B35` (`in_progress`, super-gate `CZH-GATE-89`).
+- Current active macro batch: `CZH-B36` (`in_progress`, super-gate `CZH-GATE-90`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S30_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S31_TICKETS.md`
+- Active validation platforms: Linux desktop and the connected Android device
+  (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
+  they must not block core correction work unless a change intentionally touches
+  their platform-specific code.
+- Current hard blocker: bounded Linux GUI startup smoke reaches
+  `std.debug.assert` in `TerminalWidgetSurfaceState.assertLegsInitialized`.
 
 ## Campaign Goals
 
@@ -27,10 +33,19 @@ stable, reviewable, and ready for the next expansion phase.
 ## Hard Contracts
 
 - Behavior freeze by default during hygiene cuts.
+- Correctness regressions that break startup/runtime are allowed to cut through
+  the freeze, but must be isolated, tested, and documented as fixes.
 - No compatibility sludge.
 - No stale debug/probe caller residue in tracked product code.
 - No compatibility shims, migration surfaces, or preservation-only fallbacks kept "just in case".
 - Every file in the touched layer set must have a doc string; important/locked-down functions must be audited for whether their doc strings help, hurt, or lie about current responsibility.
+- Source doc comments are architectural drawings: current ownership, invariants,
+  and constraints only. Ticket IDs, sprint names, progress notes, and historical
+  commentary belong in `docs/todo/`, not product source files.
+- The current FFI/caller shape is not frozen by this campaign. If VT core,
+  editor, BYO-PTY, or terminal presentation maturity requires callers to move,
+  move them cleanly and update Android as the proving host rather than treating
+  Android's first implementation as the final shape.
 - Batch closure requires doc updates + validation record.
 
 ## Validation Baseline
@@ -39,9 +54,13 @@ stable, reviewable, and ready for the next expansion phase.
 - `zig build test`
 - `zig build -Dmode=terminal`
 - `zig build -Dmode=editor`
+- bounded Linux GUI startup smoke when presentation paths are touched: launch
+  terminal mode, verify init gets past the targeted failure, then terminate it
+  cleanly; do not leave a GUI process open as a validation step
 - Android regression guard at seam boundaries:
   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
+  - when a device is connected, deploy/start/logcat smoke on `RF8M74JDWEK`
 
 ## Macro Batches
 
@@ -3275,7 +3294,7 @@ Checkpoint packet: `docs/todo/core/CZH_S29_CHECKPOINT.md`.
 - `Acceptance judgment:` follow-through hardening is coherent; behavior and ABI
   remain stable.
 
-### `CZH-B35` Present/Outcome Seam Consolidation Follow-Through (`in_progress`)
+### `CZH-B35` Present/Outcome Seam Consolidation Follow-Through (`changes_required`)
 
 Queue line (exact):
 
@@ -3317,6 +3336,67 @@ Execution source:
   `presentable_contract.zig`,
   `TERMINAL_SURFACE_CONTRACT.md`
 - lock exact edit targets and scope for `CZH-849`
+
+#### Architect gate result
+
+- `Review chunk: CZH-B35`
+- `Verdict: changes_required`
+- `Reason:` Linux terminal startup smoke is broken by
+  `TerminalWidgetSurfaceState.assertLegsInitialized` during
+  terminal GUI initialization.
+- `Failure path:` `notePresentableAvailability` asserts that both presentation
+  legs are initialized immediately after writing the host-target leg, but the
+  pipeline leg may still be unset on the first refresh path.
+- `Architecture finding:` hardening assertions must reflect real runtime order.
+  If the canonical route requires a different initialization owner, move the
+  caller/state ownership cleanly; do not preserve the current caller shape just
+  because it exists.
+- `Source-comment finding:` touched product files contain ticket/progress
+  wording such as `CZH-S30`; remove historical progress language from source
+  comments and keep only current ownership/invariant text.
+
+### `CZH-B36` Runtime Startup Correctness + Comment Hygiene (`in_progress`)
+
+Queue line (exact):
+
+- fix the Linux terminal startup assertion regression, validate on the connected
+  Android device, and clean product source comments so they describe current
+  architecture rather than ticket history
+
+Acceptance:
+
+- bounded Linux terminal GUI startup smoke gets past initialization without the
+  `assertLegsInitialized` panic and leaves no GUI process running
+- connected Android device `RF8M74JDWEK` is used for compile/deploy/start/logcat
+  smoke unless the device disconnects
+- Windows/macOS validation is explicitly non-blocking for this correction pass
+- product source comments in touched presentation files contain current
+  ownership/invariant language only, with no ticket/progress history
+- no host ABI/C export changes
+- full stress ladder remains green through `CZH-GATE-90`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S31_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-851`..`CZH-860` in order from
+  `docs/todo/core/CZH_S31_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-90` or a real hard blocker
+
+#### `CZH-851` runtime blocker audit + scope lock (`CZH-S31`)
+
+- reproduce or reason from the captured stack for the startup assertion failure
+- map the actual initialization order for:
+  `terminal_presentable_pipeline_ready`,
+  `host_surface_target_available`, and
+  `shared_surface_attachment_ready`
+- lock exact edit targets and source-comment cleanup scope
 
 ## Response Contract
 

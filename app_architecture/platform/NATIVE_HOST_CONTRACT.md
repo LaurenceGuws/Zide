@@ -272,6 +272,18 @@ These two platforms are deliberately useful tension:
 If a shared seam cannot satisfy both cleanly, it is probably not the right
 shared seam.
 
+## Current Validation Priority
+
+Linux desktop and Android are the active validation pressure for the current
+core cleanup pass. A connected Android device (`RF8M74JDWEK`) is available for
+compile/deploy/start/logcat smoke checks when shared terminal presentation or
+host attachment paths are touched.
+
+Windows and macOS are catch-up validation platforms for this phase. They should
+not block Linux/Android correctness work unless the change directly edits their
+platform-owned code or intentionally changes a cross-platform contract they
+consume.
+
 ## Immediate Consequences For Zide
 
 Future platform work must now follow this order:

@@ -13,6 +13,8 @@ resource, not the contract center.
 
 Android proved “host hands in a drawable attachment; Zide owns terminal truth
 and generation bookkeeping” — **Android is one host**, not the definition.
+Android may move when the shared contract matures; the first Android GLES shape
+is validation pressure, not permanent architecture.
 
 ## What the frozen abstraction is
 
@@ -55,6 +57,11 @@ Hosts observe redraw and generation pairing through **VT core FFI** symbols (e.g
 `acknowledged_generation`) — portable **logical** surface for frame contract
 state. Raw GPU handles do not need to cross that boundary for the contract to
 hold.
+
+The current FFI/caller layout is not the maturity boundary. VT core,
+bring-your-own-PTY, editor backend, and terminal presentation callers may move
+when that makes ownership cleaner. The contract to preserve is the meaning of
+the state crossing, not the current file or call-site placement.
 
 **Zig seam (logical bundle):** `src/terminal/surface_contract.zig` layers **FFI**
 (`ffiRedrawStateFill`, `ffiNeedsRedrawU8`, `ffiPresentAckGenerationAdmissible` for
