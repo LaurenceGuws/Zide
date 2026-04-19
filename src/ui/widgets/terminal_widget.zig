@@ -5,6 +5,9 @@
 //! Present aggregation (`TerminalPresentResult`) keeps host-target vs full-attachment fields
 //! distinct (`CZH-B26`). **Reporting carrier (`CZH-S23`):** widget shell defers conjunction in
 //! `renderer.terminal_present` to runtime’s `PresentationPresentState` snapshot, not draw.
+//! **Shell vs runtime (`CZH-S24`):** widget shell orchestrates draw/input/publication; presentation
+//! runtime computes present outcomes and **aggregates** host-facing present results — the shell does
+//! not substitute reporting carriers for `TerminalPresentResult` fields.
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
