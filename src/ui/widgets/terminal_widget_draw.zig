@@ -3,11 +3,12 @@
 //! target** legs and their **full attachment** conjunction are `surface_attachment_contract`
 //! (`TerminalWidgetSurfaceState`: `terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`,
 //! `notePresentableAvailability`).
-//! **Conjunction propagation (`CZH-S22`):** this draw module does **not** compute or store the
-//! conjunction; presentation runtime does (`notePresentableAvailability` →
-//! `PresentationPresentState.shared_surface_attachment_ready` / `TerminalPresentResult` fields).
-//! This module orchestrates draw and delegates presentation to
-//! `terminal_widget_presentation_runtime` (`CZH-S16`, vocabulary lock `CZH-S18`).
+//! **Conjunction propagation (`CZH-S22`, **canonical route CZH-791**):** this draw module
+//! does **not** compute or store the conjunction; presentation runtime does exclusively via
+//! **canonical helper** `TerminalWidgetSurfaceState.notePresentableAvailability()` (calls
+//! `surface_attachment_contract.hostSharedSurfaceAttachmentReady`). Runtime stores conjunction on
+//! `PresentationPresentState` and `TerminalPresentResult`. This module orchestrates draw and
+//! delegates presentation to `terminal_widget_presentation_runtime` (`CZH-S16`, vocabulary lock `CZH-S18`).
 //!
 //! **Observability (`CZH-B24`, alias lock `CZH-B25`):** glyph-prep adopt warnings label
 //! raster/publication-stage generation; attachment legs on widget state use dominant field names
