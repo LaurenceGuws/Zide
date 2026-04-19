@@ -93,3 +93,32 @@ test "All outcome classification paths work in widget context" {
     const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     try std.testing.expect(reuse.outcome == .reused);
 }
+
+test "Widget layer delegates outcome folding without re-derivation" {
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const timing = .{ .background_ms = 1.5, .glyph_ms = 2.5, .kitty_ms = 0.0 };
+    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, false);
+
+    try std.testing.expect(result.outcome == .updated_and_presented);
+    try std.testing.expect(result.timing.background_ms == 1.5);
+}
+
+test "Widget layer reuse delegation preserves outcome semantics" {
+    const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
+    const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
+    const result = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(reuse, timing);
+
+    try std.testing.expect(result.outcome == .reused);
+    try std.testing.expect(result.shared_surface_attachment_ready == true);
+}
+
+test "Widget layer assertions validate outcome consistency" {
+    const refresh = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    terminal_widget_presentation_runtime.assertRefreshOutcomeConsistency(refresh);
+
+    const direct = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
+    terminal_widget_presentation_runtime.assertDirectPresentOutcomeConsistency(direct);
+
+    const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
+    terminal_widget_presentation_runtime.assertReuseOutcomeConsistency(reuse);
+}

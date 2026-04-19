@@ -116,3 +116,53 @@ test "ReusePresentOutcomeState validates success coupling" {
     const outcome = presentation_runtime.reuseSuccessOutcome();
     presentation_runtime.assertReuseOutcomeConsistency(outcome);
 }
+
+test "Outcome functions produce consistent results across multiple calls" {
+    const refresh_1 = presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const refresh_2 = presentation_runtime.classifyRefreshOutcome(.refreshed);
+    try std.testing.expect(refresh_1.outcome == refresh_2.outcome);
+    try std.testing.expect(refresh_1.cache_state_advanced == refresh_2.cache_state_advanced);
+
+    const direct_1 = presentation_runtime.classifyDirectPresentOutcome(true);
+    const direct_2 = presentation_runtime.classifyDirectPresentOutcome(true);
+    try std.testing.expect(direct_1.outcome == direct_2.outcome);
+
+    const reuse_1 = presentation_runtime.reuseSuccessOutcome();
+    const reuse_2 = presentation_runtime.reuseSuccessOutcome();
+    try std.testing.expect(reuse_1.outcome == reuse_2.outcome);
+}
+
+test "Outcome classification remains idempotent across fold/unfold cycles" {
+    const outcome = presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 1.5,
+        .glyph_ms = 2.5,
+        .kitty_ms = 0.0,
+    };
+    const result = presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, true);
+    try std.testing.expect(result.outcome == outcome.outcome);
+    try std.testing.expect(result.cache_state_advanced == outcome.cache_state_advanced);
+}
+
+test "All outcome classification paths maintain invariants" {
+    const outcomes = [_]presentation_runtime.RefreshOutcomeState{
+        presentation_runtime.classifyRefreshOutcome(.refreshed),
+        presentation_runtime.classifyRefreshOutcome(.presented),
+        presentation_runtime.classifyRefreshOutcome(.target_unavailable),
+        presentation_runtime.classifyRefreshOutcome(.unsupported),
+    };
+    for (outcomes) |outcome| {
+        presentation_runtime.assertRefreshOutcomeConsistency(outcome);
+    }
+}
+
+test "Direct present outcome paths maintain host availability coupling" {
+    const updated = presentation_runtime.classifyDirectPresentOutcome(true);
+    const not_updated = presentation_runtime.classifyDirectPresentOutcome(false);
+
+    try std.testing.expect(updated.host_surface_target_available == true);
+    try std.testing.expect(not_updated.host_surface_target_available == true);
+
+    try std.testing.expect(updated.cache_state_advanced == true);
+    try std.testing.expect(not_updated.cache_state_advanced == true);
+}
