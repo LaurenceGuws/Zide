@@ -20,9 +20,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B13` — **`in_progress`** (sprint `CZH-S8`): expand surface-contract seam
-  usage to one additional bounded path with behavior-neutral wiring. Execute
-  tickets `CZH-641`..`CZH-645`; stop only at `CZH-GATE-67` or a real hard blocker.
+- `CZH-B13` — **`architect_review_pending`** at **`CZH-GATE-67`** (sprint `CZH-S8`):
+  `present_ack` admissibility seam landed. Packet `docs/todo/core/CZH_S8_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -38,7 +37,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S8` tickets `CZH-641`..`CZH-645` are the active execution set.
+- Sprint `CZH-S8` tickets `CZH-641`..`CZH-645` are complete at **`CZH-GATE-67`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

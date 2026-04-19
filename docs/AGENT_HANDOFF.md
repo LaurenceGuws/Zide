@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B13` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-67`): `CZH-B13` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -15,6 +15,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S5_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S7_CHECKPOINT.md`
+- Pending Architect review: `docs/todo/core/CZH_S8_CHECKPOINT.md` (`CZH-GATE-67`)
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S8_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -40,11 +41,11 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B13`, engineer work in progress):
+Current batch intent (`CZH-B13`, engineer work at `CZH-GATE-67`):
 
-- expand seam usage beyond redraw helpers to one additional bounded wiring path
-- keep behavior and host ABI stable while tightening code-level ownership
-- keep surface-contract terms synchronized between code and authority docs
+- `present_ack` admissibility uses `surface_contract.presentAckGenerationAdmissible`
+  (`CZH-S8`)
+- **Architect** accepts or requests changes via **`CZH-GATE-67`**
 
 ## First Read Order
 
