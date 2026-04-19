@@ -13,6 +13,7 @@ comptime {
     _ = @import("layout_tests.zig");
     _ = @import("widget_action_tests.zig");
     _ = @import("../src/ui/widgets/terminal_widget_draw.zig");
+    _ = @import("../src/terminal/surface_contract.zig");
     _ = @import("terminal_key_encoder_tests.zig");
     _ = @import("terminal_input_encoding_tests.zig");
 }
