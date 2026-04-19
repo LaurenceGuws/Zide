@@ -1,16 +1,21 @@
 //! Terminal **surface contract** seam: logical published vs host-acknowledged
 //! generation pairing for shared-GPU presentation (`TERMINAL_SURFACE_CONTRACT.md`).
-//! VT core FFI continues to own the extern `RedrawState` ABI; this module names
-//! the frozen contract center and centralizes how that bundle is filled — one
-//! truth source for `needs_redraw` derivation.
+//! VT core FFI continues to own the extern `RedrawState` ABI; this module is the
+//! naming center for generation pairing (`TERMINAL_SURFACE_CONTRACT.md`).
 //!
-//! VT core FFI (`core_api`): `ffiRedrawStateFill`, `ffiNeedsRedrawU8`,
-//! `ffiPresentAckGenerationAdmissible` name the host-export seam (`CZH-S13`).
-//!
-//! Widget surface state: `TerminalWidgetSurfaceState.presentationUpdateDelta` and
-//! present-plan paths use publication/clear vs last-surface predicates (`CZH-S11` /
-//! `CZH-S12`). Composite pair helpers: `publicationClearPairMismatchesFromLastSurfaceRender`,
-//! `publicationClearPairMatchesLastSurfaceRender`.
+//! **Layering (no duplicate policy paths):**
+//! - **Primitive predicates:** `needsRedrawFromPair` (pair inequality); widget
+//!   legs `publicationGenerationDiffersFromLastSurfaceRender` and
+//!   `clearGenerationDiffersFromLastSurfaceRenderClear` (same core).
+//! - **Widget composite:** `publicationClearPairMismatchesFromLastSurfaceRender` /
+//!   `publicationClearPairMatchesLastSurfaceRender` — sole composite shape for
+//!   terminal widget publication/clear vs last surface draw (`presentationUpdateDelta`,
+//!   present-plan reuse).
+//! - **FFI exports:** `ffiRedrawStateFill`, `ffiNeedsRedrawU8`,
+//!   `ffiPresentAckGenerationAdmissible` — sole `core_api` seam for redraw bundle,
+//!   needs-redraw byte, and present-ack gate (`core_api`).
+//! - **Bundle fill:** `fillRedrawState` implements `RedrawState`; `ffiRedrawStateFill`
+//!   delegates here (`CZH-S13`, `CZH-S14`).
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 
