@@ -396,12 +396,14 @@ pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.S
     return .ok;
 }
 
+/// Last generation the host reported as presented (`presentAck`).
 pub fn acknowledgedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: *u64) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_generation.* = h.last_acknowledged_generation;
     return .ok;
 }
 
+/// Current publication generation from the terminal core (VT core truth).
 pub fn publishedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: *u64) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_generation.* = currentPublishedGeneration(h);
@@ -423,6 +425,7 @@ pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.Redra
     return .ok;
 }
 
+/// Shell/input close-confirm signals for the host (VT core publication).
 pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *shared.CloseConfirmSignals) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_signals.* = currentCloseConfirmSignals(h);
@@ -437,6 +440,8 @@ pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
 }
 
 /// Tears down the handle, shell, and pending FFI-owned buffers.
+/// Test builds only: may honor `destroy_debug_pause_ms_for_tests` before teardown
+/// (`CZH-606`); never sleeps on non-test builds.
 pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     const h = shared.fromOpaque(handle) orelse return;
     h.destroying.store(true, .release);
@@ -474,12 +479,14 @@ pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len:
     return shared.syncDerivedEvents(h);
 }
 
+/// Closes the external byte transport when the host is driving I/O (BYO path).
 pub fn closeInput(handle: ?*shared.ZideTerminalHandle) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (!session_runtime.closeExternalTransport(h.shell)) return .invalid_argument;
     return shared.syncDerivedEvents(h);
 }
 
+/// Takes pending outgoing bytes from external transport into `out_buffer` (host must `pendingInputRelease`).
 pub fn pendingInputAcquire(handle: ?*shared.ZideTerminalHandle, out_buffer: *shared.ByteBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const bytes = session_runtime.takeExternalOutgoingBytes(h.shell, h.allocator) catch |err| return shared.mapError(err);
@@ -487,6 +494,7 @@ pub fn pendingInputAcquire(handle: ?*shared.ZideTerminalHandle, out_buffer: *sha
     return shared.byteBufferFromOwnedSlice(h.allocator, slice, out_buffer);
 }
 
+/// Frees a buffer from `pendingInputAcquire`.
 pub fn pendingInputRelease(out_buffer: *shared.ByteBuffer) void {
     shared.byteBufferFree(out_buffer);
 }
@@ -696,6 +704,7 @@ pub fn snapshotDiffRelease(diff: *shared.SnapshotDiff) void {
     diff.* = .{};
 }
 
+/// Copies a scrollback cell range into `out_buffer` (VT core); free with `scrollbackRelease`.
 pub fn scrollbackAcquire(handle: ?*shared.ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *shared.ScrollbackBuffer) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
@@ -751,6 +760,7 @@ pub fn scrollbackAcquire(handle: ?*shared.ZideTerminalHandle, start_row: u32, ma
     return .ok;
 }
 
+/// Frees memory from a prior `scrollbackAcquire`.
 pub fn scrollbackRelease(scrollback: *shared.ScrollbackBuffer) void {
     const owner = shared.scrollbackOwner(scrollback._ctx) orelse {
         scrollback.* = .{};
@@ -761,6 +771,7 @@ pub fn scrollbackRelease(scrollback: *shared.ScrollbackBuffer) void {
     scrollback.* = .{};
 }
 
+/// Copies title/cwd metadata per `request` (VT core); free with `metadataRelease`.
 pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.MetadataRequest, out_metadata: *shared.Metadata) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
@@ -824,6 +835,7 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     return .ok;
 }
 
+/// Frees memory from a prior `metadataAcquire`.
 pub fn metadataRelease(metadata: *shared.Metadata) void {
     const owner = shared.metadataOwner(metadata._ctx) orelse {
         metadata.* = .{};
@@ -835,6 +847,7 @@ pub fn metadataRelease(metadata: *shared.Metadata) void {
     metadata.* = .{};
 }
 
+/// Exports foreground/semantic activity fields per `request` (VT core); free with `activityRelease`.
 pub fn activityAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.ActivityRequest, out_activity: *shared.Activity) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
@@ -886,6 +899,7 @@ pub fn activityAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     return .ok;
 }
 
+/// Frees memory from a prior `activityAcquire`.
 pub fn activityRelease(activity: *shared.Activity) void {
     const owner = shared.activityOwner(activity._ctx) orelse {
         activity.* = .{};
@@ -896,6 +910,7 @@ pub fn activityRelease(activity: *shared.Activity) void {
     activity.* = .{};
 }
 
+/// Drains queued terminal events into `out_events` (VT core); free with `eventsFree`.
 pub fn eventDrain(handle: ?*shared.ZideTerminalHandle, out_events: *shared.EventBuffer) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
@@ -948,6 +963,7 @@ pub fn eventDrain(handle: ?*shared.ZideTerminalHandle, out_events: *shared.Event
     return .ok;
 }
 
+/// Frees memory from a prior `eventDrain`.
 pub fn eventsFree(events: *shared.EventBuffer) void {
     const owner = shared.eventOwner(events._ctx) orelse {
         events.* = .{};
@@ -962,6 +978,7 @@ pub fn eventsFree(events: *shared.EventBuffer) void {
     events.* = .{};
 }
 
+/// Allocates the current selection as a string (VT core); free with `stringFree`.
 pub fn selectionText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const text = (h.shell.core.selectionPlainTextAlloc(h.allocator) catch |err| {
@@ -970,6 +987,7 @@ pub fn selectionText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.St
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);
 }
 
+/// If the engine requested a clipboard write, returns that payload (VT core); free with `stringFree`.
 pub fn clipboardWrite(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (!h.clipboard_write_pending) return shared.stringFromSlice(h.allocator, "", out_string);
@@ -977,6 +995,7 @@ pub fn clipboardWrite(handle: ?*shared.ZideTerminalHandle, out_string: *shared.S
     return shared.stringFromSlice(h.allocator, h.pending_clipboard_write.items, out_string);
 }
 
+/// Full scrollback as plain text (VT core); free with `stringFree`.
 pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const text = h.shell.core.scrollbackPlainTextAlloc(h.allocator) catch |err| {
@@ -985,6 +1004,7 @@ pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *sha
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);
 }
 
+/// Full scrollback as ANSI-colored text (VT core); free with `stringFree`.
 pub fn scrollbackAnsiText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const text = h.shell.core.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
@@ -993,6 +1013,7 @@ pub fn scrollbackAnsiText(handle: ?*shared.ZideTerminalHandle, out_string: *shar
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);
 }
 
+/// Frees FFI-owned string bytes from `selectionText`, scrollback exports, etc.
 pub fn stringFree(string: *shared.StringBuffer) void {
     const owner = shared.stringOwner(string._ctx) orelse {
         string.* = .{};
@@ -1047,6 +1068,7 @@ pub fn stringAbiVersion() u32 {
     return shared.string_abi_version;
 }
 
+/// Glyph classification + damage-policy metadata for a codepoint (single fill path; VT core FFI).
 pub fn rendererMetadata(codepoint: u32, out_metadata: *shared.RendererMetadata) shared.Status {
     renderer_metadata_mod.fillRendererMetadata(out_metadata, codepoint);
     return .ok;

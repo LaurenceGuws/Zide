@@ -45,6 +45,8 @@ const StringOwner = struct {
     bytes: []u8,
 };
 
+/// Allocates a foreign-host editor handle (`c_allocator` + grammar manager + `Editor`).
+/// Pair with `destroy`. In-process code should call `editor.zig` directly (`FFI_DESIGN.md`).
 pub fn create(out_handle: *?*ZideEditorHandle) Status {
     const log = app_logger.logger("editor.ffi");
     out_handle.* = null;
@@ -75,6 +77,7 @@ pub fn create(out_handle: *?*ZideEditorHandle) Status {
     return .ok;
 }
 
+/// Tears down the editor, grammar manager, and opaque handle (symmetric with `create`).
 pub fn destroy(handle: ?*ZideEditorHandle) void {
     const h = fromOpaque(handle) orelse return;
     h.editor.deinit();
