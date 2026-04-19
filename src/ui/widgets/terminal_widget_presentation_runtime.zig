@@ -256,12 +256,8 @@ fn presentResultFromRefreshOutcomeState(
     timing: renderer_presentable_host.TerminalPresentTiming,
     shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
-    // Harden: validate followup consistency before fold
-    if (outcome_state.followup_required) {
-        std.debug.assert(outcome_state.followup_reason != .none);
-    } else {
-        std.debug.assert(outcome_state.followup_reason == .none);
-    }
+    // Consolidation: use unified assertion helper before fold
+    assertRefreshOutcomeConsistency(outcome_state);
     var result = presentResultFromOutcomeState(
         outcome_state.outcome,
         outcome_state.cache_state_advanced,
@@ -317,6 +313,16 @@ fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void 
     std.debug.assert(state.cache_state_advanced == true);
     std.debug.assert(state.host_surface_target_available == true);
     std.debug.assert(state.shared_surface_attachment_ready == false);
+}
+
+/// **Validate refresh outcome consistency (`CZH-S30`):** consolidation of refresh-path assertion patterns.
+/// Verifies that followup coupling invariants hold (if followup_required, then followup_reason != .none).
+fn assertRefreshOutcomeConsistency(state: RefreshOutcomeState) void {
+    if (state.followup_required) {
+        std.debug.assert(state.followup_reason != .none);
+    } else {
+        std.debug.assert(state.followup_reason == .none);
+    }
 }
 
 /// **Consolidated attachment state computation (`CZH-791`, `CZH-S27`):** derives host-target leg from
@@ -1342,12 +1348,8 @@ fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeSta
         .followup_required = refresh == .target_unavailable,
         .followup_reason = if (refresh == .target_unavailable) .target_unavailable else .none,
     };
-    // Harden: validate followup coupling
-    if (outcome_state.followup_required) {
-        std.debug.assert(outcome_state.followup_reason != .none);
-    } else {
-        std.debug.assert(outcome_state.followup_reason == .none);
-    }
+    // Consolidation: use unified assertion helper
+    assertRefreshOutcomeConsistency(outcome_state);
     return outcome_state;
 }
 
