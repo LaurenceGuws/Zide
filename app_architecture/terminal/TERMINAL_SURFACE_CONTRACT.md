@@ -100,6 +100,13 @@ attachment legs as **`terminal_presentable_pipeline_ready`** (pipeline only) and
 `SharedSurfaceAttachmentPipelinePair` field names; full attachment remains the conjunction via
 `readSharedSurfaceAttachmentReady` / `hostSharedSurfaceAttachmentReady`.
 
+## Present aggregation (`TerminalPresentResult`, `CZH-B26`)
+
+`TerminalPresentResult` (`src/ui/renderer/presentable_contract.zig`) carries **`host_surface_target_available`**
+(host drawable-target leg only) and **`shared_surface_attachment_ready`** (full attachment when the
+caller computes pipeline ∧ host target). `ReusePresentOutcomeState` in the widget presentation
+runtime uses the same two identifiers before folding into `TerminalPresentResult` on reuse success.
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
