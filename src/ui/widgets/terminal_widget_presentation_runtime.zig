@@ -1656,14 +1656,15 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) ReusePresentOutcomeState {
     if (plan.present_intent != .reuse) return .{};
+    const host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
     const shared_surface_attachment_ready = surface_state.notePresentableAvailability(
-        renderer_presentable_host.terminalPresentableInfo(renderer) != null,
+        host_surface_target_available,
     );
     if (!(view_cells_len > 0 and shared_surface_attachment_ready and
         (terminal_view.sync_updates_active or
             renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
         return .{
-            .host_surface_target_available = shared_surface_attachment_ready,
+            .host_surface_target_available = host_surface_target_available,
         };
     }
 
