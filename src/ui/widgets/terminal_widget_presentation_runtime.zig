@@ -1041,7 +1041,6 @@ fn buildTerminalPresentPlan(
         cursor_style,
     );
     const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
-    const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
     const terminal_presentable_pipeline_ready = self.surface.terminalPresentablePipelineReady();
     const publication_clear_pair_matches_last_surface_render = surface_contract.publicationClearPairMatchesLastSurfaceRender(
         terminal_view.generation,
@@ -1053,29 +1052,27 @@ fn buildTerminalPresentPlan(
         delta.invalidation_flags.content or
         delta.invalidation_flags.overlay or
         delta.invalidation_flags.availability;
-    const invalidation_blocks_reuse = explicit_invalidation_blocks_reuse or
-        delta.clear_generation_changed or
-        delta.cell_metrics_changed or
-        delta.render_scale_changed or
-        delta.cursor_changed or
-        overlay_changed or
-        blink_requires_partial;
-    const reuse_allowed = terminal_presentable_pipeline_ready and terminal_view.cells.len > 0;
-    const reuse_requested = reuse_allowed and
-        !viewport_shifted and
-        (terminal_view.sync_updates_active or
-            (!invalidation_blocks_reuse and publication_clear_pair_matches_last_surface_render));
+
+    const plan_decision = terminal_presentation_runtime.computeTerminalPresentPlanDecision(
+        terminal_presentable_pipeline_ready,
+        terminal_view.rows,
+        terminal_view.cols,
+        terminal_view.cells.len,
+        terminal_view.sync_updates_active,
+        terminal_view.partial_capture.active_viewport_shift_rows,
+        publication_clear_pair_matches_last_surface_render,
+        explicit_invalidation_blocks_reuse,
+        delta.clear_generation_changed,
+        delta.cell_metrics_changed,
+        delta.render_scale_changed,
+        delta.cursor_changed,
+        overlay_changed,
+        blink_requires_partial,
+    );
+
     return .{
-        .update_intent = if (terminal_view.rows == 0 or terminal_view.cols == 0 or reuse_requested)
-            .none
-        else if (viewport_shifted or invalidation_blocks_reuse)
-            .full
-        else
-            .partial,
-        .present_intent = if (reuse_requested)
-            .reuse
-        else
-            .update_and_present,
+        .update_intent = plan_decision.update_intent,
+        .present_intent = plan_decision.present_intent,
         .surface_geometry = .{
             .logical_width = geometry.surface_w,
             .logical_height = geometry.surface_h,
@@ -1087,9 +1084,9 @@ fn buildTerminalPresentPlan(
             .dest_height = height,
         },
         .reuse_policy = .{
-            .reuse_allowed = reuse_allowed,
-            .shift_reuse_requested = viewport_shifted,
-            .invalidation_blocks_reuse = invalidation_blocks_reuse,
+            .reuse_allowed = plan_decision.reuse_allowed,
+            .shift_reuse_requested = plan_decision.viewport_shifted,
+            .invalidation_blocks_reuse = plan_decision.invalidation_blocks_reuse,
         },
         .damage = .{
             .mode = switch (self.publication.cacheConst().dirty) {
@@ -1106,7 +1103,7 @@ fn buildTerminalPresentPlan(
             .scale_changed = delta.render_scale_changed or delta.invalidation_flags.geometry,
             .cursor_changed = delta.cursor_changed,
             .overlay_changed = overlay_changed or delta.invalidation_flags.overlay,
-            .viewport_shifted = viewport_shifted,
+            .viewport_shifted = plan_decision.viewport_shifted,
         },
     };
 }

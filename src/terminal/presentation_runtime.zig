@@ -286,6 +286,70 @@ pub const ViewportShiftState = struct {
     exposed_only: bool = false,
 };
 
+/// **Compute presentation plan decision:** Pure orchestration logic for deciding update/present intents.
+/// Terminal-owned orchestration function; widget layer gathers state and calls this helper.
+/// Returns decision struct with update/present intents and reuse flags for widget facade to use.
+pub const TerminalPresentPlanDecision = struct {
+    update_intent: @import("../ui/renderer/presentable_contract.zig").TerminalPresentUpdateIntent = .none,
+    present_intent: @import("../ui/renderer/presentable_contract.zig").TerminalPresentIntent = .update_and_present,
+    reuse_allowed: bool = false,
+    invalidation_blocks_reuse: bool = false,
+    viewport_shifted: bool = false,
+};
+
+pub fn computeTerminalPresentPlanDecision(
+    terminal_presentable_pipeline_ready: bool,
+    terminal_view_rows: usize,
+    terminal_view_cols: usize,
+    terminal_view_cells_len: usize,
+    terminal_view_sync_updates_active: bool,
+    partial_capture_viewport_shift_rows: i32,
+    generation_matches_last_render: bool,
+    invalidation_blocks_reuse_explicit: bool,
+    delta_clear_generation_changed: bool,
+    delta_cell_metrics_changed: bool,
+    delta_render_scale_changed: bool,
+    delta_cursor_changed: bool,
+    overlay_changed: bool,
+    blink_requires_partial: bool,
+) TerminalPresentPlanDecision {
+    const viewport_shifted = partial_capture_viewport_shift_rows != 0;
+    const explicit_invalidation_blocks_reuse = invalidation_blocks_reuse_explicit or
+        delta_clear_generation_changed or
+        delta_cell_metrics_changed or
+        delta_render_scale_changed or
+        delta_cursor_changed or
+        overlay_changed or
+        blink_requires_partial;
+
+    const reuse_allowed = terminal_presentable_pipeline_ready and terminal_view_cells_len > 0;
+    const reuse_requested = reuse_allowed and
+        !viewport_shifted and
+        (terminal_view_sync_updates_active or
+            (!explicit_invalidation_blocks_reuse and generation_matches_last_render));
+
+    const PresentableContract = @import("../ui/renderer/presentable_contract.zig");
+    const update_intent = if (terminal_view_rows == 0 or terminal_view_cols == 0 or reuse_requested)
+        PresentableContract.TerminalPresentUpdateIntent.none
+    else if (viewport_shifted or explicit_invalidation_blocks_reuse)
+        PresentableContract.TerminalPresentUpdateIntent.full
+    else
+        PresentableContract.TerminalPresentUpdateIntent.partial;
+
+    const present_intent = if (reuse_requested)
+        PresentableContract.TerminalPresentIntent.reuse
+    else
+        PresentableContract.TerminalPresentIntent.update_and_present;
+
+    return .{
+        .update_intent = update_intent,
+        .present_intent = present_intent,
+        .reuse_allowed = reuse_allowed,
+        .invalidation_blocks_reuse = explicit_invalidation_blocks_reuse,
+        .viewport_shifted = viewport_shifted,
+    };
+}
+
 /// **Outcome from refresh + presentation:** timing and attachment state after refresh cycle handling.
 /// Produced by `runRefreshedPresentablePresentation` (widget layer orchestration).
 /// Canonically owns outcome aggregation responsibility.
