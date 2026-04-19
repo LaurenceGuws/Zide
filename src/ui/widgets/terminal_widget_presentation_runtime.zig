@@ -1564,8 +1564,9 @@ pub fn refreshPresentState(
 /// Operator `renderer.terminal_present` JSON when present cannot proceed because the drawable
 /// shared-surface attachment is unavailable. Vocabulary: **generation** on the view model;
 /// view/update flags; renderer presentable **refresh cycle** enum; **pipeline** vs **host-target**
-/// legs per `surface_attachment_contract`; explicit **full attachment** readiness
-/// (`readSharedSurfaceAttachmentReady`); viewport geometry (`CZH-B24`).
+/// legs per `surface_attachment_contract`; explicit **full attachment** readiness (same predicate as
+/// `readSharedSurfaceAttachmentReady`, reported here from `PresentationPresentState.shared_surface_attachment_ready`
+/// after the compute path); viewport geometry (`CZH-B24`).
 pub fn logUnavailable(
     surface_state: anytype,
     terminal_view: view_state.TerminalViewModel,
@@ -1581,7 +1582,7 @@ pub fn logUnavailable(
         .{ .key = "renderer_presentable_refresh_tag", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
         .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.terminalPresentablePipelineReady() } },
         .{ .key = "host_surface_target_available", .value = .{ .boolean = present_state.host_surface_target_available } },
-        .{ .key = "shared_surface_attachment_ready", .value = .{ .boolean = surface_state.readSharedSurfaceAttachmentReady() } },
+        .{ .key = "shared_surface_attachment_ready", .value = .{ .boolean = present_state.shared_surface_attachment_ready } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },
     });
