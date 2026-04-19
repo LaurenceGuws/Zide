@@ -20,10 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B11` — **`in_progress`** (sprint `CZH-S6`): remove the residual
-  `destroy_debug_pause_ms_for_tests` debug hook from product FFI code and keep
-  equivalent test coverage through test-owned seams. Execute `CZH-631`..`CZH-635`
-  in order; stop only at `CZH-GATE-65` or a real hard blocker.
+- `CZH-B11` — **`architect_review_pending`** at **`CZH-GATE-65`** (sprint `CZH-S6`):
+  product destroy hook removed; test harness uses `shared` + `destroying` spin.
+  Packet: `docs/todo/core/CZH_S6_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -39,7 +38,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S6` tickets `CZH-631`..`CZH-635` are the active execution set.
+- Sprint `CZH-S6` tickets `CZH-631`..`CZH-635` are complete at **`CZH-GATE-65`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

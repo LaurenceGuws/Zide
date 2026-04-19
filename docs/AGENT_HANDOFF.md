@@ -6,13 +6,14 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B11` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-65`): `CZH-B11` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S3_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S4_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S5_CHECKPOINT.md`
+- Pending Architect review: `docs/todo/core/CZH_S6_CHECKPOINT.md` (`CZH-GATE-65`)
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S6_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -38,11 +39,11 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B11`, engineer work in progress):
+Current batch intent (`CZH-B11`, engineer work at `CZH-GATE-65`):
 
-- remove `destroy_debug_pause_ms_for_tests` from product FFI code
-- preserve production destroy semantics while keeping equivalent test coverage
-- close this final residual debug-hook seam under `CZH-GATE-65`
+- product `core_api.destroy` carries no test sleep or `destroy_debug_pause_ms_for_tests`
+- smoke tests observe `Handle.destroying` only in test code (`CZH-S6`)
+- **Architect** accepts or requests changes via **`CZH-GATE-65`**
 
 ## First Read Order
 

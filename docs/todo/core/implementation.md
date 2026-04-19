@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B11` (`in_progress`).
+- Current active macro batch: `CZH-B11` (`architect_review_pending` at `CZH-GATE-65`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S6_TICKETS.md`
 
@@ -1125,7 +1125,7 @@ Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
   `CZH-608` table state, and the touched source files describe the same
   ownership and contract shape.
 
-### `CZH-B11` Remove Residual FFI Debug Test Hook (`in_progress`)
+### `CZH-B11` Remove Residual FFI Debug Test Hook (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1183,6 +1183,11 @@ where `destroying` stays true during deinit.
   `Handle`; no new product seam.
 - **`CZH-634`:** Update `CZH-606` removal queue row, `CZH-608` destroy row, and any
   `implementation.md` / handoff lines that still name the removed hook.
+
+**Landed (`CZH-632`..`CZH-634`):** `destroy_debug_pause_ms_for_tests` and test sleep
+removed from `core_api.destroy`; `tests/terminal_ffi_smoke_tests.zig` syncs via
+`shared.fromOpaque` + spin on `Handle.destroying`; queue (`CZH-606` / `CZH-608`)
+updated.
 
 #### `CZH-626` FFI/export doc drift audit (`CZH-S5`)
 
@@ -1245,6 +1250,21 @@ they match this audit; drop completed “add `//!` to editor FFI” items.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
+
+#### `CZH-S6` engineer validation (`CZH-635`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-631`..`CZH-635` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S6_CHECKPOINT.md`.
 
 ## Response Contract
 
