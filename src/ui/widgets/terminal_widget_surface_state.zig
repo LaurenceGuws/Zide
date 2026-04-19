@@ -16,8 +16,14 @@ pub const TerminalWidgetSurfaceState = struct {
     pub const PresentationUpdateDelta = struct {
         cell_metrics_changed: bool,
         render_scale_changed: bool,
+        /// Same predicate as `surface_contract.publicationGenerationDiffersFromLastSurfaceRender`
+        /// for `(publication_generation, last_surface_render_generation)`.
         generation_changed: bool,
+        /// Same predicate as `surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear`
+        /// for `(clear_generation, last_surface_render_clear_generation)`.
         clear_generation_changed: bool,
+        /// Terminal presentable **pipeline** ready (`presentableReady()`); not full
+        /// `surface_attachment_contract.hostSharedSurfaceAttachmentReady`.
         presentable_ready: bool,
         cursor_changed: bool,
         invalidation_flags: InvalidationFlags,

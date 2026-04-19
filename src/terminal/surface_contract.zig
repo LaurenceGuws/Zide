@@ -17,6 +17,10 @@
 //! - **Bundle fill:** `fillRedrawState` implements `RedrawState`; `ffiRedrawStateFill`
 //!   delegates here (`CZH-S13`, `CZH-S14`).
 //! - **Host attachment (pipeline ∧ target):** `surface_attachment_contract` (`CZH-S15`).
+//!
+//! **`CZH-S16`:** `presentationUpdateDelta.presentable_ready` in the widget is the
+//! attachment **pipeline leg** only; composite publication/clear fields remain
+//! generation-owned via `publicationClearPair*` above.
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 

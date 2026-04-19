@@ -3,6 +3,13 @@
 //! (`TERMINAL_SURFACE_CONTRACT.md`, `TERMINAL_SUBSYSTEM_LAYERS.md`).
 //! Generation/clear pairing remains in `surface_contract.zig`; this module names
 //! attachment-only predicates (`CZH-S15`).
+//!
+//! **Naming (`CZH-S16`):** `TerminalWidgetSurfaceState.presentationUpdateDelta` exposes
+//! `presentable_ready` as the **terminal presentable pipeline** leg
+//! (`terminal_presentable_ready` / `presentableReady()`), not the full
+//! `hostSharedSurfaceAttachmentReady` conjunction. Present-plan reuse eligibility still
+//! uses that pipeline leg alone by design; full attachment readiness uses
+//! `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
 
 const std = @import("std");
 
