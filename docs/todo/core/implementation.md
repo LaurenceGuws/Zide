@@ -11,10 +11,11 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B40` (in_progress, super-gate `CZH-GATE-94`). Sprint `CZH-S35` complete — all tickets `CZH-893`..`CZH-900` landed; awaiting architect acceptance at `CZH-GATE-94`.
+- Current active macro batch: `CZH-B41` (in_progress, super-gate `CZH-GATE-95`). Sprint `CZH-S36` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Completed sprint: `CZH-S34` (accepted, with CZH-B39-corrective extraction). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md` and `docs/todo/core/CZH_B39_CORRECTIVE_CHECKPOINT.md`.
-- Active sprint: `CZH-S35` (review_gate). Checkpoints: `docs/todo/core/CZH_S35_PARTIAL_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH893_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH894_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH895_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH896_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
+- Accepted sprint: `CZH-S35` (`CZH-B40`, `CZH-GATE-94`). Checkpoint: `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
+- Active sprint: `CZH-S36`. Ticket source: `docs/todo/core/CZH_S36_TICKETS.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
@@ -3527,7 +3528,7 @@ Owner docs:
 - Validation spot-check stayed green: Zig ladder pass, bounded Linux GUI startup smoke pass, Android debug/release compile guard pass.
 - Process correction: checkpoint text claimed Android gradle environment failure, but architect rerun passed; keep validation claims strict and current.
 
-### `CZH-B40` Callback-Based Orchestration Extraction (`in_progress`)
+### `CZH-B40` Callback-Based Orchestration Extraction (`accepted`)
 
 Queue line (exact):
 
@@ -3546,6 +3547,34 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S35_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+`Verdict: accepted`
+
+- Architect review confirmed refresh/reuse/direct orchestration decisions are terminal-owned and widget runtime delegates as integration facade.
+- Corrective extraction commit `5185d084` activated the terminal refresh orchestrator call path.
+- Validation stayed green on Linux and connected Android.
+
+### `CZH-B41` Execution-Hook Purity and Facade Tightening (`in_progress`)
+
+Queue line (exact):
+
+- tighten callback orchestration execution hooks so terminal-owned seams are explicit, minimal, and test-locked while widget remains integration-only
+
+Acceptance:
+
+- terminal-owned orchestration hooks remain pure about decisions and folding responsibilities
+- widget runtime owns integration wiring only (renderer/shell/timing side effects)
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-95`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S36_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
