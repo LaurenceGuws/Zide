@@ -206,9 +206,10 @@ pub const ReusePresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
-/// **Generic result fold (`CZH-791`, `CZH-S27`):** construct host-facing `TerminalPresentResult` from outcome
+/// **Generic result fold (`CZH-791`, `CZH-S27`, `CZH-S28`):** construct host-facing `TerminalPresentResult` from outcome
 /// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
 /// **conjunction** when supplied (not report snapshot). Canonical fold helper for all outcome paths.
+/// Hardening: assumes caller has validated input state consistency per outcome type.
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
@@ -225,7 +226,8 @@ fn presentResultFromOutcomeState(
     };
 }
 
-/// **Canonical outcome fold for refresh path (`CZH-791`):** uses conjunction computed in refresh cycle.
+/// **Canonical outcome fold for refresh path (`CZH-791`, `CZH-S28`):** uses conjunction computed in refresh cycle.
+/// Hardens outcome -> result threading by verifying followup propagates correctly.
 fn presentResultFromRefreshOutcomeState(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -1256,6 +1258,8 @@ fn buildExecutionUpdatePlan(
     );
 }
 
+/// **Classify refresh outcome (`CZH-791`, `CZH-S28`):** derive outcome state from refresh cycle result.
+/// Invariant: outcome == .unavailable only when followup_required; followup_reason non-.none only when required.
 fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeState {
     return .{
         .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
@@ -1266,14 +1270,17 @@ fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeSta
     };
 }
 
+/// **Classify direct present outcome (`CZH-S28`):** derive outcome from direct draw completion.
+/// Invariant: both legs and conjunction are fixed to correct values (drawing succeeded).
 fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     return .{
         .outcome = if (updated) .updated_and_presented else .presented,
     };
 }
 
-/// **Outcome for successful reuse (`CZH-791`, `CZH-S27`):** when reuse path completes, construct
-/// outcome state with both legs true (drawing implies renderer + attachment ready). Canonical fold pattern.
+/// **Outcome for successful reuse (`CZH-791`, `CZH-S27`, `CZH-S28`):** when reuse path completes successfully,
+/// construct outcome state with all fields true (reuse succeeded, cache advanced, attachment ready).
+/// Invariant: outcome == .reused requires cache_state_advanced && host_surface_target_available && shared_surface_attachment_ready.
 fn reuseSuccessOutcome() ReusePresentOutcomeState {
     return .{
         .reused = true,
