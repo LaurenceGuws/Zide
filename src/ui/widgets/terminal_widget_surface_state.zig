@@ -125,7 +125,7 @@ pub const TerminalWidgetSurfaceState = struct {
         cursor: CursorPos,
         cursor_style: terminal_types.CursorStyle,
     ) PresentationUpdateDelta {
-        const gen_clear_mismatch = surface_contract.publicationClearPairMismatchesFromLastSurfaceRender(
+        const publication_clear_pair_mismatches = surface_contract.publicationClearPairMismatchesFromLastSurfaceRender(
             terminal_view.generation,
             terminal_view.clear_generation,
             self.presentation.last_render_generation,
@@ -135,8 +135,8 @@ pub const TerminalWidgetSurfaceState = struct {
             .cell_metrics_changed = surface_geometry.cell_w_i != self.presentation.last_cell_w_i or
                 surface_geometry.cell_h_i != self.presentation.last_cell_h_i,
             .render_scale_changed = surface_geometry.render_scale != self.presentation.last_render_scale,
-            .generation_changed = gen_clear_mismatch.publication_mismatch,
-            .clear_generation_changed = gen_clear_mismatch.clear_mismatch,
+            .generation_changed = publication_clear_pair_mismatches.publication_mismatch,
+            .clear_generation_changed = publication_clear_pair_mismatches.clear_mismatch,
             .terminal_presentable_pipeline_ready = self.presentableReady(),
             .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
             .invalidation_flags = self.presentation.invalidation_flags,
