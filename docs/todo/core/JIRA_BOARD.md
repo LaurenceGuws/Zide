@@ -22,29 +22,29 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S12`
-- Objective: long-loop seam pack: two bounded surface-contract consumer
-  consolidations + scoped hygiene sweep, behavior-neutral
+- Sprint ID: `CZH-S13`
+- Objective: long-loop seam pack: consolidate VT FFI redraw/present-ack seam
+  consumption under `surface_contract` + scoped hygiene sweep, behavior-neutral
 - Commit budget before checkpoint: `10`
-- Super-gate: `CZH-GATE-71`
+- Super-gate: `CZH-GATE-72`
 
-## Ticket Order (`CZH-S12`)
+## Ticket Order (`CZH-S13`)
 
-1. `CZH-661`
-2. `CZH-662`
-3. `CZH-663`
-4. `CZH-664`
-5. `CZH-665`
-6. `CZH-666`
-7. `CZH-667`
-8. `CZH-668`
-9. `CZH-669`
-10. `CZH-670`
+1. `CZH-671`
+2. `CZH-672`
+3. `CZH-673`
+4. `CZH-674`
+5. `CZH-675`
+6. `CZH-676`
+7. `CZH-677`
+8. `CZH-678`
+9. `CZH-679`
+10. `CZH-680`
 
 ## Current State
 
-- `in_progress`: none
-- `todo`: none
+- `in_progress`: `CZH-671`
+- `todo`: `CZH-672`, `CZH-673`, `CZH-674`, `CZH-675`, `CZH-676`, `CZH-677`, `CZH-678`, `CZH-679`, `CZH-680`
 - `blocked`: none
-- `review_gate`: `CZH-670` (super-gate `CZH-GATE-71`; sprint `CZH-S12` pending Architect acceptance)
-- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-B10` (accepted), `CZH-B11` (accepted), `CZH-B12` (accepted), `CZH-B13` (accepted), `CZH-B14` (accepted), `CZH-B15` (accepted), `CZH-B16` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`, `CZH-626`, `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`, `CZH-631`, `CZH-632`, `CZH-633`, `CZH-634`, `CZH-635`, `CZH-636`, `CZH-637`, `CZH-638`, `CZH-639`, `CZH-640`, `CZH-641`, `CZH-642`, `CZH-643`, `CZH-644`, `CZH-645`, `CZH-646`, `CZH-647`, `CZH-648`, `CZH-649`, `CZH-650`, `CZH-651`, `CZH-652`, `CZH-653`, `CZH-654`, `CZH-655`, `CZH-656`, `CZH-657`, `CZH-658`, `CZH-659`, `CZH-660` (sprint `CZH-S12` tickets `CZH-661`..`CZH-669` remain pending Architect acceptance with `CZH-GATE-71`)
+- `review_gate`: none
+- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-B10` (accepted), `CZH-B11` (accepted), `CZH-B12` (accepted), `CZH-B13` (accepted), `CZH-B14` (accepted), `CZH-B15` (accepted), `CZH-B16` (accepted), `CZH-B17` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`, `CZH-626`, `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`, `CZH-631`, `CZH-632`, `CZH-633`, `CZH-634`, `CZH-635`, `CZH-636`, `CZH-637`, `CZH-638`, `CZH-639`, `CZH-640`, `CZH-641`, `CZH-642`, `CZH-643`, `CZH-644`, `CZH-645`, `CZH-646`, `CZH-647`, `CZH-648`, `CZH-649`, `CZH-650`, `CZH-651`, `CZH-652`, `CZH-653`, `CZH-654`, `CZH-655`, `CZH-656`, `CZH-657`, `CZH-658`, `CZH-659`, `CZH-660`, `CZH-661`, `CZH-662`, `CZH-663`, `CZH-664`, `CZH-665`, `CZH-666`, `CZH-667`, `CZH-668`, `CZH-669`, `CZH-670`
