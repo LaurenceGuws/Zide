@@ -3607,6 +3607,19 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B42` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded startup smoke)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
+  - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
 ## Response Contract
 
 Every batch update must include:
