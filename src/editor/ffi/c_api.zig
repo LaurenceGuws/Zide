@@ -1,3 +1,4 @@
+//! Editor FFI C ABI: flat `zide_editor_*` entrypoints forwarding to `bridge.zig`.
 const bridge = @import("bridge.zig");
 
 pub const ZideEditorHandle = bridge.ZideEditorHandle;

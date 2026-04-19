@@ -1,3 +1,4 @@
+//! Exported `zide_terminal_*` C symbols; delegates to `terminal/ffi/c_api.zig`.
 const c_api = @import("terminal/ffi/c_api.zig");
 
 pub export fn zide_terminal_create(config: ?*const c_api.ZideTerminalCreateConfig, out_handle: *?*c_api.ZideTerminalHandle) c_int {

@@ -1,3 +1,5 @@
+//! Terminal FFI Zig facade: re-exports ABI types and forwards calls to
+//! `core_api.zig` (VT core) and `host_api.zig` (optional BYO-PTY host seam).
 const shared = @import("shared.zig");
 const host_api = @import("host_api.zig");
 const core_api = @import("core_api.zig");

@@ -1,3 +1,5 @@
+//! Editor backend FFI: owns allocator, grammar manager, and `Editor` for the
+//! C ABI in `c_api.zig` (foreign hosts); native code may call `editor.zig` directly.
 const std = @import("std");
 const editor_mod = @import("../editor.zig");
 const grammar_manager_mod = @import("../grammar_manager.zig");

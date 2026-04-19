@@ -1,3 +1,5 @@
+//! C ABI layer: typedef aliases and thin wrappers over `bridge.zig` for stable
+//! exported symbol names.
 const bridge = @import("bridge.zig");
 
 pub const ZideTerminalHandle = bridge.ZideTerminalHandle;
