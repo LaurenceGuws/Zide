@@ -4,6 +4,9 @@
 //! the frozen contract center and centralizes how that bundle is filled — one
 //! truth source for `needs_redraw` derivation.
 //!
+//! VT core FFI (`core_api`): `ffiRedrawStateFill`, `ffiNeedsRedrawU8`,
+//! `ffiPresentAckGenerationAdmissible` name the host-export seam (`CZH-S13`).
+//!
 //! Widget surface state: `TerminalWidgetSurfaceState.presentationUpdateDelta` and
 //! present-plan paths use publication/clear vs last-surface predicates (`CZH-S11` /
 //! `CZH-S12`). Composite pair helpers: `publicationClearPairMismatchesFromLastSurfaceRender`,
@@ -29,6 +32,7 @@ pub fn needsRedrawFromPair(published_generation: u64, acknowledged_generation: u
 /// Whether `generation` is admissible for host `present_ack`: must not exceed
 /// current publication generation or regress before `last_acknowledged_generation`
 /// (`TERMINAL_SURFACE_CONTRACT.md` — presentation completion vs Zide truth).
+/// VT FFI uses `ffiPresentAckGenerationAdmissible` as the named export gate.
 pub fn presentAckGenerationAdmissible(
     generation: u64,
     published_generation: u64,
@@ -113,6 +117,7 @@ pub fn publicationClearPairMatchesLastSurfaceRender(
 }
 
 /// Fills the VT FFI `RedrawState` from publication truth + last acknowledged generation.
+/// `ffiRedrawStateFill` delegates here; both describe the same bundle (`CZH-S13`).
 pub fn fillRedrawState(
     published_generation: u64,
     last_acknowledged_generation: u64,

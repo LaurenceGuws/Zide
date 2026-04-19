@@ -383,7 +383,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
     return .ok;
 }
 
-/// Records host presentation completion for `generation` (terminal surface contract).
+/// Records host presentation completion for `generation` (`surface_contract.ffiPresentAckGenerationAdmissible`).
 pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
@@ -409,7 +409,7 @@ pub fn publishedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: 
     return .ok;
 }
 
-/// Returns published vs acknowledged generations and whether a redraw is pending (VT core).
+/// Returns published vs acknowledged generations and whether a redraw is pending (`ffiRedrawStateFill`).
 pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.RedrawState) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
@@ -425,7 +425,7 @@ pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *sh
     return .ok;
 }
 
-/// Non-zero if published generation differs from last acknowledged (VT core).
+/// Non-zero if published generation differs from last acknowledged (`ffiNeedsRedrawU8`).
 pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaqueActive(handle) orelse return 0;
     const published_generation = currentPublishedGeneration(h);
