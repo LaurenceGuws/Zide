@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S2_TICKETS.md`
+3. `docs/todo/core/CZH_S3_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,8 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B7` — **architect_review_pending** at **`CZH-GATE-61`** (sprint `CZH-S2`;
-  checkpoint `docs/todo/core/CZH_S2_CHECKPOINT.md`).
+- `CZH-B8` — **in_progress** via sprint `CZH-S3` at **`CZH-GATE-62`**:
+  make the optional BYO-PTY seam explicit in code packaging without changing
+  behavior or exported C symbols.
 
 ## Hard Rules
 
@@ -37,8 +38,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Execute `CZH-611`..`CZH-615` sequentially from
-  `docs/todo/core/CZH_S2_TICKETS.md`.
+- Execute `CZH-616`..`CZH-620` sequentially from
+  `docs/todo/core/CZH_S3_TICKETS.md`.
 - Keep one ticket per commit.
 
 ## Validation Ladder

@@ -11,10 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B7` (`architect_review_pending` at
-  `CZH-GATE-61`).
+- Current active macro batch: `CZH-B8` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S2_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S3_TICKETS.md`
 
 ## Campaign Goals
 
@@ -815,7 +814,7 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
   seam, and the terminal surface contract is centered on the shared GPU
   resource/update boundary rather than generic host window ownership.
 
-### `CZH-B7` First Post-Freeze Implementation Sprint (`architect_review_pending` — `CZH-GATE-61`)
+### `CZH-B7` First Post-Freeze Implementation Sprint (`accepted`)
 
 Queue line (exact):
 
@@ -859,6 +858,49 @@ Execution source:
   `docs/todo/core/CZH_S2_TICKETS.md`
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-61` or a real hard blocker
+
+#### Architect gate result
+
+- `Review chunk: CZH-B7`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `8f351cf4`, `2b76d32d`, `08cbd94c`, `dccf53eb`,
+  `4faf3ead`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` first post-freeze cleanup landed cleanly: the product
+  destroy test hook is now test-only, FFI/export doc strings exist on the
+  bounded target set, and snapshot-diff naming no longer reads like compatibility
+  residue.
+
+### `CZH-B8` Make BYO-PTY Packaging Explicit (`in_progress`)
+
+Queue line (exact):
+
+- make the accepted split real in code packaging: separate optional BYO-PTY
+  session/transport API ownership from VT core FFI packaging without changing
+  behavior or exported C symbols
+
+Acceptance:
+
+- the optional BYO-PTY seam is explicit in code/module packaging, not just docs
+- VT core FFI and BYO-PTY session transport no longer read as one undifferentiated
+  implementation blob
+- exported C surface remains behaviorally stable
+- full stress ladder remains green through `CZH-GATE-62`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S3_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-616`..`CZH-620` in order from
+  `docs/todo/core/CZH_S3_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-62` or a real hard blocker
 
 ## Response Contract
 
