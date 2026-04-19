@@ -483,16 +483,20 @@ pub fn presentDraw(
 
 /// **Reuse eligibility decision:** terminal-owned check for whether to attempt reuse path.
 /// Takes pre-computed attachment state (from widget-layer `computeHostSurfaceAttachmentState`).
-pub fn checkReuseEligibility(
-    plan: anytype,
+pub const ReuseEligibilityInput = struct {
     view_cells_len: usize,
     shared_surface_attachment_ready: bool,
     sync_updates_active: bool,
     supports_reuse_without_sync: bool,
+};
+
+pub fn checkReuseEligibility(
+    plan: anytype,
+    input: ReuseEligibilityInput,
 ) bool {
     if (plan.present_intent != .reuse) return false;
-    return view_cells_len > 0 and shared_surface_attachment_ready and
-        (sync_updates_active or supports_reuse_without_sync);
+    return input.view_cells_len > 0 and input.shared_surface_attachment_ready and
+        (input.sync_updates_active or input.supports_reuse_without_sync);
 }
 
 /// **Direct present eligibility decision:** terminal-owned check for direct draw path.

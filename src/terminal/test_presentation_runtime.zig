@@ -174,8 +174,18 @@ test "Reuse eligibility decision is pure and deterministic" {
     };
     const plan = FakePlan{};
 
-    const eligible_1 = presentation_runtime.checkReuseEligibility(plan, 10, true, true, false);
-    const eligible_2 = presentation_runtime.checkReuseEligibility(plan, 10, true, true, false);
+    const eligible_1 = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
+    const eligible_2 = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
     try std.testing.expect(eligible_1 == eligible_2);
 }
 
@@ -185,8 +195,18 @@ test "Reuse eligibility requires view cells" {
     };
     const plan = FakePlan{};
 
-    const with_cells = presentation_runtime.checkReuseEligibility(plan, 10, true, true, false);
-    const no_cells = presentation_runtime.checkReuseEligibility(plan, 0, true, true, false);
+    const with_cells = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
+    const no_cells = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 0,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
 
     try std.testing.expect(with_cells == true);
     try std.testing.expect(no_cells == false);
@@ -198,8 +218,18 @@ test "Reuse eligibility requires attachment ready" {
     };
     const plan = FakePlan{};
 
-    const attachment_ready = presentation_runtime.checkReuseEligibility(plan, 10, true, true, false);
-    const attachment_not_ready = presentation_runtime.checkReuseEligibility(plan, 10, false, true, false);
+    const attachment_ready = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
+    const attachment_not_ready = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = false,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
 
     try std.testing.expect(attachment_ready == true);
     try std.testing.expect(attachment_not_ready == false);
@@ -211,9 +241,24 @@ test "Reuse eligibility accepts sync_updates_active OR supports_reuse_without_sy
     };
     const plan = FakePlan{};
 
-    const with_sync = presentation_runtime.checkReuseEligibility(plan, 10, true, true, false);
-    const without_sync_support = presentation_runtime.checkReuseEligibility(plan, 10, true, false, false);
-    const without_sync_with_support = presentation_runtime.checkReuseEligibility(plan, 10, true, false, true);
+    const with_sync = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
+    const without_sync_support = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = false,
+        .supports_reuse_without_sync = false,
+    });
+    const without_sync_with_support = presentation_runtime.checkReuseEligibility(plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = false,
+        .supports_reuse_without_sync = true,
+    });
 
     try std.testing.expect(with_sync == true);
     try std.testing.expect(without_sync_support == false);
@@ -227,8 +272,18 @@ test "Reuse eligibility rejects non-reuse intent" {
     const refresh_plan = FakePlan{ .present_intent = .refresh };
     const direct_plan = FakePlan{ .present_intent = .direct };
 
-    const refresh_result = presentation_runtime.checkReuseEligibility(refresh_plan, 10, true, true, false);
-    const direct_result = presentation_runtime.checkReuseEligibility(direct_plan, 10, true, true, false);
+    const refresh_result = presentation_runtime.checkReuseEligibility(refresh_plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
+    const direct_result = presentation_runtime.checkReuseEligibility(direct_plan, .{
+        .view_cells_len = 10,
+        .shared_surface_attachment_ready = true,
+        .sync_updates_active = true,
+        .supports_reuse_without_sync = false,
+    });
 
     try std.testing.expect(refresh_result == false);
     try std.testing.expect(direct_result == false);

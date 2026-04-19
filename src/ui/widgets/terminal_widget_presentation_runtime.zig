@@ -1481,10 +1481,12 @@ pub fn tryFastPresentExisting(
     const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
     const eligible = terminal_presentation_runtime.checkReuseEligibility(
         plan,
-        view_cells_len,
-        attachment_state.shared_surface_attachment_ready,
-        terminal_view.sync_updates_active,
-        renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer),
+        .{
+            .view_cells_len = view_cells_len,
+            .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
+            .sync_updates_active = terminal_view.sync_updates_active,
+            .supports_reuse_without_sync = renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer),
+        },
     );
     if (!eligible) return .{
         .host_surface_target_available = attachment_state.host_surface_target_available,

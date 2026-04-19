@@ -189,7 +189,13 @@ test "Callback contract: reuse eligibility check integrates with outcome generat
 
     // Widget calls terminal eligibility check
     const eligible = terminal_widget_presentation_runtime.checkReuseEligibility(
-        plan, 10, true, true, false
+        plan,
+        .{
+            .view_cells_len = 10,
+            .shared_surface_attachment_ready = true,
+            .sync_updates_active = true,
+            .supports_reuse_without_sync = false,
+        },
     );
 
     // If eligible, widget would execute and generate success outcome
@@ -253,7 +259,13 @@ test "Callback contract: eligibility decision is terminal-owned, execution is wi
     // Terminal-owned: eligibility decision
     const plan = FakePlan{};
     const eligible = terminal_widget_presentation_runtime.checkReuseEligibility(
-        plan, 10, true, true, false
+        plan,
+        .{
+            .view_cells_len = 10,
+            .shared_surface_attachment_ready = true,
+            .sync_updates_active = true,
+            .supports_reuse_without_sync = false,
+        },
     );
 
     // Widget-owned: outcome generation depends on execution
