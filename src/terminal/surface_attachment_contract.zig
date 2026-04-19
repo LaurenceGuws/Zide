@@ -61,3 +61,9 @@ test "CZH-S16: pipeline leg alone does not imply full attachment readiness" {
     try std.testing.expect(!hostSharedSurfaceAttachmentReady(true, false));
     try std.testing.expect(hostSharedSurfaceAttachmentReady(true, true));
 }
+
+test "CZH-S18: full attachment readiness is strict AND of vocabulary legs" {
+    try std.testing.expect(hostSharedSurfaceAttachmentReady(true, true) == (true and true));
+    try std.testing.expect(hostSharedSurfaceAttachmentReady(false, true) == (false and true));
+    try std.testing.expect(hostSharedSurfaceAttachmentReady(true, false) == (true and false));
+}
