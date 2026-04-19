@@ -1270,6 +1270,18 @@ fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     };
 }
 
+/// **Outcome for successful reuse (`CZH-791`, `CZH-S27`):** when reuse path completes, construct
+/// outcome state with both legs true (drawing implies renderer + attachment ready). Canonical fold pattern.
+fn reuseSuccessOutcome() ReusePresentOutcomeState {
+    return .{
+        .reused = true,
+        .outcome = .reused,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = true,
+    };
+}
+
 pub fn runPresentation(
     self: anytype,
     shell: *app_shell.Shell,
@@ -1774,13 +1786,7 @@ pub fn tryFastPresentExisting(
         composing_active,
         composing_hash,
     );
-    return .{
-        .reused = true,
-        .outcome = .reused,
-        .cache_state_advanced = true,
-        .host_surface_target_available = true,
-        .shared_surface_attachment_ready = true,
-    };
+    return reuseSuccessOutcome();
 }
 
 pub fn directPresent(
