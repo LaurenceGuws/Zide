@@ -2,8 +2,9 @@
 //! surface. Publication/clear generations use `surface_contract`; host **attachment**
 //! readiness (presentable pipeline ∧ host drawable target) is named in
 //! `surface_attachment_contract` and wired through `TerminalWidgetSurfaceState`
-//! (`CZH-S15`). `buildTerminalPresentPlan` reuse gating uses `presentableReady()`
-//! (pipeline leg only), not the full attachment conjunction — intentional.
+//! (`CZH-S15`). `buildTerminalPresentPlan` reuse gating uses
+//! `terminalPresentablePipelineReady()` (pipeline leg only), not the full attachment
+//! conjunction — intentional.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
@@ -1079,7 +1080,7 @@ fn buildTerminalPresentPlan(
     );
     const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
-    const terminal_presentable_pipeline_ready = self.surface.presentableReady();
+    const terminal_presentable_pipeline_ready = self.surface.terminalPresentablePipelineReady();
     const publication_clear_pair_matches_last_surface_render = surface_contract.publicationClearPairMatchesLastSurfaceRender(
         terminal_view.generation,
         terminal_view.clear_generation,
@@ -1546,7 +1547,7 @@ pub fn logUnavailable(
         .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
         .{ .key = "presentable_refresh", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
-        .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.presentableReady() } },
+        .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.terminalPresentablePipelineReady() } },
         .{ .key = "target_available", .value = .{ .boolean = present_state.target_available } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },
@@ -1982,7 +1983,7 @@ pub fn planUpdate(
         surface_state.lastRenderClearGeneration(),
     );
 
-    const terminal_presentable_pipeline_ready = surface_state.presentableReady();
+    const terminal_presentable_pipeline_ready = surface_state.terminalPresentablePipelineReady();
 
     var update_plan = draw_presentation.choosePresentationUpdatePlan(
         cache.dirty,

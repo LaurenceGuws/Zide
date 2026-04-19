@@ -27,7 +27,7 @@ pub const TerminalWidgetSurfaceState = struct {
         /// Same predicate as `surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear`
         /// for `(clear_generation, last_surface_render_clear_generation)`.
         clear_generation_changed: bool,
-        /// Terminal presentable **pipeline** ready (same bool as `presentableReady()`); not
+        /// Terminal presentable **pipeline** ready (same bool as `terminalPresentablePipelineReady()`); not
         /// full `surface_attachment_contract.hostSharedSurfaceAttachmentReady`.
         terminal_presentable_pipeline_ready: bool,
         cursor_changed: bool,
@@ -107,7 +107,7 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.last_render_clear_generation;
     }
 
-    pub fn presentableReady(self: *const TerminalWidgetSurfaceState) bool {
+    pub fn terminalPresentablePipelineReady(self: *const TerminalWidgetSurfaceState) bool {
         return self.presentation.terminal_presentable_ready;
     }
 
@@ -139,7 +139,7 @@ pub const TerminalWidgetSurfaceState = struct {
             .render_scale_changed = surface_geometry.render_scale != self.presentation.last_render_scale,
             .generation_changed = publication_clear_pair_mismatches.publication_mismatch,
             .clear_generation_changed = publication_clear_pair_mismatches.clear_mismatch,
-            .terminal_presentable_pipeline_ready = self.presentableReady(),
+            .terminal_presentable_pipeline_ready = self.terminalPresentablePipelineReady(),
             .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
             .invalidation_flags = self.presentation.invalidation_flags,
         };
@@ -292,13 +292,13 @@ test "CZH-S17: readSharedSurfaceAttachmentReady matches FromPair on presentation
     );
 }
 
-test "CZH-S16: pipeline leg ready without host target splits presentableReady vs attachment" {
+test "CZH-S16: pipeline leg ready without host target splits pipeline getter vs attachment" {
     var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
     defer state.deinit(std.testing.allocator);
 
     state.presentation.terminal_presentable_ready = true;
     state.presentation.target_available = false;
-    try std.testing.expect(state.presentableReady());
+    try std.testing.expect(state.terminalPresentablePipelineReady());
     try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
 }
 

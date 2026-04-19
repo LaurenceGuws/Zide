@@ -1,7 +1,8 @@
 //! Terminal widget draw path: **generation** truth for publication vs last surface draw
 //! lives in `surface_contract` (via presentation delta / cache). **Pipeline** vs **host
 //! target** legs and their **full attachment** conjunction are `surface_attachment_contract`
-//! (`TerminalWidgetSurfaceState`: pipeline getter, `notePresentableAvailability`).
+//! (`TerminalWidgetSurfaceState`: `terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`,
+//! `notePresentableAvailability`).
 //! This module orchestrates draw and delegates presentation to
 //! `terminal_widget_presentation_runtime` (`CZH-S16`, vocabulary lock `CZH-S18`).
 const std = @import("std");

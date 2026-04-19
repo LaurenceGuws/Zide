@@ -71,7 +71,7 @@ inside `surface_contract`, not alternate call-site shapes (`CZH-S12`, `CZH-S14`)
 **Host attachment seam:** `src/terminal/surface_attachment_contract.zig` names
 pipeline-ready ∧ host-target-available for the shared drawable attachment.
 `TerminalWidgetSurfaceState.notePresentableAvailability` routes through that seam;
-present-plan reuse eligibility still uses `presentableReady()` (pipeline leg only)
+present-plan reuse eligibility still uses `terminalPresentablePipelineReady()` (pipeline leg only)
 by design (`CZH-S15`). `presentationUpdateDelta.terminal_presentable_pipeline_ready` is the same
 pipeline leg (`CZH-S16`); full readiness uses `readSharedSurfaceAttachmentReady` /
 `hostSharedSurfaceAttachmentReady`.

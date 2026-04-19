@@ -24,9 +24,9 @@
 //!    defined here. 3) **Full attachment** — pipeline ∧ host target; **not** defined here
 //!    (`surface_attachment_contract`).
 //!
-//! **`CZH-S16` / `CZH-S17`:** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
-//! mirrors the pipeline leg only; composite publication/clear fields remain
-//! generation-owned via `publicationClearPair*` above.
+//! **`CZH-S16` / `CZH-S17` / `CZH-S18`:** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
+//! mirrors the pipeline leg (`terminalPresentablePipelineReady()`); composite
+//! publication/clear fields remain generation-owned via `publicationClearPair*` above.
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 

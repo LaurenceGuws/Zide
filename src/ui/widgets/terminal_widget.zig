@@ -176,7 +176,7 @@ pub const TerminalWidget = struct {
                     generation_state.pending,
                     generation_state.published,
                     generation_state.presented,
-                    @intFromBool(self.surface.presentableReady()),
+                    @intFromBool(self.surface.terminalPresentablePipelineReady()),
                     @tagName(capture.presented.dirty),
                 },
             );
@@ -191,7 +191,7 @@ pub const TerminalWidget = struct {
                         generation_state.pending,
                         generation_state.published,
                         generation_state.presented,
-                        @intFromBool(self.surface.presentableReady()),
+                        @intFromBool(self.surface.terminalPresentablePipelineReady()),
                         @tagName(capture.presented.dirty),
                     },
                 );
