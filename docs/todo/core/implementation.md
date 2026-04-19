@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B27` (`architect_review_pending`, super-gate `CZH-GATE-81`).
+- Current active macro batch: `CZH-B28` (`in_progress`, super-gate `CZH-GATE-82`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S22_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S23_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2642,7 +2642,7 @@ Checkpoint packet: `docs/todo/core/CZH_S21_CHECKPOINT.md`.
 - `Acceptance judgment:` host-target leg vs full-attachment ownership is now
   explicit in selected present/runtime/state carriers with no ABI drift.
 
-### `CZH-B27` Long-Loop Present Readiness Conjunction Propagation (`architect_review_pending`)
+### `CZH-B27` Long-Loop Present Readiness Conjunction Propagation (`accepted`)
 
 Queue line (exact):
 
@@ -2725,6 +2725,59 @@ Execution source:
 - **Android guard** — **SKIP** (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S22_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B27`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `efed9fc0`, `4b04c2fe`, `47a2d078`, `a2d97344`,
+  `7d44de3c`, `58280597`, `cad9c799`, `34d78b73`, `cd88e422`, `074defdf`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` conjunction compute/store/report propagation is explicit
+  in touched paths with no behavior or ABI drift.
+
+### `CZH-B28` Long-Loop Present Reporting Carrier Consolidation (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to consolidate which
+  carrier is authoritative for present-time conjunction reporting in selected
+  runtime/widget paths, with test/doc lock and no ABI changes
+
+Acceptance:
+
+- selected touched paths use one dominant present-time reporting carrier for
+  conjunction visibility, with no leg/conjunction ambiguity
+- no host ABI/C export changes
+- selected tests/docs assert reporting-carrier boundaries
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-82`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S23_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-771`..`CZH-780` in order from
+  `docs/todo/core/CZH_S23_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-82` or a real hard blocker
+
+#### `CZH-771` reporting-carrier audit + cut plan (`CZH-S23`)
+
+- map present-time conjunction reporting carriers across:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_state.zig`,
+  `presentable_contract.zig`,
+  `TERMINAL_SURFACE_CONTRACT.md`
+- classify primary reporting carrier vs secondary debug/diagnostic carriers
+- record scoped hygiene targets for `CZH-779`
 
 ## Response Contract
 
