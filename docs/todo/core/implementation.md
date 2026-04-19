@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B22` (`architect_review_pending`, super-gate `CZH-GATE-76`).
+- Current active macro batch: `CZH-B23` (`in_progress`, super-gate `CZH-GATE-77`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S17_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S18_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2186,7 +2186,7 @@ Checkpoint packet: `docs/todo/core/CZH_S16_CHECKPOINT.md`.
   touched widget/presentation call sites; terminology/docs/tests are aligned and
   behavior remained stable.
 
-### `CZH-B22` Long-Loop Surface Naming/State Convergence Pack (`architect_review_pending`)
+### `CZH-B22` Long-Loop Surface Naming/State Convergence Pack (`accepted`)
 
 Queue line (exact):
 
@@ -2265,8 +2265,58 @@ Checkpoint packet: `docs/todo/core/CZH_S17_CHECKPOINT.md`.
 #### Architect gate result
 
 - `Review chunk: CZH-B22`
-- `Verdict: architect_review_pending`
-- `Engineer handoff:` `CZH-GATE-76` (see checkpoint packet)
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `86406205`, `772fb44d`, `048d347b`, `95dea29d`,
+  `f239f164`, `b14b2234`, `fb29571f`, `53c53530`, `a4f10f51`, `eb61a543`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` pipeline-vs-attachment naming/state ownership is now
+  explicit and consistent in touched widget/presentation paths with no behavior
+  or ABI drift.
+
+### `CZH-B23` Long-Loop Surface State Vocabulary Lock Pack (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to lock state-vocabulary
+  consistency for pipeline leg, attachment conjunction, and generation terms
+  across selected widget/runtime/state modules, tests, and authority docs
+
+Acceptance:
+
+- selected touched modules expose one consistent vocabulary for:
+  pipeline-ready, full-attachment-ready, and generation mismatch/match
+- no behavior changes and no host ABI/C export changes
+- integration tests cover representative pipeline-vs-attachment-vs-generation
+  call-site invariants in selected runtime/widget paths
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-77`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S18_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-721`..`CZH-730` in order from
+  `docs/todo/core/CZH_S18_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-77` or a real hard blocker
+
+#### `CZH-721` vocabulary/state drift audit + cut plan (`CZH-S18`)
+
+- map selected drift in:
+  `terminal_widget_presentation_state.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_draw.zig`,
+  `surface_contract.zig`,
+  `surface_attachment_contract.zig`
+- classify each touched symbol/call-site as pipeline, attachment, or generation
+- record scoped hygiene targets for `CZH-729`
 
 ## Response Contract
 
