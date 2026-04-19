@@ -270,7 +270,8 @@ Internal milestones (`CZH3-M1..M6`, execute sequentially in one batch):
 **Shared terminal FFI / publication (canonical for native + tests):**
 
 - `src/terminal/ffi/shared.zig` — extern ABI structs and `Handle` bookkeeping
-- `src/terminal/ffi/bridge.zig`, `core_api.zig`, `byo_pty_host.zig`, `c_api.zig` — host API surface
+- `src/terminal/byo_pty_host.zig` — optional BYO-PTY seam (session/transport)
+- `src/terminal/ffi/bridge.zig`, `core_api.zig`, `c_api.zig` — VT core FFI + bridge surface
 - `src/terminal_ffi_exports.zig` — exported C symbols
 
 **Android platform glue (stays local — JNI / Activity / GLES wiring):**
@@ -705,7 +706,7 @@ Architect note:
 | Layer | Canonical paths | Role |
 | --- | --- | --- |
 | VT core FFI | `src/terminal/ffi/shared.zig` (types/helpers), `core_api.zig`, `renderer_metadata.zig`, `bridge.zig`, `c_api.zig`, `src/terminal_ffi_exports.zig` | Publication / query / redraw / events / metadata + shared ABI; **not** `byo_pty_host` |
-| Optional BYO-PTY host seam | `src/terminal/ffi/byo_pty_host.zig`; `src/terminal/core/session/runtime.zig`, `input.zig`, `lifecycle.zig` | Session/runtime/input/transport; **explicit module name** under `ffi/` |
+| Optional BYO-PTY host seam | `src/terminal/byo_pty_host.zig`; `src/terminal/core/session/runtime.zig`, `input.zig`, `lifecycle.zig` | Session/runtime/input/transport; **terminal-owned** (sibling to `ffi/`, not inside it) |
 | Editor backend FFI | `src/editor/ffi/bridge.zig`, `src/editor/ffi/c_api.zig` | Foreign editor hosts; C ABI |
 | Terminal surface contract | `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`; `src/ui/widgets/terminal_widget*.zig` (presentation + publication coupling); `src/platform/android_shell_session.zig` (peer host example); GL/Metal backends under `src/ui/renderer/*_backend.zig` | Drawable surface + generations; host proves binding; Zide proves redraw truth |
 | Bridge / glue | `bridge.zig`, `c_api.zig`, `terminal_ffi_exports.zig`; `src/editor/ffi/c_api.zig` | Thin forwarders and symbol roots |
@@ -769,7 +770,7 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
 | `terminal/ffi/renderer_metadata.zig` | **Yes** | Describes single fill path for hosts. |
 | `terminal/ffi/shared.zig` | **Yes** | `//!` (`CZH-612`). |
 | `terminal/ffi/core_api.zig` | **Yes** | `//!` + key `///` (`CZH-612`/`CZH-613`). |
-| `terminal/ffi/byo_pty_host.zig` | **Yes** | `//!` + `///`; module was `host_api.zig` before `CZH-617`. |
+| `terminal/byo_pty_host.zig` | **Yes** | `//!` + `///`; module was `host_api.zig` before `CZH-617`; moved out of `ffi/` in `CZH-S4`. |
 | `terminal/ffi/bridge.zig` | **Yes** | `//!` (`CZH-612`); ownership text (`CZH-618`). |
 | `terminal/ffi/c_api.zig` | **Yes** | `//!` (`CZH-612`); C edge (`CZH-618`). |
 | `terminal_ffi_exports.zig` | **Yes** | `//!` (`CZH-612`). |
@@ -983,12 +984,12 @@ Execution source:
 
 #### `CZH-616` BYO-PTY packaging audit (touchpoint map)
 
-**Zig import graph (post-`CZH-617`)**
+**Zig import graph (post-`CZH-617`, path post-`CZH-S4`)**
 
-- **`bridge.zig`** — `@import("byo_pty_host.zig")` for the BYO-PTY seam; session
+- **`bridge.zig`** — `@import("../byo_pty_host.zig")` for the BYO-PTY seam; session
   / transport forwards use identifier `byo_pty_host`.
 - **`core_api.zig`**, **`shared.zig`** — doc cross-references to
-  `byo_pty_host.zig` only (no imports).
+  `../byo_pty_host.zig` / BYO seam only (no imports).
 
 **Exported C surface**
 
@@ -1003,9 +1004,14 @@ Execution source:
 
 **Packaging cut (`CZH-617` — landed)**
 
-- `src/terminal/ffi/byo_pty_host.zig` (renamed from `host_api.zig`).
-- **`bridge.zig`** imports `byo_pty_host.zig`; call sites use `byo_pty_host`.
+- `byo_pty_host.zig` (renamed from `host_api.zig`; originally under `ffi/`).
+- **`bridge.zig`** imports the BYO module; call sites use `byo_pty_host`.
 - Authority docs refreshed in **`CZH-619`**.
+
+**Directory ownership (`CZH-S4` — landed)**
+
+- `src/terminal/ffi/byo_pty_host.zig` → `src/terminal/byo_pty_host.zig` (no shim in
+  `ffi/`); **`bridge.zig`** uses `@import("../byo_pty_host.zig")`.
 
 #### `CZH-S3` engineer validation (`CZH-620`)
 

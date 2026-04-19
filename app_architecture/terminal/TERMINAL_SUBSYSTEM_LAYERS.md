@@ -66,7 +66,7 @@ flowchart LR
 
     subgraph HostRuntime
         Shell["TerminalRuntimeShell / host wrapper"]
-        Bridge["FFI: core_api (VT truth) + byo_pty_host (session/transport)"]
+        Bridge["FFI bridge: core_api (VT truth) + terminal/byo_pty_host (session/transport)"]
     end
 
     subgraph InputBoundary
@@ -334,8 +334,9 @@ For the current cleanup/restructure phase:
 
 ## Terminal FFI directory ownership (`CZH-B6` current-state map)
 
-This classifies `src/terminal/ffi/**` plus the repo-root export root for the
-freeze sprint. **Target split (normative):**
+This classifies `src/terminal/ffi/**`, the optional BYO-PTY seam at
+`src/terminal/byo_pty_host.zig` (terminal-owned, **not** under `ffi/`), and the
+repo-root export root for the freeze sprint. **Target split (normative):**
 
 - **VT core FFI** — publication / query / redraw / events / metadata truth
   exported to hosts (what the terminal *is* and what changed), plus handle
@@ -345,15 +346,16 @@ freeze sprint. **Target split (normative):**
   (how bytes move and how the session loop runs).
 
 Current-state files are listed honestly; **do not** merge those two concerns in
-authority wording just because some modules live in the same directory today.
+authority wording. VT core exports live under `ffi/`; the BYO seam is imported
+from a sibling module (`CZH-S4`).
 
 | Path | Primary bucket | Notes |
 | --- | --- | --- |
+| `src/terminal/byo_pty_host.zig` | Optional BYO-PTY host seam | `start` / `poll` / `resize`, cell-size updates, encoded input (`sendBytes`, `sendText`, keys, mouse) — **session/runtime/transport** path. **Not** under `ffi/`; **`bridge.zig`** imports it via `@import("../byo_pty_host.zig")`. |
 | `src/terminal/ffi/shared.zig` | VT core FFI (types + shared helpers) | ABI structs, version constants, opaque `ZideTerminalHandle`, status mapping — shared machinery **used by** both VT core exports and BYO-PTY entrypoints; the types are not themselves “the BYO seam.” |
 | `src/terminal/ffi/renderer_metadata.zig` | VT core FFI | `RendererMetadata` fill + glyph classification; the only supported fill path for FFI metadata. |
 | `src/terminal/ffi/core_api.zig` | VT core FFI | Snapshots/diffs, metadata/activity/redraw queries, event/publication-facing queries, present/generation bookkeeping, feed hooks that attach to engine truth — **publication and query surface** for hosts. |
-| `src/terminal/ffi/byo_pty_host.zig` | Optional BYO-PTY host seam | `start` / `poll` / `resize`, cell-size updates, encoded input (`sendBytes`, `sendText`, keys, mouse) — **session/runtime/transport** path. **Filename** matches the seam (replaces the old `host_api.zig` packaging). |
-| `src/terminal/ffi/bridge.zig` | bridge/facade glue | Zig-facing barrel that forwards to `core_api` (VT core) and `byo_pty_host` (BYO-PTY); keeps one import surface for hosts without collapsing the two contracts. |
+| `src/terminal/ffi/bridge.zig` | bridge/facade glue | Zig-facing barrel that forwards to `core_api` (VT core) and `../byo_pty_host.zig` (BYO-PTY); keeps one import surface for hosts without collapsing the two contracts. |
 | `src/terminal/ffi/c_api.zig` | bridge/facade glue | C typedef aliases and thin wrappers for exported symbols; no extra semantics. |
 | `src/terminal_ffi_exports.zig` | bridge/facade glue | Root that re-exports `zide_terminal_*` C symbols; keeps export names out of individual modules. |
 
@@ -366,7 +368,7 @@ authority wording just because some modules live in the same directory today.
 **Smell / misalignment (documented; no behavior change in the freeze sprint):**
 
 - `core_api.zig` concentrates many publication and lifecycle concerns in one module; a later cut may narrow “pure VT core query” vs handle helpers — **without** folding `byo_pty_host` into that label.
-- **`byo_pty_host.zig` and `core_api.zig` under `ffi/`** are distinct modules: BYO-PTY session/transport vs VT core publication/query — the former is no longer named like generic “host API.”
+- **Resolved (`CZH-S4`):** BYO-PTY vs VT core FFI are distinct modules **and** distinct directory ownership (`byo_pty_host.zig` is terminal-owned; `core_api.zig` remains under `ffi/`).
 
 ## FFI renderer metadata and visible viewport (shared core)
 

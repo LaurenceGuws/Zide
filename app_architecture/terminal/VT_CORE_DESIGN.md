@@ -1369,10 +1369,10 @@ they do not need.
 
 - shared terminal FFI ABI types, handle state, event/string helpers, and
   glyph-class metadata helpers live in `src/terminal/ffi/shared.zig`
-- PTY-host/runtime-facing operations live in `src/terminal/ffi/byo_pty_host.zig`
+- PTY-host/runtime-facing operations live in `src/terminal/byo_pty_host.zig`
 - core-facing snapshot/scrollback/metadata/event/text-export operations live in
   `src/terminal/ffi/core_api.zig`
-- `src/terminal/ffi/bridge.zig` is a thin facade over `core_api` + `byo_pty_host`
+- `src/terminal/ffi/bridge.zig` is a thin facade over `core_api` + `../byo_pty_host.zig`
 - `src/terminal/core/terminal_transport.zig` has an in-memory external
   transport implementation alongside the PTY-backed transport facade
 - FFI-created terminal sessions attach that external transport by default
