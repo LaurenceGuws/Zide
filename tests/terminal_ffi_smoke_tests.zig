@@ -1,7 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../src/app_logger.zig");
 const c_api = @import("../src/terminal/ffi/c_api.zig");
-const core_api = @import("../src/terminal/ffi/core_api.zig");
+const shared = @import("../src/terminal/ffi/shared.zig");
 
 test "ffi non-pty snapshot and event ownership smoke" {
     try app_logger.setConsoleFilterString("none");
@@ -884,17 +884,17 @@ test "ffi destroy blocks host-visible transport and event calls once teardown be
 
     var handle: ?*c_api.ZideTerminalHandle = null;
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
+    const raw = shared.fromOpaque(handle).?;
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 80, 24, 8, 16));
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, "seed".ptr, 4));
-
-    core_api.destroy_debug_pause_ms_for_tests.store(150, .release);
-    defer core_api.destroy_debug_pause_ms_for_tests.store(0, .release);
 
     const ctx = DestroyThreadCtx{ .handle = handle };
     const destroy_thread = try std.Thread.spawn(.{}, destroyTerminalHandle, .{&ctx});
     defer destroy_thread.join();
 
-    std.Thread.sleep(20 * std.time.ns_per_ms);
+    while (!raw.destroying.load(.acquire)) {
+        std.atomic.spinLoopHint();
+    }
 
     var redraw_state: c_api.ZideTerminalRedrawState = .{};
     var events: c_api.ZideTerminalEventBuffer = .{};
