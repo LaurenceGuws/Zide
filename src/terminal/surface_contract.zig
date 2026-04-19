@@ -190,3 +190,28 @@ test "CZH-S11: presentationUpdateDelta generation limbs use publication and clea
         );
     }
 }
+
+test "CZH-S12: publicationClearPairMismatchesFromLastSurfaceRender matches decomposed primitives" {
+    const cases = [_]struct { pg: u64, cg: u64, lr: u64, lrc: u64 }{
+        .{ .pg = 1, .cg = 2, .lr = 1, .lrc = 2 },
+        .{ .pg = 0, .cg = 0, .lr = 1, .lrc = 0 },
+        .{ .pg = 1 << 40, .cg = 0, .lr = 0, .lrc = 1 << 39 },
+    };
+    for (cases) |c| {
+        const m = publicationClearPairMismatchesFromLastSurfaceRender(c.pg, c.cg, c.lr, c.lrc);
+        try std.testing.expectEqual(
+            publicationGenerationDiffersFromLastSurfaceRender(c.pg, c.lr),
+            m.publication_mismatch,
+        );
+        try std.testing.expectEqual(
+            clearGenerationDiffersFromLastSurfaceRenderClear(c.cg, c.lrc),
+            m.clear_mismatch,
+        );
+    }
+}
+
+test "publicationClearPairMatchesLastSurfaceRender is conjunction of primitive non-mismatch" {
+    try std.testing.expect(publicationClearPairMatchesLastSurfaceRender(5, 5, 5, 5));
+    try std.testing.expect(!publicationClearPairMatchesLastSurfaceRender(5, 5, 5, 6));
+    try std.testing.expect(!publicationClearPairMatchesLastSurfaceRender(5, 6, 5, 5));
+}
