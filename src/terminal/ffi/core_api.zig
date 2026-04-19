@@ -2,7 +2,6 @@
 //! redraw/generation, metadata, events, clipboard/selection strings, and handle
 //! lifecycle. Session/transport entrypoints live in `../byo_pty_host.zig` (BYO-PTY
 //! seam; terminal-owned, not under `ffi/`).
-const builtin = @import("builtin");
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const publication_state = @import("../core/publication/publication_state.zig");
@@ -24,8 +23,6 @@ const MetadataOwner = shared.MetadataOwner;
 const ActivityOwner = shared.ActivityOwner;
 const ScrollbackOwner = shared.ScrollbackOwner;
 const EventOwner = shared.EventOwner;
-
-pub var destroy_debug_pause_ms_for_tests = std.atomic.Value(u32).init(0);
 
 fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals {
     const activity = host_queries.currentActivityMetadata(handle.shell);
@@ -440,17 +437,9 @@ pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
 }
 
 /// Tears down the handle, shell, and pending FFI-owned buffers.
-/// Test builds only: may honor `destroy_debug_pause_ms_for_tests` before teardown
-/// (`CZH-606`); never sleeps on non-test builds.
 pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     const h = shared.fromOpaque(handle) orelse return;
     h.destroying.store(true, .release);
-    if (builtin.is_test) {
-        const pause_ms = destroy_debug_pause_ms_for_tests.load(.acquire);
-        if (pause_ms > 0) {
-            std.Thread.sleep(@as(u64, pause_ms) * std.time.ns_per_ms);
-        }
-    }
     var i: usize = 0;
     while (i < h.pending_events.items.len) : (i += 1) {
         h.allocator.free(h.pending_events.items[i].data);
