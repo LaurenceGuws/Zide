@@ -258,6 +258,16 @@ fn presentResultFromReuseOutcomeState(
     );
 }
 
+/// **Validate reuse outcome consistency (`CZH-S28`):** hardening check that reuse outcome
+/// state has correct field values. Used to catch invalid state early in development/testing.
+fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
+    if (state.reused) {
+        std.debug.assert(state.cache_state_advanced == true);
+        std.debug.assert(state.host_surface_target_available == true);
+        std.debug.assert(state.shared_surface_attachment_ready == true);
+    }
+}
+
 /// **Consolidated attachment state computation (`CZH-791`, `CZH-S27`):** derives host-target leg from
 /// renderer, calls canonical helper `notePresentableAvailability`, returns both for outcome state threading.
 fn computeHostSurfaceAttachmentState(
@@ -1282,13 +1292,15 @@ fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
 /// construct outcome state with all fields true (reuse succeeded, cache advanced, attachment ready).
 /// Invariant: outcome == .reused requires cache_state_advanced && host_surface_target_available && shared_surface_attachment_ready.
 fn reuseSuccessOutcome() ReusePresentOutcomeState {
-    return .{
+    const outcome: ReusePresentOutcomeState = .{
         .reused = true,
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
     };
+    assertReuseOutcomeConsistency(outcome);
+    return outcome;
 }
 
 pub fn runPresentation(
