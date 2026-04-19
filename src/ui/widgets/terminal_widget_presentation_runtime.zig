@@ -2344,6 +2344,17 @@ test "CZH-798: ReusePresentOutcomeState conjunction field role matches TerminalP
     try std.testing.expect(result.host_surface_target_available == outcome.host_surface_target_available);
 }
 
+test "CZH-S27: helper consolidation — reuseSuccessOutcome constructs correct outcome state" {
+    // Verify the CZH-814 consolidation helper produces the expected outcome state for successful reuse.
+    // This locks the pattern: successful reuse always has both legs and conjunction true.
+    const outcome = reuseSuccessOutcome();
+    try std.testing.expect(outcome.reused == true);
+    try std.testing.expectEqual(outcome.outcome, TerminalPresentOutcome.reused);
+    try std.testing.expect(outcome.cache_state_advanced == true);
+    try std.testing.expect(outcome.host_surface_target_available == true);
+    try std.testing.expect(outcome.shared_surface_attachment_ready == true);
+}
+
 test "CZH-S26: integration lock — PresentationPresentState conjunction equals outcome conjunction" {
     const present_state = PresentationPresentState{
         .shared_surface_attachment_ready = true,
