@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B24` — **`in_progress`** toward **`CZH-GATE-78`** (sprint `CZH-S19`):
+- `CZH-B24` — **`architect_review_pending`** at **`CZH-GATE-78`** (sprint `CZH-S19`):
   surface observability vocabulary lock aligned to pipeline vs attachment vs generation terms
-  (`docs/todo/core/CZH_S19_TICKETS.md`).
+  (`docs/todo/core/CZH_S19_TICKETS.md`, checkpoint `docs/todo/core/CZH_S19_CHECKPOINT.md`).
 
 ## Hard Rules
 

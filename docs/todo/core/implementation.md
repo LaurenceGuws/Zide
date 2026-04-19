@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B24` (`in_progress`, super-gate `CZH-GATE-78`).
+- Current active macro batch: `CZH-B24` (`architect_review_pending`, super-gate `CZH-GATE-78`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S19_TICKETS.md`
 
@@ -2356,7 +2356,7 @@ Checkpoint packet: `docs/todo/core/CZH_S18_CHECKPOINT.md`.
   full attachment, and generation terms is coherent across touched paths with
   no behavior or ABI drift.
 
-### `CZH-B24` Long-Loop Surface Observability Vocabulary Lock (`in_progress`)
+### `CZH-B24` Long-Loop Surface Observability Vocabulary Lock (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -2422,6 +2422,26 @@ Execution source:
   `terminal.ui.redraw` and other existing operator logs outside this sprint scope unchanged.
 - **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — operator observability vocabulary subsection (`CZH-739`);
   audit table above refreshed to landed keys (`CZH-731`).
+
+#### `CZH-S19` engineer validation (`CZH-740`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-731`..`CZH-740` (one commit each).  
+- **SL-0** `zig build` — **PASS**  
+- **SL-1** `zig build test` — **PASS**  
+- **SL-2** `zig build -Dmode=terminal` — **PASS**  
+- **SL-3** `zig build -Dmode=editor` — **PASS**  
+- **`zig build test-config`** — **PASS**  
+- **`zig build test-editor`** — **PASS**  
+- **`zig build test-terminal-replay-all`** — **PASS**  
+- **Android guard** — **SKIP** (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S19_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B24`
+- `Verdict: pending` — submitted for Architect review (`CZH-GATE-78`).
 
 ## Response Contract
 
