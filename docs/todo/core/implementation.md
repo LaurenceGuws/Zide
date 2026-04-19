@@ -714,6 +714,24 @@ Architect note:
   (they are contract, not cruft) — any rename/collapse waits on an
   implementation sprint tied to `CZH-607` review notes.
 
+#### `CZH-606` hard-rule audit: probe / debug residue (layer set)
+
+Scope: `src/terminal/ffi/**`, `src/editor/ffi/**`, plus `src/terminal_ffi_exports.zig`
+(the `CZH-605` FFI + export inventory).
+
+| File | Symbol / site | Classification | Removal queue? |
+| --- | --- | --- | --- |
+| `terminal/ffi/shared.zig` | `mapError`, `stringFromSlice`, `byteBufferFromSlice`, … `log.logf(.warning, …)` | Operator telemetry on allocation/backend failures | **No** — legitimate error-path logging |
+| `terminal/ffi/core_api.zig` | `app_logger` `.warning` in `snapshotAcquire`, `snapshotDiffAcquire`, etc. | Same — export failure diagnostics | **No** |
+| `terminal/ffi/core_api.zig` | `destroy_debug_pause_ms_for_tests` + sleep in `destroy` | Test timing injection on **product** destroy path | **Yes** — queue for implementation sprint: gate behind test-only build, test-only module, or harness-only API; remove unconditional sleep from product path per `AGENTS.md` debug policy |
+| `editor/ffi/bridge.zig` | `app_logger` `.warning` on alloc/create failures | Error-path telemetry | **No** |
+| `terminal_ffi_exports.zig` | (none) | N/A | **No** |
+
+**Explicit removal queue (later sprint, bounded)**
+
+1. `core_api.zig` — replace or strictly isolate `destroy_debug_pause_ms_for_tests`
+   so production `destroy` never sleeps for test hooks unless compiled for tests.
+
 ## Response Contract
 
 Every batch update must include:
