@@ -293,6 +293,15 @@ fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
     }
 }
 
+/// **Validate direct present outcome consistency (`CZH-S29`):** hardening check that direct present outcome
+/// state has invariant field values. Direct draws always advance cache and have renderer available;
+/// conjunction is false (not pre-verified). Used to catch invalid state early in development/testing.
+fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void {
+    std.debug.assert(state.cache_state_advanced == true);
+    std.debug.assert(state.host_surface_target_available == true);
+    std.debug.assert(state.shared_surface_attachment_ready == false);
+}
+
 /// **Consolidated attachment state computation (`CZH-791`, `CZH-S27`):** derives host-target leg from
 /// renderer, calls canonical helper `notePresentableAvailability`, returns both for outcome state threading.
 fn computeHostSurfaceAttachmentState(
@@ -1310,9 +1319,11 @@ fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeSta
 /// Invariant: both legs and conjunction are fixed to correct values (drawing succeeded).
 /// **Hardening (`CZH-S29`):** validates invariant fields to catch invalid state early.
 fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
-    return .{
+    const outcome_state: DirectPresentOutcomeState = .{
         .outcome = if (updated) .updated_and_presented else .presented,
     };
+    assertDirectPresentOutcomeConsistency(outcome_state);
+    return outcome_state;
 }
 
 /// **Outcome for successful reuse (`CZH-791`, `CZH-S27`, `CZH-S28`):** when reuse path completes successfully,
