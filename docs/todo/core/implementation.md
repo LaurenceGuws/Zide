@@ -2050,6 +2050,15 @@ Execution source:
 - classify what belongs to shared contract helpers vs call-site local wiring
 - record scoped probe/doc hygiene targets for `CZH-699`
 
+**Engineer (CZH-691):** Cut plan: introduce `src/terminal/surface_attachment_contract.zig`
+for host **pipeline-ready ∧ host-target-available** pairing; route
+`notePresentableAvailability` return through primitives/composites; present-plan
+`reuse_allowed` stays **pipeline-only** (`presentableReady`) — no semantic drift.
+Cross-link from `surface_contract.zig` / widget docs. Hygiene `CZH-699`:
+`surface_attachment_contract.zig`, `terminal_widget_surface_state.zig`,
+`terminal_widget_presentation_runtime.zig`, `terminal_widget_draw.zig`,
+`TERMINAL_SURFACE_CONTRACT.md`.
+
 ## Response Contract
 
 Every batch update must include:
