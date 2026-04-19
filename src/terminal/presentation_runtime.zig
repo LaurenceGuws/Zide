@@ -506,17 +506,19 @@ pub fn checkDirectPresentEligibility(
 }
 
 /// **Refresh orchestration flow:** terminal-owned sequence for refresh path.
-/// Orchestrates: run refresh cycle → classify outcome → run presentation → fold result.
-/// Widget provides `runCycle` and `runPresentation` hooks for integration-only operations.
+/// Orchestrates: check dimensions → run cycle → classify outcome → run presentation → fold result.
+///
+/// `Hooks` interface (comptime, widget-provided):
+///   `runCycle(ctx) -> TerminalPresentableRefreshExecutionResult`
+///   `runPresentation(ctx, cycle: TerminalPresentableRefreshExecutionResult) -> RefreshedPresentablePresentationResult`
+///
+/// Terminal owns orchestration and classification; widget owns execution via `Hooks`.
 pub fn executeRefreshPresentFlow(
     rows: usize,
     cols: usize,
     ctx: anytype,
     comptime Hooks: type,
 ) TerminalPresentResult {
-    // Hooks must implement:
-    //   runCycle(ctx: anytype) -> TerminalPresentableRefreshExecutionResult
-    //   runPresentation(ctx: anytype, cycle: anytype) -> RefreshedPresentablePresentationResult
     if (rows == 0 or cols == 0) return .{};
     const cycle = Hooks.runCycle(ctx);
     const outcome_state = classifyRefreshOutcome(cycle.refresh);
