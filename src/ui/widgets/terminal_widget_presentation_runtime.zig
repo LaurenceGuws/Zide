@@ -911,46 +911,92 @@ pub fn executeRefreshPresentFlow(
     note_present_ctx: anytype,
     note_present: anytype,
 ) TerminalPresentResult {
-    if (terminal_view.rows == 0 or terminal_view.cols == 0) return .{};
-    const cycle = runPresentableRefreshCycle(
-        self,
-        shell,
-        renderer,
-        terminal_view,
-        view_geometry,
-        hover_link_id,
-        start_line,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        blink_style,
-        blink_time,
-        has_kitty,
-        surface_update_plan,
+    const RefreshCtx = struct {
+        self_widget: @TypeOf(self),
+        shell: *app_shell.Shell,
+        renderer: @TypeOf(renderer),
+        terminal_view: view_state.TerminalViewModel,
+        view_geometry: TerminalViewGeometry,
+        view_cells_len: usize,
+        hover_link_id: u32,
+        composing_active: bool,
+        composing_hash: u64,
+        start_line: usize,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
+        blink_style: @TypeOf(blink_style),
+        blink_time: f64,
+        has_kitty: bool,
+        surface_update_plan: PresentationUpdatePlan,
+        note_present_ctx: @TypeOf(note_present_ctx),
+        // note_present captured from outer scope (function with anytype params cannot be stored in struct)
+    };
+    const RefreshHooks = struct {
+        pub fn runCycle(ctx: RefreshCtx) TerminalPresentableRefreshExecutionResult {
+            return runPresentableRefreshCycle(
+                ctx.self_widget,
+                ctx.shell,
+                ctx.renderer,
+                ctx.terminal_view,
+                ctx.view_geometry,
+                ctx.hover_link_id,
+                ctx.start_line,
+                ctx.draw_cursor,
+                ctx.cursor,
+                ctx.cursor_style,
+                ctx.blink_style,
+                ctx.blink_time,
+                ctx.has_kitty,
+                ctx.surface_update_plan,
+            );
+        }
+        pub fn runPresentation(ctx: RefreshCtx, cycle: TerminalPresentableRefreshExecutionResult) RefreshedPresentablePresentationResult {
+            return runRefreshedPresentablePresentation(
+                ctx.self_widget,
+                ctx.renderer,
+                ctx.terminal_view,
+                ctx.view_geometry,
+                ctx.view_cells_len,
+                ctx.draw_cursor,
+                ctx.cursor,
+                ctx.cursor_style,
+                ctx.hover_link_id,
+                ctx.composing_active,
+                ctx.composing_hash,
+                ctx.surface_update_plan,
+                cycle,
+                ctx.note_present_ctx,
+                note_present, // captured from outer scope
+            );
+        }
+    };
+    const ctx = RefreshCtx{
+        .self_widget = self,
+        .shell = shell,
+        .renderer = renderer,
+        .terminal_view = terminal_view,
+        .view_geometry = view_geometry,
+        .view_cells_len = view_cells_len,
+        .hover_link_id = hover_link_id,
+        .composing_active = composing_active,
+        .composing_hash = composing_hash,
+        .start_line = start_line,
+        .draw_cursor = draw_cursor,
+        .cursor = cursor,
+        .cursor_style = cursor_style,
+        .blink_style = blink_style,
+        .blink_time = blink_time,
+        .has_kitty = has_kitty,
+        .surface_update_plan = surface_update_plan,
+        .note_present_ctx = note_present_ctx,
+    };
+    return terminal_presentation_runtime.executeRefreshPresentFlow(
+        terminal_view.rows,
+        terminal_view.cols,
+        ctx,
+        RefreshHooks,
     );
-    const outcome_state = terminal_presentation_runtime.classifyRefreshOutcome(cycle.refresh);
-    const refreshed = runRefreshedPresentablePresentation(
-        self,
-        renderer,
-        terminal_view,
-        view_geometry,
-        view_cells_len,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        hover_link_id,
-        composing_active,
-        composing_hash,
-        surface_update_plan,
-        cycle,
-        note_present_ctx,
-        note_present,
-    );
-    return terminal_presentation_runtime.presentResultFromRefreshOutcomeState(outcome_state, .{
-        .background_ms = refreshed.bg_ms,
-        .glyph_ms = refreshed.glyph_ms,
-        .kitty_ms = refreshed.kitty_ms,
-    }, refreshed.shared_surface_attachment_ready);
 }
 
 /// Present/reuse plan; generation alignment for reuse uses

@@ -11,10 +11,10 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B40` (in_progress, super-gate `CZH-GATE-94`). Sprint `CZH-S35` in progress (orchestration extraction cuts `CZH-893`..`CZH-896` landed; remaining scope `CZH-897`..`CZH-900`).
+- Current active macro batch: `CZH-B40` (in_progress, super-gate `CZH-GATE-94`). Sprint `CZH-S35` complete — all tickets `CZH-893`..`CZH-900` landed; awaiting architect acceptance at `CZH-GATE-94`.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Completed sprint: `CZH-S34` (accepted, with CZH-B39-corrective extraction). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md` and `docs/todo/core/CZH_B39_CORRECTIVE_CHECKPOINT.md`.
-- Active sprint: `CZH-S35` (execution active). Checkpoints: `docs/todo/core/CZH_S35_PARTIAL_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH893_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH894_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH895_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH896_CHECKPOINT.md`.
+- Active sprint: `CZH-S35` (review_gate). Checkpoints: `docs/todo/core/CZH_S35_PARTIAL_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH893_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH894_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH895_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH896_CHECKPOINT.md`, `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
