@@ -1102,3 +1102,9 @@ test "CZH-S14: core_api needsRedraw export — ffiNeedsRedrawU8 matches needsRed
         @as(u8, @intFromBool(surface_contract.needsRedrawFromPair(2, 3))),
     );
 }
+
+test "CZH-S14: core_api present_ack gate — ffiPresentAckGenerationAdmissible window" {
+    try std.testing.expect(surface_contract.ffiPresentAckGenerationAdmissible(10, 10, 10));
+    try std.testing.expect(!surface_contract.ffiPresentAckGenerationAdmissible(11, 10, 10));
+    try std.testing.expect(!surface_contract.ffiPresentAckGenerationAdmissible(9, 10, 10));
+}

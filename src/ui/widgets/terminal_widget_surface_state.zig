@@ -246,4 +246,10 @@ test "CZH-S14: composite pair mismatch matches per-leg inequality (widget seam s
     try std.testing.expect(mm.clear_mismatch);
     try std.testing.expectEqual(mm.publication_mismatch, 10 != 10);
     try std.testing.expectEqual(mm.clear_mismatch, 20 != 30);
+
+    const mm2 = surface_contract.publicationClearPairMismatchesFromLastSurfaceRender(1, 2, 0, 2);
+    try std.testing.expect(mm2.publication_mismatch);
+    try std.testing.expect(!mm2.clear_mismatch);
+    try std.testing.expectEqual(mm2.publication_mismatch, 1 != 0);
+    try std.testing.expectEqual(mm2.clear_mismatch, 2 != 2);
 }
