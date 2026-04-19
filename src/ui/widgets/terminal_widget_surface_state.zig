@@ -7,6 +7,9 @@
 //! **Observability (`CZH-B24`):** operator logs should use the same identifiers as the getters
 //! (`terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`, `readSharedSurfaceAttachmentReady`)
 //! when surfacing pipeline vs target vs full attachment — no paraphrased synonyms on those legs.
+//! **Present-result ownership (`CZH-B26`):** `readSharedSurfaceAttachmentReady` is the only
+//! single-bool “full attachment” predicate here; `hostSurfaceTargetAvailable` remains host-target
+//! leg only.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");

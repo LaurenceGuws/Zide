@@ -133,6 +133,11 @@ pub const TerminalPresentFollowup = struct {
     reason: TerminalPresentFollowupReason = .none,
 };
 
+/// Aggregated present result (`CZH-B26` ownership): **`host_surface_target_available`**
+/// records only whether the **host drawable-target** leg was available for this execution
+/// (renderer-reported presentable target). It is **not** the full shared-surface attachment
+/// predicate; that conjunction lives in `surface_attachment_contract.hostSharedSurfaceAttachmentReady`
+/// and may be surfaced as a separate field when a caller tracks both legs (`CZH-752`).
 pub const TerminalPresentResult = struct {
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,

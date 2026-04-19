@@ -12,6 +12,10 @@
 //! viewport geometry — aligned with `surface_contract` / `surface_attachment_contract` vocabulary
 //! (full attachment is the conjunction of the pipeline and host-target legs, also surfaced as
 //! `shared_surface_attachment_ready` when logged).
+//!
+//! **Present-result ownership (`CZH-B26`):** `ReusePresentOutcomeState` / `TerminalPresentResult`
+//! distinguish the host-target **leg** from the **full attachment** conjunction (`pipeline ∧ host
+//! target`) so bookkeeping cannot overload one bool for both (`CZH-753`..`CZH-754`).
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");

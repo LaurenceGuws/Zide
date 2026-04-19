@@ -22,6 +22,11 @@
 //! **Alias vocabulary (`CZH-B25`):** the same two legs are stored on widget presentation state
 //! under the dominant names `terminal_presentable_pipeline_ready` and `host_surface_target_available`
 //! (parallel to `SharedSurfaceAttachmentPipelinePair`).
+//!
+//! **Present-result ownership (`CZH-B26`):** values that only observe the host-target leg (e.g.
+//! renderer `terminalPresentableInfo`) must not be labeled as full attachment without also
+//! threading the terminal presentable **pipeline** leg; `hostSharedSurfaceAttachmentReady` is
+//! the single conjunction for “attachment-ready” semantics.
 
 const std = @import("std");
 

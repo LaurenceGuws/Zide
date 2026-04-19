@@ -7,7 +7,8 @@
 //! - **Pipeline leg:** `terminal_presentable_pipeline_ready` (not full attachment alone).
 //! - **Host target leg:** `host_surface_target_available` (drawable target exists for the attachment).
 //! - **Full attachment:** `hostSharedSurfaceAttachmentReady(pipeline, target)` in
-//!   `surface_attachment_contract` — not stored as a single bool here.
+//!   `surface_attachment_contract` — not stored as a single bool here; do not treat the host-target
+//!   leg alone as “attachment-ready” (`CZH-B26`).
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
