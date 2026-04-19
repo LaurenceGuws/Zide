@@ -20,36 +20,24 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S1`
-- Objective: freeze the core host/core/editor/surface split before more cleanup
-- Commit budget before checkpoint: `10`
-- Super-gate: `CZH-GATE-60` — **resubmitted** after `CZH-B6-corrective` authority
-  alignment (doc-only; see `docs/todo/core/CZH_B6_CHECKPOINT.md`)
-
-## Next Sprint (queued, do not start until `CZH-GATE-60` accepted)
-
 - Sprint ID: `CZH-S2`
-- Ticket file: `docs/todo/core/CZH_S2_TICKETS.md`
-- Super-gate (future): `CZH-GATE-61`
+- Objective: execute the first bounded implementation sprint from the accepted
+  split authority
+- Commit budget before checkpoint: `5`
+- Super-gate: `CZH-GATE-61`
 
-## Ticket Order (`CZH-S1`)
+## Ticket Order (`CZH-S2`)
 
-1. `CZH-601`
-2. `CZH-602`
-3. `CZH-603`
-4. `CZH-604`
-5. `CZH-605`
-6. `CZH-606`
-7. `CZH-607`
-8. `CZH-608`
-9. `CZH-609`
-10. `CZH-610`
+1. `CZH-611`
+2. `CZH-612`
+3. `CZH-613`
+4. `CZH-614`
+5. `CZH-615`
 
 ## Current State
 
-- `in_progress`: none
-- `todo`: none
+- `in_progress`: `CZH-611`
+- `todo`: `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`
 - `blocked`: none
-- `review_gate`: `CZH-GATE-60` (batch `CZH-B6` closure — `CZH-B6-corrective` resubmit;
-  see `docs/todo/core/CZH_B6_CHECKPOINT.md`)
-- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`
+- `review_gate`: none
+- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`

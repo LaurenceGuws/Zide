@@ -11,16 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B6` (`architect_review_pending` at
-  `CZH-GATE-60`).
-- `CZH-B6-corrective` (2026-04-19): authority-only pass — separated **VT core
-  FFI** vs **BYO-PTY host seam** wording, updated **terminal surface contract**
-  (shared GPU resource center); **`CZH-GATE-60` resubmitted**; no product code
-  changes.
+- Current active macro batch: `CZH-B7` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_B6_TICKETS.md`
-- Queued next implementation sprint: `docs/todo/core/CZH_S2_TICKETS.md` (`CZH-S2`,
-  not started until Architect accepts `CZH-GATE-60`)
+- Active ticket source: `docs/todo/core/CZH_S2_TICKETS.md`
 
 ## Campaign Goals
 
@@ -606,7 +599,7 @@ Rationale: consistent `lifecycle_*` vocabulary for JSONL `message` values, drop 
   but it does **not** answer the larger ownership problem. Wider hygiene now
   continues only inside the explicit layer split defined by `CZH-B6`.
 
-### `CZH-B6` Layer Freeze: VT Core FFI / Optional PTY Host / Editor FFI / Terminal Surface (`architect_review_pending` — `CZH-GATE-60`)
+### `CZH-B6` Layer Freeze: VT Core FFI / Optional PTY Host / Editor FFI / Terminal Surface (`accepted`)
 
 Queue line (exact):
 
@@ -805,6 +798,51 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
 - **Intent:** close the audited gaps (probe isolation, FFI module docs, export
   docstrings, optional snapshot-diff rename hygiene) without reopening broad
   cleanup.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B6`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `3b772c77`, `15c51c8d`, `a43610d8`, `04153fa3`,
+  `44ebe637`, `a04c9bc4`, `89cb2d5b`, `015aa139`, `15df5921`, `40f9dd2f`
+- `Corrective authority commits reviewed:` `a03ace8f`, `60d26864`, `4c251c00`,
+  `b1cfcc27`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` the frozen authority now matches the intended target:
+  VT core publication/query truth stays distinct from the optional BYO-PTY host
+  seam, and the terminal surface contract is centered on the shared GPU
+  resource/update boundary rather than generic host window ownership.
+
+### `CZH-B7` First Post-Freeze Implementation Sprint (`in_progress`)
+
+Queue line (exact):
+
+- execute the first bounded implementation sprint from the accepted split
+  authority: isolate the product-path destroy test hook, align FFI/export docs,
+  and clean snapshot-diff fallback naming without behavior drift
+
+Acceptance:
+
+- `destroy_debug_pause_ms_for_tests` no longer sleeps on product destroy paths
+- FFI/export files have module doc strings aligned to the four-layer split
+- key exported host entrypoints have concise `///` ownership docs
+- snapshot-diff fallback naming no longer reads like compatibility sludge
+- full stress ladder remains green through `CZH-GATE-61`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S2_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-611`..`CZH-615` in order from
+  `docs/todo/core/CZH_S2_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-61` or a real hard blocker
 
 ## Response Contract
 

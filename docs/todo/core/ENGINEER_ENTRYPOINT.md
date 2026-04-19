@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_B6_TICKETS.md`
+3. `docs/todo/core/CZH_S2_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,12 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B6` — **architect_review_pending** at **`CZH-GATE-60`** (layer freeze:
-  **VT core FFI** = publication/query/redraw/events/metadata; **BYO-PTY host seam**
-  = session/runtime/input/transport — distinct targets even when colocated under
-  `ffi/`; **editor backend FFI**; **terminal surface** = shared GPU resource +
-  Zide dirty/generation truth). Checkpoint (includes **`CZH-B6-corrective`**
-  resubmit): `docs/todo/core/CZH_B6_CHECKPOINT.md`.
+- `CZH-B7` — **in_progress** via sprint `CZH-S2` at **`CZH-GATE-61`**:
+  implement the first post-freeze cuts from the accepted authority in
+  `docs/todo/core/CZH_S2_TICKETS.md`.
 
 ## Hard Rules
 
@@ -41,8 +38,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Execute `CZH-601`..`CZH-610` sequentially from
-  `docs/todo/core/CZH_B6_TICKETS.md`.
+- Execute `CZH-611`..`CZH-615` sequentially from
+  `docs/todo/core/CZH_S2_TICKETS.md`.
 - Keep one ticket per commit.
 
 ## Validation Ladder
