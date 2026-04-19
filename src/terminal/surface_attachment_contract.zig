@@ -27,3 +27,21 @@ pub fn hostSharedSurfaceAttachmentReadyFromPair(pair: SharedSurfaceAttachmentPip
         pair.host_surface_target_available,
     );
 }
+
+test "hostSharedSurfaceAttachmentReady is conjunction of legs" {
+    try std.testing.expect(hostSharedSurfaceAttachmentReady(true, true));
+    try std.testing.expect(!hostSharedSurfaceAttachmentReady(false, true));
+    try std.testing.expect(!hostSharedSurfaceAttachmentReady(true, false));
+    try std.testing.expect(!hostSharedSurfaceAttachmentReady(false, false));
+}
+
+test "FromPair matches hostSharedSurfaceAttachmentReady" {
+    try std.testing.expect(hostSharedSurfaceAttachmentReadyFromPair(.{
+        .terminal_presentable_pipeline_ready = true,
+        .host_surface_target_available = true,
+    }));
+    try std.testing.expect(!hostSharedSurfaceAttachmentReadyFromPair(.{
+        .terminal_presentable_pipeline_ready = true,
+        .host_surface_target_available = false,
+    }));
+}
