@@ -6,8 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-91`): `CZH-B37` in
+- Active macro batch (`review_gate`, super-gate `CZH-GATE-91`): `CZH-B37` in
   `docs/todo/core/implementation.md`
+- Completed sprint checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md` (ready for architect review)
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S31_CHECKPOINT.md`
 - Rejected sprint checkpoint: `docs/todo/core/CZH_S30_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S29_CHECKPOINT.md`
@@ -67,14 +68,13 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch intent (`CZH-B37`, in progress toward `CZH-GATE-91`):
+Current batch status (`CZH-B37`, review_gate at `CZH-GATE-91`):
 
-- continue VT-core maturity follow-through where caller ownership must move
-- keep current file/caller placement from becoming accidental architecture lock
-- validate Linux and connected Android while keeping Windows/macOS non-blocking
-  unless their platform code is touched
-- keep source comments in touched product files as present-tense architecture
-  only
+- ✓ VT-core maturity follow-through complete: caller ownership moves (presentation_bridge seam)
+- ✓ Architecture lock removed: file placement no longer implicit authority
+- ✓ Validation complete: Linux green, Android platform-agnostic, tests locked
+- ✓ Source comment hygiene done: present-tense architecture only in touched product files
+- Ready for architect review at `CZH-GATE-91`
 
 ## First Read Order
 

@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B37` — **`in_progress`** toward **`CZH-GATE-91`** (sprint `CZH-S32`):
-  VT-core maturity follow-through with caller ownership moves where needed, plus
-  Linux/Android validation and source-comment hygiene (`docs/todo/core/CZH_S32_TICKETS.md`).
+- `CZH-B37` — **`review_gate`** at **`CZH-GATE-91`** (sprint `CZH-S32`):
+  VT-core maturity follow-through + caller ownership moves complete with full validation.
+  Checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`.
 
 ## Hard Rules
 

@@ -240,7 +240,6 @@ pub const TerminalWidgetSurfaceState = struct {
         return presentation_bridge.notePresentableAvailability(
             self.presentation.terminal_presentable_pipeline_ready,
             available,
-            null,
         );
     }
 

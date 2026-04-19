@@ -20,21 +20,14 @@
 
 const surface_attachment_contract = @import("surface_attachment_contract.zig");
 
-/// **Canonical compute + store route for conjunction:** computes host-target leg availability
+/// **Canonical compute route for conjunction:** computes host-target leg availability
 /// and returns conjunction. Called on each refresh/reuse evaluation.
 ///
-/// **Invalidation:** If availability becomes false, presentation cache should be invalidated.
 /// **Pairing:** Pairs with `readSharedSurfaceAttachmentReady` for storage/read consistency.
 pub fn notePresentableAvailability(
     pipeline_ready: bool,
     available: bool,
-    invalidate_callback: ?*const fn (bool) void,
 ) bool {
-    if (!available) {
-        if (invalidate_callback) |cb| {
-            cb(true);
-        }
-    }
     return surface_attachment_contract.hostSharedSurfaceAttachmentReady(pipeline_ready, available);
 }
 
@@ -55,18 +48,18 @@ pub fn readSharedSurfaceAttachmentReady(
 
 const std = @import("std");
 
-test "CZH-864: notePresentableAvailability compute route matches readSharedSurfaceAttachmentReady" {
+test "compute route matches read route on matching inputs" {
     // Verify compute and read routes return same value for matching inputs
     const pipeline_ready = true;
     const host_available = true;
 
-    const computed = notePresentableAvailability(pipeline_ready, host_available, null);
+    const computed = notePresentableAvailability(pipeline_ready, host_available);
     const read_result = readSharedSurfaceAttachmentReady(pipeline_ready, host_available);
 
     try std.testing.expectEqual(computed, read_result);
 }
 
-test "CZH-864: conjunction is AND of pipeline and host legs" {
+test "conjunction is AND of pipeline and host legs" {
     const cases = [_]struct { pipe: bool, host: bool, expected: bool }{
         .{ .pipe = false, .host = false, .expected = false },
         .{ .pipe = false, .host = true, .expected = false },
@@ -80,35 +73,26 @@ test "CZH-864: conjunction is AND of pipeline and host legs" {
     }
 }
 
-test "CZH-864: notePresentableAvailability returns false when host unavailable" {
-    const result = notePresentableAvailability(true, false, null);
+test "notePresentableAvailability returns false when host unavailable" {
+    const result = notePresentableAvailability(true, false);
     try std.testing.expect(!result);
 }
 
-test "CZH-864: notePresentableAvailability returns false when pipeline not ready" {
-    const result = notePresentableAvailability(false, true, null);
+test "notePresentableAvailability returns false when pipeline not ready" {
+    const result = notePresentableAvailability(false, true);
     try std.testing.expect(!result);
 }
 
-test "CZH-867: ownership invariant - widget layer does not re-compute conjunction" {
-    // This test documents the ownership contract: widget layer must delegate
-    // to presentation_bridge for conjunction computation, not re-derive it.
-    // If widget tests directly call surface_attachment_contract functions,
-    // that violates the intended ownership split.
-
-    // Widget calls bridge (correct pattern):
+test "ownership invariant: widget layer does not re-compute conjunction" {
+    // Widget layer must delegate to presentation_bridge for conjunction computation.
+    // Widget stores legs; bridge computes conjunction. Tests must verify this boundary.
     const bridge_result = readSharedSurfaceAttachmentReady(true, false);
     try std.testing.expect(!bridge_result); // true AND false = false
-
-    // This is the ONLY canonical read path widget should use.
-    // Any widget test that calls surface_attachment_contract directly
-    // is a violation of CZH-863/864 ownership move.
 }
 
-test "CZH-867: compute and read pairing - matching inputs yield same result" {
-    // CZH-863/864 pairing: compute route must yield same value as read route
-    // for matching inputs. This tests that the two functions are consistent.
-
+test "compute and read pairing: matching inputs yield same result" {
+    // Compute route and read route must return same value for matching inputs.
+    // This invariant locks consistency of the two interfaces.
     const test_cases = [_]struct { pipe: bool, host: bool }{
         .{ .pipe = true, .host = true },
         .{ .pipe = true, .host = false },
@@ -117,13 +101,13 @@ test "CZH-867: compute and read pairing - matching inputs yield same result" {
     };
 
     for (test_cases) |case| {
-        const computed = notePresentableAvailability(case.pipe, case.host, null);
+        const computed = notePresentableAvailability(case.pipe, case.host);
         const read = readSharedSurfaceAttachmentReady(case.pipe, case.host);
         try std.testing.expectEqual(computed, read);
     }
 }
 
-test "CZH-868: integration - widget delegation path maintains invariant across leg changes" {
+test "integration: widget delegation path maintains invariant across leg changes" {
     // Simulate widget state flow: update legs -> compute conjunction -> read conjunction
     // This verifies the delegation contract works end-to-end.
 

@@ -11,15 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B37` (`in_progress`, super-gate `CZH-GATE-91`).
+- Current active macro batch: `CZH-B37` (review_gate, super-gate `CZH-GATE-91`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S32_TICKETS.md`
+- Completed sprint: `CZH-S32` (Maturity follow-through + caller ownership mobility). Checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`.
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
   they must not block core correction work unless a change intentionally touches
   their platform-specific code.
-- Current hard blocker: bounded Linux GUI startup smoke reaches
-  `std.debug.assert` in `TerminalWidgetSurfaceState.assertLegsInitialized`.
+- Hard blockers (CZH-B36 resolved): startup assertion regression fixed; no current blockers.
 
 ## Campaign Goals
 
