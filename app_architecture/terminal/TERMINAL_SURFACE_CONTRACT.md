@@ -72,7 +72,9 @@ inside `surface_contract`, not alternate call-site shapes (`CZH-S12`, `CZH-S14`)
 pipeline-ready ∧ host-target-available for the shared drawable attachment.
 `TerminalWidgetSurfaceState.notePresentableAvailability` routes through that seam;
 present-plan reuse eligibility still uses `presentableReady()` (pipeline leg only)
-by design (`CZH-S15`).
+by design (`CZH-S15`). `presentationUpdateDelta.presentable_ready` is the same
+pipeline leg (`CZH-S16`); full readiness uses `readSharedSurfaceAttachmentReady` /
+`hostSharedSurfaceAttachmentReady`.
 
 ## Android mapping (example, not definition)
 

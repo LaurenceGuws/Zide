@@ -2149,6 +2149,16 @@ Execution source:
 
 **`CZH-709` scoped hygiene targets:** `surface_contract.zig`, `surface_attachment_contract.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_runtime.zig`, `terminal_widget_draw.zig`, `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` — expect **no** investigation-only probe callers; keep operator/error-path logging as-is unless stale.
 
+#### `CZH-709` probe/doc hygiene (`CZH-S16`)
+
+- **Reviewed:** `surface_contract.zig`, `surface_attachment_contract.zig`,
+  `terminal_widget_surface_state.zig`, `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_draw.zig`.
+- **Removed:** nothing (no investigation-only probe callers in these paths).
+- **Kept:** `logUnavailable` operator `app_logger` warning in presentation runtime;
+  draw-path `renderer.font` warnings on glyph prep adopt (`terminal_widget_draw.zig`).
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — `CZH-S16` widget/delta vocabulary (`CZH-709`).
+
 ## Response Contract
 
 Every batch update must include:
