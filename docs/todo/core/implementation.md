@@ -11,10 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B8` (`architect_review_pending` at
-  `CZH-GATE-62`).
+- Current active macro batch: `CZH-B9` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S3_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S4_TICKETS.md`
 
 ## Campaign Goals
 
@@ -872,7 +871,7 @@ Execution source:
   bounded target set, and snapshot-diff naming no longer reads like compatibility
   residue.
 
-### `CZH-B8` Make BYO-PTY Packaging Explicit (`architect_review_pending` — `CZH-GATE-62`)
+### `CZH-B8` Make BYO-PTY Packaging Explicit (`accepted`)
 
 Queue line (exact):
 
@@ -901,6 +900,48 @@ Execution source:
   `docs/todo/core/CZH_S3_TICKETS.md`
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-62` or a real hard blocker
+
+#### Architect gate result
+
+- `Review chunk: CZH-B8`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `b3512236`, `554eb430`, `22626c9b`, `9a741692`,
+  `25caacc6`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` the BYO-PTY seam is now explicit in Zig packaging
+  (`byo_pty_host.zig`) without behavior change or C export churn. The split is
+  cleaner in code, not just in docs.
+
+### `CZH-B9` Extract BYO-PTY Out Of `terminal/ffi` Packaging (`in_progress`)
+
+Queue line (exact):
+
+- move the optional BYO-PTY seam out of `src/terminal/ffi/` so the accepted
+  split is reflected in directory ownership, while keeping bridge behavior and
+  exported C symbols stable
+
+Acceptance:
+
+- optional BYO-PTY code no longer lives under `src/terminal/ffi/`
+- bridge/c_api/export roots still provide the same external behavior
+- docs reflect the new actual placement rather than calling the remaining
+  packaging a smell
+- full stress ladder remains green through `CZH-GATE-63`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S4_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-621`..`CZH-625` in order from
+  `docs/todo/core/CZH_S4_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-63` or a real hard blocker
 
 #### `CZH-616` BYO-PTY packaging audit (touchpoint map)
 
