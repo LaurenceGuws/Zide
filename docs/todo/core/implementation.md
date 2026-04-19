@@ -664,6 +664,16 @@ Architect note:
   architecture freeze. Do not reopen broad cleanup-by-instinct until this split
   is written down and accepted.
 
+#### `CZH-602` terminal FFI ownership audit (recorded)
+
+- **Authority:** `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` →
+  **Terminal FFI directory ownership (`CZH-B6` current-state map)**.
+- **Scope:** `src/terminal/ffi/**` and `src/terminal_ffi_exports.zig`, plus the
+  closely coupled session/runtime modules called from `host_api` / `core_api`.
+- **Outcome:** file-by-file classification into VT core FFI, optional
+  bring-your-own-PTY host seam, bridge/facade glue, and explicit smell notes for
+  post-freeze extraction.
+
 ## Response Contract
 
 Every batch update must include:
