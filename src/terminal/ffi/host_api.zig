@@ -9,6 +9,7 @@ const scrollback_view = @import("../core/scrollback_view.zig");
 const types = @import("../model/types.zig");
 const shared = @import("shared.zig");
 
+/// Starts the session/runtime loop (optional shell argv). BYO-PTY seam.
 pub fn start(handle: ?*shared.ZideTerminalHandle, shell: ?[*:0]const u8) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const shell_slice: ?[:0]const u8 = if (shell) |value| std.mem.span(value) else null;
@@ -16,12 +17,14 @@ pub fn start(handle: ?*shared.ZideTerminalHandle, shell: ?[*:0]const u8) shared.
     return .ok;
 }
 
+/// Runs one session poll and syncs derived FFI-visible events. BYO-PTY seam.
 pub fn poll(handle: ?*shared.ZideTerminalHandle) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     session_runtime.poll(h.shell) catch |err| return shared.mapError(err);
     return shared.syncDerivedEvents(h);
 }
 
+/// Resizes the terminal grid and cell geometry. BYO-PTY seam.
 pub fn resize(handle: ?*shared.ZideTerminalHandle, cols: u16, rows: u16, cell_width: u16, cell_height: u16) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (rows == 0 or cols == 0) return .invalid_argument;
@@ -36,6 +39,7 @@ pub fn updateCellSize(handle: ?*shared.ZideTerminalHandle, cell_width: u16, cell
     return shared.syncDerivedEvents(h);
 }
 
+/// Sends raw input bytes to the shell (PTY path). BYO-PTY seam.
 pub fn sendBytes(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;

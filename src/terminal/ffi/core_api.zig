@@ -325,6 +325,8 @@ fn copyGranularSnapshotDiffExport(
     };
 }
 
+/// Allocates a terminal handle and shell; wires external transport. Use
+/// `host_api.start` / `poll` for the BYO-PTY session loop when applicable.
 pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTerminalHandle) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     out_handle.* = null;
@@ -382,6 +384,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
     return .ok;
 }
 
+/// Records host presentation completion for `generation` (terminal surface contract).
 pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
@@ -404,6 +407,7 @@ pub fn publishedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: 
     return .ok;
 }
 
+/// Returns published vs acknowledged generations and whether a redraw is pending (VT core).
 pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.RedrawState) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
@@ -424,12 +428,14 @@ pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *sh
     return .ok;
 }
 
+/// Non-zero if published generation differs from last acknowledged (VT core).
 pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaqueActive(handle) orelse return 0;
     const published_generation = currentPublishedGeneration(h);
     return @intFromBool(published_generation != h.last_acknowledged_generation);
 }
 
+/// Tears down the handle, shell, and pending FFI-owned buffers.
 pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     const h = shared.fromOpaque(handle) orelse return;
     h.destroying.store(true, .release);
@@ -455,6 +461,7 @@ pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     h.allocator.destroy(h);
 }
 
+/// Feeds process output bytes into the engine (external transport or direct feed path).
 pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;
@@ -483,6 +490,7 @@ pub fn pendingInputRelease(out_buffer: *shared.ByteBuffer) void {
     shared.byteBufferFree(out_buffer);
 }
 
+/// Copies the current published terminal grid into `out_snapshot` (VT core); host frees via `snapshotRelease`.
 pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.SnapshotRequest, out_snapshot: *shared.Snapshot) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
@@ -539,6 +547,7 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     return .ok;
 }
 
+/// Frees memory owned by a prior `snapshotAcquire`.
 pub fn snapshotRelease(snapshot: *shared.Snapshot) void {
     const owner = shared.snapshotOwner(snapshot._ctx) orelse {
         snapshot.* = .{};
@@ -549,6 +558,7 @@ pub fn snapshotRelease(snapshot: *shared.Snapshot) void {
     snapshot.* = .{};
 }
 
+/// Exports an incremental or full cell diff vs `base_generation` (VT core); free with `snapshotDiffRelease`.
 pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.SnapshotDiffRequest, out_diff: *shared.SnapshotDiff) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
@@ -672,6 +682,7 @@ pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const
     return .ok;
 }
 
+/// Frees memory owned by a prior `snapshotDiffAcquire`.
 pub fn snapshotDiffRelease(diff: *shared.SnapshotDiff) void {
     const owner = shared.snapshotDiffOwner(diff._ctx) orelse {
         diff.* = .{};
