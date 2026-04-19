@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B26` — **`in_progress`** at **`CZH-GATE-80`** (sprint `CZH-S21`):
+- `CZH-B26` — **`architect_review_pending`** at **`CZH-GATE-80`** (sprint `CZH-S21`):
   long-loop present-result ownership lock across selected present/runtime/state seams
-  (`docs/todo/core/CZH_S21_TICKETS.md`).
+  (`docs/todo/core/CZH_S21_TICKETS.md`, checkpoint `docs/todo/core/CZH_S21_CHECKPOINT.md`).
 
 ## Hard Rules
 

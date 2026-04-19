@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B26` (`in_progress`, super-gate `CZH-GATE-80`).
+- Current active macro batch: `CZH-B26` (`architect_review_pending`, super-gate `CZH-GATE-80`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S21_TICKETS.md`
 
@@ -2549,7 +2549,7 @@ Checkpoint packet: `docs/todo/core/CZH_S20_CHECKPOINT.md`.
   drift; one semantic naming mismatch in reuse-return bookkeeping was corrected
   in-place and does not change draw/present control flow.
 
-### `CZH-B26` Long-Loop Present Result Ownership Lock (`in_progress`)
+### `CZH-B26` Long-Loop Present Result Ownership Lock (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -2615,6 +2615,26 @@ Execution source:
   `terminal.ui.redraw` resize warnings.
 - **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — present-result ownership note (`CZH-759`);
   audit table (`CZH-751`) updated by landed `TerminalPresentResult` / reuse outcome fields (`CZH-753`..`CZH-754`).
+
+#### `CZH-S21` engineer validation (`CZH-760`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-751`..`CZH-760` (one commit each).  
+- **SL-0** `zig build` — **PASS**  
+- **SL-1** `zig build test` — **PASS**  
+- **SL-2** `zig build -Dmode=terminal` — **PASS**  
+- **SL-3** `zig build -Dmode=editor` — **PASS**  
+- **`zig build test-config`** — **PASS**  
+- **`zig build test-editor`** — **PASS**  
+- **`zig build test-terminal-replay-all`** — **PASS**  
+- **Android guard** — **SKIP** (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S21_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B26`
+- `Verdict: pending` — submitted for Architect review (`CZH-GATE-80`).
 
 ## Response Contract
 
