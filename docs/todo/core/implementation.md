@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B15` (`architect_review_pending` at `CZH-GATE-69`).
+- Current active macro batch: `CZH-B16` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S10_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S11_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1519,7 +1519,7 @@ Checkpoint packet: `docs/todo/core/CZH_S9_CHECKPOINT.md`.
 - `Acceptance judgment:` widget present-plan generation match now consumes the
   explicit surface-contract seam in a behavior-neutral cut; host ABI unchanged.
 
-### `CZH-B15` Surface Contract Consumer Expansion II (`architect_review_pending`)
+### `CZH-B15` Surface Contract Consumer Expansion II (`accepted`)
 
 Queue line (exact):
 
@@ -1594,6 +1594,63 @@ mismatch limb). No plan change from the `CZH-652`..`CZH-653` seam-cut above.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S10_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B15`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `116636d4`, `23faf7bb`, `07f0023f`, `98aaa494`,
+  `63854b41`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` clear-generation reuse limb now consumes
+  `surface_contract` in a behavior-neutral cut; host ABI unchanged.
+
+### `CZH-B16` Surface Contract Consumer Expansion III (`in_progress`)
+
+Queue line (exact):
+
+- expand surface-contract seam consumption to one additional bounded
+  draw/presentation-facing path while preserving behavior and host ABI
+
+Acceptance:
+
+- one additional bounded consumer path is selected via audit
+- minimal seam helpers/types for that path are added behavior-neutrally
+- selected path adopts the seam helpers/types with equivalent runtime behavior
+- queue/handoff/entrypoint and authority docs remain aligned
+- full stress ladder remains green through `CZH-GATE-70`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S11_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-656`..`CZH-660` in order from
+  `docs/todo/core/CZH_S11_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-70` or a real hard blocker
+
+#### `CZH-656` draw/presentation seam consumer audit (`CZH-S11`)
+
+**Selected path target:** `presentationUpdateDelta` in
+`src/ui/widgets/terminal_widget_surface_state.zig`, where
+`generation_changed` and `clear_generation_changed` are still implicit direct
+inequality checks against last rendered generations.
+
+**Plan (`CZH-657`..`CZH-658`):** add named mismatch helpers on
+`src/terminal/surface_contract.zig` for the `presentationUpdateDelta` consumer
+path and route these two predicates through seam helpers only. **No** policy
+or branching changes.
+
+**`CZH-659`:** predicate tests + `TERMINAL_SURFACE_CONTRACT.md` consumer note.
+
+**`CZH-660`:** validation ladder + checkpoint packet + board/queue/handoff sync
+to `CZH-GATE-70`.
 
 ## Response Contract
 
