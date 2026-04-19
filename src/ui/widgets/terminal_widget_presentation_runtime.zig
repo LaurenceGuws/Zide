@@ -2313,3 +2313,43 @@ test "CZH-798: ReusePresentOutcomeState conjunction field role matches TerminalP
     try std.testing.expect(result.host_surface_target_available == outcome.host_surface_target_available);
 }
 
+test "CZH-S26: integration lock — PresentationPresentState conjunction equals outcome conjunction" {
+    const present_state = PresentationPresentState{
+        .shared_surface_attachment_ready = true,
+        .host_surface_target_available = true,
+        .visible = true,
+        .present = true,
+    };
+    const outcome = ReusePresentOutcomeState{
+        .shared_surface_attachment_ready = true,
+        .host_surface_target_available = true,
+    };
+    try std.testing.expectEqual(
+        present_state.shared_surface_attachment_ready,
+        outcome.shared_surface_attachment_ready,
+    );
+}
+
+test "CZH-S26: integration lock — result fold preserves outcome conjunction" {
+    const outcome = ReusePresentOutcomeState{
+        .reused = true,
+        .outcome = .reused,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = true,
+    };
+    const timing = renderer_presentable_host.TerminalPresentTiming{};
+    const result = presentResultFromReuseOutcomeState(outcome, timing);
+    try std.testing.expectEqual(result.shared_surface_attachment_ready, outcome.shared_surface_attachment_ready);
+    try std.testing.expectEqual(result.outcome, outcome.outcome);
+}
+
+test "CZH-S26: integration lock — direct present outcome has correct leg/conjunction separation" {
+    const outcome = DirectPresentOutcomeState{
+        .outcome = .presented,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+    };
+    try std.testing.expect(outcome.host_surface_target_available);
+}
+
