@@ -18,10 +18,12 @@
 //! Result structs distinguish leg from conjunction to prevent overloading one bool.
 //! Do not re-derive or re-label legs as conjunction in reporting/result paths.
 //!
-//! **Conjunction computation:** Happens in `refreshPresentState` and `tryFastPresentExisting`
-//! via canonical helper `TerminalWidgetSurfaceState.notePresentableAvailability`. Stored on
-//! transient `PresentationPresentState` and outcome/result structs. Reported through
-//! `logUnavailable`, `readSharedSurfaceAttachmentReady`, and result consumers.
+//! **Conjunction computation:** Attachment conjunction is computed in `refreshPresentState`
+//! (pure) and `tryFastPresentExisting` via `computeHostSurfaceAttachmentState` →
+//! `notePresentableAvailability`. Cache state is advanced by `advancePresentationCache`
+//! (called by widget in the refreshed path, and directly in the reuse path).
+//! Conjunction stored on transient `PresentationPresentState` and outcome/result structs.
+//! Reported through `logUnavailable`, `readSharedSurfaceAttachmentReady`, and result consumers.
 //!
 //! **Reporting carriers:** For operator JSON on present failure, conjunction carrier is
 //! `PresentationPresentState.shared_surface_attachment_ready` (see `logUnavailable`).
@@ -831,18 +833,24 @@ pub fn runRefreshedPresentablePresentation(
     const viewport_w = surface_update_plan.geometry.viewport_w;
     const viewport_h = surface_update_plan.geometry.viewport_h;
 
+    if (cycle_result.refresh == .refreshed) {
+        advancePresentationCache(
+            &self.surface,
+            terminal_view,
+            surface_update_plan.geometry,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            hover_link_id,
+            composing_active,
+            composing_hash,
+        );
+    }
     const present_state = terminal_presentation_runtime.refreshPresentState(
         &self.surface,
         renderer,
         terminal_view,
-        surface_update_plan.geometry,
         cycle_result.refresh,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        hover_link_id,
-        composing_active,
-        composing_hash,
         visible_w,
         visible_h,
         view_cells_len,

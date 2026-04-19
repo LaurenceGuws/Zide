@@ -387,20 +387,14 @@ pub const PresentationPresentState = struct {
     log_unavailable: bool = false,
 };
 
-/// **Presentation state refresh:** computes conjunction via `notePresentableAvailability`; stores
-/// on transient `PresentationPresentState` for tick. **Canonical conjunction derivation.**
+/// **Presentation state computation:** pure conjunction computation for a refresh tick.
+/// Computes attachment state and visibility flags. Does not mutate surface cache state;
+/// callers advance cache separately for the refreshed path.
 pub fn refreshPresentState(
     surface_state: anytype,
     renderer: anytype,
     terminal_view: anytype,
-    surface_geometry: PresentationGeometry,
     presentable_refresh: TerminalPresentableRefresh,
-    draw_cursor: bool,
-    cursor: anytype,
-    cursor_style: anytype,
-    hover_link_id: u32,
-    composing_active: bool,
-    composing_hash: u64,
     visible_w: i32,
     visible_h: i32,
     view_cells_len: usize,
@@ -410,26 +404,11 @@ pub fn refreshPresentState(
         .presentable_refresh = presentable_refresh,
         .visible = visible_w > 0 and visible_h > 0,
     };
-
-    if (presentable_refresh == .refreshed) {
-        surface_state.notePresentationUpdated(
-            terminal_view,
-            surface_geometry,
-            draw_cursor,
-            cursor,
-            cursor_style,
-            hover_link_id,
-            composing_active,
-            composing_hash,
-        );
-    }
-
     const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
     state.host_surface_target_available = attachment_state.host_surface_target_available;
     state.shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
     state.present = state.shared_surface_attachment_ready and state.visible;
     state.log_unavailable = !state.shared_surface_attachment_ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
-
     return state;
 }
 
