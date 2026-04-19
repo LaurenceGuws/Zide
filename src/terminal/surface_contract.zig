@@ -117,6 +117,22 @@ pub fn fillRedrawState(
     };
 }
 
+/// VT core FFI `redraw_state`: fill `RedrawState` from publication vs last
+/// `present_ack` generation (`core_api.redrawState`).
+pub fn ffiRedrawStateFill(
+    published_generation: u64,
+    last_acknowledged_generation: u64,
+    out_state: *shared.RedrawState,
+) void {
+    fillRedrawState(published_generation, last_acknowledged_generation, out_state);
+}
+
+/// VT core FFI `needs_redraw` byte: non-zero iff publication differs from last
+/// acknowledged (`core_api.needsRedraw`).
+pub fn ffiNeedsRedrawU8(published_generation: u64, last_acknowledged_generation: u64) u8 {
+    return @intFromBool(needsRedrawFromPair(published_generation, last_acknowledged_generation));
+}
+
 test "fillRedrawState sets logical triple" {
     var out: shared.RedrawState = undefined;
     fillRedrawState(10, 7, &out);
