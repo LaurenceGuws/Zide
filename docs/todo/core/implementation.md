@@ -1306,6 +1306,31 @@ Execution source:
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-66` or a real hard blocker
 
+#### `CZH-636` terminal surface ownership touchpoint map (`CZH-S7`)
+
+**Authority:** `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` — shared GPU
+attachment + Zide-owned generation/dirty truth + host presentation completion via
+FFI `present_ack` / `acknowledged_generation`.
+
+| Layer | Primary paths | Role |
+| --- | --- | --- |
+| VT core FFI (logical surface state) | `src/terminal/ffi/core_api.zig` — `presentAck`, `publishedGeneration`, `acknowledgedGeneration`, `redrawState`, `needsRedraw` | Portable generation pairing for hosts; **no** raw GPU handles on this boundary (`TERMINAL_SURFACE_CONTRACT.md` §FFI touchpoints). |
+| FFI ABI structs | `src/terminal/ffi/shared.zig` — `RedrawState` | Extern bundle for published/ack/`needs_redraw`. |
+| Bridge / C exports | `bridge.zig`, `c_api.zig`, `terminal_ffi_exports.zig` | Stable C names; unchanged ABI in `CZH-S7`. |
+| IDE gating (“terminal surface” feature) | `src/app/terminal/terminal_surface_gate.zig`, `src/app/modes/ide/host.zig` | When a terminal **tab surface** may be shown / receive input (not the publication contract center). |
+| Widget draw + presentation | `src/ui/widgets/terminal_widget*.zig`, `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig` | GPU draw scheduling vs `terminal_view.generation` (widget publication coupling). |
+
+**First-cut seam plan (`CZH-637`..`CZH-638`)**
+
+- Add **`src/terminal/surface_contract.zig`**: explicit **logical** surface-frame
+  naming (published vs acknowledged + derived `needs_redraw`) aligned to the
+  contract doc; helpers to fill `shared.RedrawState` without a second truth
+  source.
+- **`CZH-638`:** route **`core_api.redrawState`** through the helper (behavior-neutral
+  refactor).
+- **`CZH-639`:** point `TERMINAL_SURFACE_CONTRACT.md` / queue at the landed module +
+  wiring path.
+
 ## Response Contract
 
 Every batch update must include:
