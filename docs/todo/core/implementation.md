@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B28` (`architect_review_pending`, super-gate `CZH-GATE-82`).
+- Current active macro batch: `CZH-B29` (`in_progress`, super-gate `CZH-GATE-83`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S23_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S24_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2737,7 +2737,7 @@ Checkpoint packet: `docs/todo/core/CZH_S22_CHECKPOINT.md`.
 - `Acceptance judgment:` conjunction compute/store/report propagation is explicit
   in touched paths with no behavior or ABI drift.
 
-### `CZH-B28` Long-Loop Present Reporting Carrier Consolidation (`architect_review_pending`)
+### `CZH-B28` Long-Loop Present Reporting Carrier Consolidation (`accepted`)
 
 Queue line (exact):
 
@@ -2817,6 +2817,59 @@ Execution source:
 - **Android guard** — **SKIP** (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S23_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B28`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `ca75eb62`, `1cba26c4`, `1af411e3`, `f9cdc60d`,
+  `0765b648`, `97d6feed`, `5e2e968f`, `2059991b`, `b0398630`, `d6bb7198`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` dominant reporting carrier boundaries are explicit in
+  touched runtime/widget paths with no behavior or ABI drift.
+
+### `CZH-B29` Long-Loop Reporting/Result Cohesion Lock (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to lock cohesion between
+  present-time reporting carriers and present-result aggregation fields in selected
+  runtime/widget/result seams, with test/doc lock and no ABI changes
+
+Acceptance:
+
+- selected touched paths keep reporting-carrier and present-result field roles
+  coherent and non-overlapping (leg vs conjunction)
+- no host ABI/C export changes
+- selected tests/docs assert reporting/result cohesion boundaries
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-83`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S24_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-781`..`CZH-790` in order from
+  `docs/todo/core/CZH_S24_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-83` or a real hard blocker
+
+#### `CZH-781` reporting/result cohesion audit + cut plan (`CZH-S24`)
+
+- map reporting carriers vs present-result fields across:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `presentable_contract.zig`,
+  `terminal_widget_presentation_state.zig`,
+  `TERMINAL_SURFACE_CONTRACT.md`
+- classify primary ownership and no-overlap rules (leg vs conjunction) per flow
+- record scoped hygiene targets for `CZH-789`
 
 ## Response Contract
 

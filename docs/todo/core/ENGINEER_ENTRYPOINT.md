@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S23_TICKETS.md`
+3. `docs/todo/core/CZH_S24_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B28` — **`architect_review_pending`** at **`CZH-GATE-82`** (sprint `CZH-S23`):
-  long-loop present-time reporting-carrier consolidation for conjunction visibility
-  across selected runtime/widget seams (`docs/todo/core/CZH_S23_TICKETS.md`).
+- `CZH-B29` — **`in_progress`** toward **`CZH-GATE-83`** (sprint `CZH-S24`):
+  long-loop reporting/result cohesion lock across selected runtime/widget seams
+  (`docs/todo/core/CZH_S24_TICKETS.md`).
 
 ## Hard Rules
 
@@ -38,8 +38,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S23` tickets `CZH-771`..`CZH-780` are active; run to
-  **`CZH-GATE-82`** unless blocked.
+- Sprint `CZH-S24` tickets `CZH-781`..`CZH-790` are active; run to
+  **`CZH-GATE-83`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
