@@ -732,6 +732,23 @@ Scope: `src/terminal/ffi/**`, `src/editor/ffi/**`, plus `src/terminal_ffi_export
 1. `core_api.zig` — replace or strictly isolate `destroy_debug_pause_ms_for_tests`
    so production `destroy` never sleeps for test hooks unless compiled for tests.
 
+#### `CZH-607` hard-rule audit: compatibility / fallback residue (layer set)
+
+Same scope as `CZH-606` (`src/terminal/ffi/**`, `src/editor/ffi/**`,
+`src/terminal_ffi_exports.zig`).
+
+| File | Symbol / pattern | Assessment | Recommended action |
+| --- | --- | --- | --- |
+| `terminal/ffi/core_api.zig` | `should_fallback` + early `return null` in snapshot diff export | **Not** a deprecated shim — encodes when granular diff cannot be produced (stale base generation, dimension/mode changes, full dirty, etc.). | Keep behavior. Optional **rename** in a behavior-allowed ticket to `requires_full_refresh` (or similar) so the name does not read like “compat fallback.” |
+| `terminal/ffi/core_api.zig` | `copyPublishedSnapshotExport` branch after granular path fails | Delivers full cell buffer with `full_refresh_required` — part of the snapshot-diff contract. | **No removal.** |
+| `terminal/ffi/core_api.zig` | `feedOutput` → `enqueueExternalBytes` vs `terminal_core_feed.feedOutputBytes` | Dual path for **external host-fed** transport vs **direct engine feed** — ownership split, not a legacy duplicate. | **No removal**; document only (already the BYO transport seam). |
+| `editor/ffi/*` | (none located) | No `fallback` / `compat` / `legacy` markers in editor FFI tree. | None. |
+
+**Net:** no preservation-only fallback identified that should be deleted in the
+next sprint without a scoped behavior/replay ticket. The only follow-up is
+**naming hygiene** around snapshot-diff “fallback” vocabulary if engineers
+misread it as cruft.
+
 ## Response Contract
 
 Every batch update must include:
