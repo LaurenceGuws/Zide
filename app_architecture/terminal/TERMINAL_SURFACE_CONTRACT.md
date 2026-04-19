@@ -65,7 +65,9 @@ truth and last ack) uses the same module (`presentAckGenerationAdmissible`;
 
 **Widget draw consumer:** `terminal_widget_presentation_runtime` present-plan
 generation reuse uses `publicationGenerationDiffersFromLastSurfaceRender` for the
-publication vs last surface-render generation limb (`CZH-S9`).
+publication vs last surface-render generation limb (`CZH-S9`) and
+`clearGenerationDiffersFromLastSurfaceRenderClear` for the clear-generation vs
+last surface-render clear limb (`CZH-S10`).
 
 ## Android mapping (example, not definition)
 

@@ -1572,6 +1572,14 @@ the conjunct `terminal_view.clear_generation ==
 self.surface.lastRenderClearGeneration()` (paired with the publication-generation
 mismatch limb). No plan change from the `CZH-652`..`CZH-653` seam-cut above.
 
+#### Landed (`CZH-652`..`CZH-654`)
+
+- `surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear`
+- `buildTerminalPresentPlan` uses `clear_gen_mismatch_surface` with that helper
+  (paired with the publication-generation limb)
+- unit test aliases `needsRedrawFromPair`; `TERMINAL_SURFACE_CONTRACT.md` widget
+  draw consumer updated
+
 ## Response Contract
 
 Every batch update must include:

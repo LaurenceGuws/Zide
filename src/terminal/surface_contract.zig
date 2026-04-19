@@ -106,3 +106,17 @@ test "publicationGenerationDiffersFromLastSurfaceRender aliases needsRedrawFromP
         );
     }
 }
+
+test "clearGenerationDiffersFromLastSurfaceRenderClear aliases needsRedrawFromPair" {
+    const pairs = [_]struct { a: u64, b: u64 }{
+        .{ .a = 0, .b = 1 },
+        .{ .a = 9, .b = 9 },
+        .{ .a = 1 << 40, .b = 0 },
+    };
+    for (pairs) |p| {
+        try std.testing.expectEqual(
+            needsRedrawFromPair(p.a, p.b),
+            clearGenerationDiffersFromLastSurfaceRenderClear(p.a, p.b),
+        );
+    }
+}
