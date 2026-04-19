@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const publication_state = @import("../core/publication/publication_state.zig");
@@ -429,9 +430,11 @@ pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
 pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     const h = shared.fromOpaque(handle) orelse return;
     h.destroying.store(true, .release);
-    const pause_ms = destroy_debug_pause_ms_for_tests.load(.acquire);
-    if (pause_ms > 0) {
-        std.Thread.sleep(@as(u64, pause_ms) * std.time.ns_per_ms);
+    if (builtin.is_test) {
+        const pause_ms = destroy_debug_pause_ms_for_tests.load(.acquire);
+        if (pause_ms > 0) {
+            std.Thread.sleep(@as(u64, pause_ms) * std.time.ns_per_ms);
+        }
     }
     var i: usize = 0;
     while (i < h.pending_events.items.len) : (i += 1) {

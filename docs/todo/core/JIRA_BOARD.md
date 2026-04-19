@@ -36,8 +36,8 @@ This file is the canonical ticket board for active core execution.
 
 ## Current State
 
-- `in_progress`: `CZH-611`
-- `todo`: `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`
+- `in_progress`: `CZH-612`
+- `todo`: `CZH-613`, `CZH-614`, `CZH-615`
 - `blocked`: none
 - `review_gate`: none
-- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`
+- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`
