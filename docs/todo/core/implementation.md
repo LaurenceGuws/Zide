@@ -773,23 +773,26 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
 | `terminal/byo_pty_host.zig` | **Yes** | `//!` + `///`; module was `host_api.zig` before `CZH-617`; moved out of `ffi/` in `CZH-S4`. |
 | `terminal/ffi/bridge.zig` | **Yes** | `//!` (`CZH-612`); ownership text (`CZH-618`). |
 | `terminal/ffi/c_api.zig` | **Yes** | `//!` (`CZH-612`); C edge (`CZH-618`). |
-| `terminal_ffi_exports.zig` | **Yes** | `//!` (`CZH-612`). |
-| `editor/ffi/bridge.zig` | **No** | **Fix queue:** editor FFI Zig facade. |
-| `editor/ffi/c_api.zig` | **No** | **Fix queue:** C ABI surface. |
+| `terminal_ffi_exports.zig` | **Yes** | `//!` — symbol root vs `c_api` behavior explicit (`CZH-627` / `CZH-S5`). |
+| `editor/ffi/bridge.zig` | **Yes** | Editor backend FFI facade (`CZH-S5`); `///` on `create`/`destroy` (`CZH-628`). |
+| `editor/ffi/c_api.zig` | **Yes** | Flat `zide_editor_*` forwarders (`CZH-S5` verified). |
 
 **Important function doc drift (representative)**
 
-| Symbol | Issue | Recommendation |
+| Symbol | Issue | Status (`CZH-S5`) |
 | --- | --- | --- |
-| `core_api.destroy` | No doc; embeds test sleep (`destroy_debug_pause_ms_for_tests`) | Document lifecycle + point to probe queue `CZH-606` |
-| `byo_pty_host.start` / `poll` | Documented (`CZH-613`) | BYO-PTY seam |
-| `bridge.create` (editor) | No doc | Document handle ownership vs native `Editor` |
+| `core_api.destroy` | Test-only pause (`destroy_debug_pause_ms_for_tests`) | `///` documents test-build behavior; not a product sleep (`CZH-628`). |
+| `byo_pty_host.start` / `poll` | — | Documented (`CZH-613`); unchanged. |
+| `bridge.create` / `destroy` (editor) | — | `///` added (`CZH-628`). |
 
-**Doc-alignment queue (for next implementation sprint)**
+**Doc-alignment queue**
 
-1. Add `//!` headers to every file in the table with “No” above.
-2. Add brief `///` on exported `pub fn` entrypoints in `byo_pty_host` and `core_api`
-   that hosts call (at minimum: create/destroy/start/poll/snapshot/diff/redraw).
+- **Closed in `CZH-S5` (`CZH-B10`):** editor `//!`, `terminal_ffi_exports` ownership
+  `//!`, and representative `core_api` / editor bridge `///` gaps identified in
+  `#### CZH-626`..`CZH-628`.
+- **Out of scope here:** ABI version getter `///` on `core_api` (thin constants);
+  optional snapshot-diff **rename** hygiene remains a future behavior-allowed ticket
+  if naming still misreads as “compat fallback” (`CZH-607`).
 
 #### `CZH-609` first implementation sprint shaped (recorded)
 
