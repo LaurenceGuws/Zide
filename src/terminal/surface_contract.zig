@@ -240,6 +240,22 @@ test "CZH-S14: composite pair mismatch fields mirror per-coordinate inequality" 
     try std.testing.expectEqual(2 != 4, m.clear_mismatch);
 }
 
+test "CZH-S16: composite mismatch legs match planUpdate surface_contract primitives" {
+    const pg: u64 = 9;
+    const cg: u64 = 3;
+    const lr: u64 = 8;
+    const lrc: u64 = 3;
+    const mm = publicationClearPairMismatchesFromLastSurfaceRender(pg, cg, lr, lrc);
+    try std.testing.expectEqual(
+        publicationGenerationDiffersFromLastSurfaceRender(pg, lr),
+        mm.publication_mismatch,
+    );
+    try std.testing.expectEqual(
+        clearGenerationDiffersFromLastSurfaceRenderClear(cg, lrc),
+        mm.clear_mismatch,
+    );
+}
+
 test "CZH-S13: ffiRedrawStateFill matches fillRedrawState" {
     var via_ffi: shared.RedrawState = undefined;
     var direct: shared.RedrawState = undefined;

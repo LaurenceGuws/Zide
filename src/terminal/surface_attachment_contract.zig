@@ -52,3 +52,8 @@ test "FromPair matches hostSharedSurfaceAttachmentReady" {
         .host_surface_target_available = false,
     }));
 }
+
+test "CZH-S16: pipeline leg alone does not imply full attachment readiness" {
+    try std.testing.expect(!hostSharedSurfaceAttachmentReady(true, false));
+    try std.testing.expect(hostSharedSurfaceAttachmentReady(true, true));
+}
