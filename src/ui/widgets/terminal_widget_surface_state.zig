@@ -289,6 +289,22 @@ test "CZH-S15: notePresentableAvailability matches readSharedSurfaceAttachmentRe
     try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
 }
 
+test "CZH-767: conjunction compute return matches stored legs and report read" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    state.presentation.terminal_presentable_pipeline_ready = true;
+    const computed = state.notePresentableAvailability(true);
+    try std.testing.expectEqual(
+        computed,
+        surface_attachment_contract.hostSharedSurfaceAttachmentReady(
+            state.presentation.terminal_presentable_pipeline_ready,
+            state.presentation.host_surface_target_available,
+        ),
+    );
+    try std.testing.expectEqual(computed, state.readSharedSurfaceAttachmentReady());
+}
+
 test "CZH-S17: readSharedSurfaceAttachmentReady matches FromPair on presentation legs" {
     var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
     defer state.deinit(std.testing.allocator);
