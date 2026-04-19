@@ -1553,7 +1553,7 @@ pub fn logUnavailable(
 ) void {
     if (!present_state.log_unavailable) return;
     app_logger.logger("renderer.terminal_present").logFields(.warning, "terminal_surface_unavailable_for_present", &.{
-        .{ .key = "generation", .value = .{ .unsigned = terminal_view.generation } },
+        .{ .key = "publication_generation", .value = .{ .unsigned = terminal_view.generation } },
         .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
         .{ .key = "presentable_refresh", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
