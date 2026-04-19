@@ -27,9 +27,9 @@ const presentation_state_mod = @import("terminal_widget_presentation_state.zig")
 const view_state = @import("terminal_widget_view_state.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const std = @import("std");
-const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const surface_contract = @import("../../terminal/surface_contract.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const presentation_bridge = @import("../../terminal/presentation_bridge.zig");
 
 const KittyState = kitty_mod.KittyState;
 const PresentationState = presentation_state_mod.PresentationState;
@@ -224,33 +224,38 @@ pub const TerminalWidgetSurfaceState = struct {
         self.presentation.last_composing_hash = composing_hash;
     }
 
-    /// **Canonical compute+store route for conjunction:** writes the host-target leg and returns
-    /// the conjunction via `surface_attachment_contract.hostSharedSurfaceAttachmentReady`. Invalidates
-    /// presentation cache on unavailability. Must be called before `readSharedSurfaceAttachmentReady`
-    /// or operator-log recording uses the conjunction. **Only** call this to compute leg+conjunction;
+    /// **Canonical compute+store route for conjunction (delegates to terminal presentation bridge):**
+    /// writes the host-target leg and returns the conjunction. Invalidates presentation cache on
+    /// unavailability. Must be called before `readSharedSurfaceAttachmentReady` or operator-log
+    /// recording uses the conjunction. **Only** call this to compute leg+conjunction;
     /// do not re-derive conjunction outside this path.
     /// **Initialization contract:** reads the pipeline leg (set by `notePresentationUpdated` when
     /// presentation occurs) and writes the host-target leg; both legs have sensible defaults (false)
     /// on first initialization. **Pairing:** maintains storage/read consistency with `readSharedSurfaceAttachmentReady`.
+    /// **Delegation:** Terminal-owned bridge (`presentation_bridge`) computes the conjunction;
+    /// widget storage delegates and does not re-derive.
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
         self.presentation.host_surface_target_available = available;
-        return surface_attachment_contract.hostSharedSurfaceAttachmentReady(
+        return presentation_bridge.notePresentableAvailability(
             self.presentation.terminal_presentable_pipeline_ready,
-            self.presentation.host_surface_target_available,
+            available,
+            null,
         );
     }
 
-    /// **Canonical read-only route for conjunction:** derives conjunction from stored `PresentationState`
-    /// legs via canonical helper `hostSharedSurfaceAttachmentReadyFromPair`. Returns same predicate as
-    /// `notePresentableAvailability`’s return. Dominant widget-surface **report** when `PresentationPresentState`
-    /// is not in scope; not the operator-log carrier (which uses `PresentationPresentState.shared_surface_attachment_ready`
+    /// **Canonical read-only route for conjunction (delegates to terminal presentation bridge):**
+    /// derives conjunction from stored legs. Returns same predicate as `notePresentableAvailability`’s
+    /// return. Dominant widget-surface **report** when `PresentationPresentState` is not in scope;
+    /// not the operator-log carrier (which uses `PresentationPresentState.shared_surface_attachment_ready`
     /// in `logUnavailable`). **Pairing:** maintains storage/read consistency with `notePresentableAvailability`.
+    /// **Delegation:** Terminal-owned bridge (`presentation_bridge`) computes the conjunction;
+    /// widget storage delegates and does not re-derive.
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
-        return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
-            .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_pipeline_ready,
-            .host_surface_target_available = self.presentation.host_surface_target_available,
-        });
+        return presentation_bridge.readSharedSurfaceAttachmentReady(
+            self.presentation.terminal_presentable_pipeline_ready,
+            self.presentation.host_surface_target_available,
+        );
     }
 
     pub fn ensurePartialDrawPlan(
@@ -330,7 +335,7 @@ test "CZH-767: conjunction compute return matches stored legs and report read" {
     const computed = state.notePresentableAvailability(true);
     try std.testing.expectEqual(
         computed,
-        surface_attachment_contract.hostSharedSurfaceAttachmentReady(
+        presentation_bridge.readSharedSurfaceAttachmentReady(
             state.presentation.terminal_presentable_pipeline_ready,
             state.presentation.host_surface_target_available,
         ),
@@ -346,10 +351,10 @@ test "CZH-S17: readSharedSurfaceAttachmentReady matches FromPair on presentation
     state.presentation.host_surface_target_available = false;
     try std.testing.expectEqual(
         state.readSharedSurfaceAttachmentReady(),
-        surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
-            .terminal_presentable_pipeline_ready = state.presentation.terminal_presentable_pipeline_ready,
-            .host_surface_target_available = state.presentation.host_surface_target_available,
-        }),
+        presentation_bridge.readSharedSurfaceAttachmentReady(
+            state.presentation.terminal_presentable_pipeline_ready,
+            state.presentation.host_surface_target_available,
+        ),
     );
 }
 
