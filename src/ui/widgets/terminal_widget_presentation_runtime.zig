@@ -36,9 +36,15 @@
 //! conjunction fields). Do not merge those roles: logs are not populated from `TerminalPresentResult`
 //! alone, and present results are not interchangeable with per-tick present-state snapshots.
 //!
+//! **Terminal ownership (`CZH-S33`):** outcome classification, folding, and geometry computation moved to
+//! `src/terminal/presentation_runtime.zig` (CZH-873/874/875). Widget layer delegates: re-exports terminal
+//! types and calls terminal-layer helpers. Pure computation ownership now explicit; widget owns orchestration
+//! (calling helpers together) and renderer/shell integration (drawing, timing, input handling).
+//!
 //! **Outcome hardening follow-through (`CZH-S29`):** debug assertions in outcome classification and fold
-//! functions catch invalid state combinations early in development/testing. All hardening maintains
-//! behavior freeze: assertions validate that existing patterns remain consistent, no success-path changes.
+//! functions (terminal layer, `presentation_runtime.zig`) catch invalid state combinations early in
+//! development/testing. All hardening maintains behavior freeze: assertions validate that existing patterns
+//! remain consistent, no success-path changes.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
