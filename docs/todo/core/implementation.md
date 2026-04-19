@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B36` (`in_progress`, super-gate `CZH-GATE-90`).
+- Current active macro batch: `CZH-B37` (`in_progress`, super-gate `CZH-GATE-91`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S31_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S32_TICKETS.md`
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
   they must not block core correction work unless a change intentionally touches
@@ -3355,7 +3355,7 @@ Execution source:
   wording such as `CZH-S30`; remove historical progress language from source
   comments and keep only current ownership/invariant text.
 
-### `CZH-B36` Runtime Startup Correctness + Comment Hygiene (`in_progress`)
+### `CZH-B36` Runtime Startup Correctness + Comment Hygiene (`accepted`)
 
 Queue line (exact):
 
@@ -3397,6 +3397,72 @@ Execution source:
   `host_surface_target_available`, and
   `shared_surface_attachment_ready`
 - lock exact edit targets and source-comment cleanup scope
+
+#### `CZH-S31` engineer validation (`CZH-860`)
+
+- **Date:** 2026-04-19
+- **Tickets:** `CZH-851`..`CZH-860`
+- **SL-0** `zig build` — **PASS**
+- **SL-1** `zig build test` — **PASS**
+- **SL-2** `zig build -Dmode=terminal` — **PASS**
+- **SL-3** `zig build -Dmode=editor` — **PASS**
+- **Bounded Linux GUI startup smoke** — **PASS** (no assertion panic before timeout)
+- **Android compile/deploy/start smoke** — **PASS** on `RF8M74JDWEK`
+
+Checkpoint packet: `docs/todo/core/CZH_S31_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B36`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `c603d941`, `318f9a0f`, `9874f122`,
+  `c890e457`, `47ae240b`, `46d15f52`, `b3570d0f`, `6dddeee4`, `ddef7349`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`,
+  bounded Linux GUI startup smoke PASS, Android compile/deploy/start/logcat PASS
+- `Acceptance judgment:` startup regression is fixed, behavior and ABI remain
+  stable, and source comments in touched product code no longer carry sprint
+  progress history.
+- `Process finding:` checkpoint text claimed Android environment issues, but
+  architect rerun passed compile/deploy/start; keep validation reporting strict.
+
+### `CZH-B37` VT-Core Maturity Follow-Through + Caller Mobility (`in_progress`)
+
+Queue line (exact):
+
+- continue the VT-core maturity direction by auditing and implementing caller
+  ownership moves where needed, without letting current file/caller placement
+  freeze the architecture
+
+Acceptance:
+
+- selected caller ownership moves are landed where they improve the mature split
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- touched source comments remain present-tense architecture only
+- Linux and connected Android validation stay green through `CZH-GATE-91`
+- Windows/macOS remain non-blocking unless their platform-owned code is touched
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S32_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-861`..`CZH-870` in order from
+  `docs/todo/core/CZH_S32_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-91` or a real hard blocker
+
+#### `CZH-861` maturity audit + movement scope lock (`CZH-S32`)
+
+- map remaining caller-placement constraints that block the intended mature
+  split between VT core FFI, BYO-PTY, editor backend FFI, and terminal
+  presentation/runtime ownership
+- lock exact move targets and comment-hygiene scope for `CZH-869`
 
 ## Response Contract
 
