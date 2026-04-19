@@ -1,9 +1,13 @@
 //! Cached terminal **presentation draw** state: partial row plans plus the last
 //! generations recorded for the terminal surface draw (see `surface_contract`
-//! composite helpers). **Pipeline readiness** (`terminal_presentable_ready`) and
-//! **host drawable target** (`target_available`) are separate legs; full shared-surface
-//! attachment readiness is their conjunction (`surface_attachment_contract`,
-//! `TerminalWidgetSurfaceState.notePresentableAvailability`).
+//! composite helpers).
+//!
+//! **Vocabulary lock (`CZH-S18`):**
+//! - **Generation (surface cache):** `last_render_generation`, `last_render_clear_generation`.
+//! - **Pipeline leg:** `terminal_presentable_ready` (not full attachment alone).
+//! - **Host target leg:** `target_available` (drawable target exists for the attachment).
+//! - **Full attachment:** `hostSharedSurfaceAttachmentReady(pipeline, target)` in
+//!   `surface_attachment_contract` — not stored as a single bool here.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");

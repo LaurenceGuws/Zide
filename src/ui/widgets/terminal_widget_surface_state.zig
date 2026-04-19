@@ -1,3 +1,8 @@
+//! Terminal widget **surface** state: kitty + cached presentation draw metadata.
+//! **Vocabulary (`CZH-S18`):** generation pairing vs last draw uses `surface_contract`;
+//! pipeline leg (`terminal_presentable_ready` / delta field); host target leg
+//! (`target_available`); full attachment uses `surface_attachment_contract` via
+//! `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");

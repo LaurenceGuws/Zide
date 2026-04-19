@@ -18,9 +18,15 @@
 //!   delegates here (`CZH-S13`, `CZH-S14`).
 //! - **Host attachment (pipeline ∧ target):** `surface_attachment_contract` (`CZH-S15`).
 //!
+//! **State vocabulary lock (`CZH-S18`):** three **non-overlapping** concerns:
+//! 1) **Generation pairing** — this module (publication / clear vs acknowledged or last
+//!    surface draw). 2) **Pipeline leg** — terminal presentable pipeline ready; **not**
+//!    defined here. 3) **Full attachment** — pipeline ∧ host target; **not** defined here
+//!    (`surface_attachment_contract`).
+//!
 //! **`CZH-S16` / `CZH-S17`:** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
-//! (from `presentableReady()`) is the attachment **pipeline leg** only; composite
-//! publication/clear fields remain generation-owned via `publicationClearPair*` above.
+//! mirrors the pipeline leg only; composite publication/clear fields remain
+//! generation-owned via `publicationClearPair*` above.
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 
