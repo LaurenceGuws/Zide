@@ -145,12 +145,13 @@ pub const TerminalPresentFollowup = struct {
     reason: TerminalPresentFollowupReason = .none,
 };
 
-/// Aggregated present result (`CZH-B26` ownership, report wording `CZH-S23`): **`host_surface_target_available`**
-/// reports **only** the host drawable-target **leg** for this execution (renderer-reported presentable
-/// target) — **not** “attachment ready” alone. **`shared_surface_attachment_ready`** reports the **full
-/// attachment** predicate (terminal presentable pipeline ∧ host target) when the caller computes it;
-/// default `false` when this execution path does not surface that conjunction. Do not read the leg
-/// field as the conjunction carrier.
+/// Aggregated present result (`CZH-B26` ownership, report wording `CZH-S23`, cohesion `CZH-S24`):
+/// **`host_surface_target_available`** is **only** the host drawable-target **leg** for this execution
+/// — **not** “attachment ready” alone. **`shared_surface_attachment_ready`** is the **full attachment**
+/// predicate (terminal presentable pipeline ∧ host target) when the caller computes it; default `false`
+/// when this path does not surface that conjunction. This struct is **host export / aggregation**, not
+/// operator JSON or `PresentationPresentState` — do not read the leg field as the conjunction carrier
+/// or substitute this struct for per-tick reporting snapshots.
 pub const TerminalPresentResult = struct {
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,
