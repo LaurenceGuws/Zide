@@ -239,3 +239,17 @@ test "overlayPresentationChanged tracks hover and composing signature" {
     try std.testing.expect(state.overlayPresentationChanged(17, false, 0xABCD));
     try std.testing.expect(state.overlayPresentationChanged(17, true, 0x1234));
 }
+
+test "CZH-S12: publicationClearPair matches presentationUpdateDelta generation field shape" {
+    const mm = surface_contract.publicationClearPairMismatchesFromLastSurfaceRender(10, 20, 10, 30);
+    try std.testing.expect(!mm.publication_mismatch);
+    try std.testing.expect(mm.clear_mismatch);
+    try std.testing.expectEqual(
+        surface_contract.publicationGenerationDiffersFromLastSurfaceRender(10, 10),
+        mm.publication_mismatch,
+    );
+    try std.testing.expectEqual(
+        surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear(20, 30),
+        mm.clear_mismatch,
+    );
+}
