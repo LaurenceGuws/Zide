@@ -1391,6 +1391,27 @@ Execution source:
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-67` or a real hard blocker
 
+#### `CZH-641` next bounded surface-contract crossing (`CZH-S8`)
+
+**Already seam-backed (`CZH-B12`):** `core_api.redrawState` / `needsRedraw` use
+`surface_contract.fillRedrawState` / `needsRedrawFromPair`.
+
+**Selected expansion (`CZH-642`..`CZH-643`):** `core_api.presentAck` — host calls FFI
+after binding/presenting the shared GPU attachment; Zide must reject impossible
+`generation` values vs **publication truth** and **last acknowledged**
+generation (`TERMINAL_SURFACE_CONTRACT.md` §ownership: host reports presentation
+completion through shared FFI). Today this is two implicit comparisons; the cut
+routes the **admissibility predicate** through `surface_contract.zig` so the
+surface contract names the same monotonic window as `redraw_state`.
+
+**Not in scope this sprint:** terminal widget GPU draw paths (different
+`generation` symbol — widget publication coupling); no ABI or renderer policy
+change.
+
+**Plan:** add `presentAckGenerationAdmissible` (or equivalent) in
+`surface_contract.zig`; **`presentAck`** early-return uses it; **`CZH-644`** adds
+unit tests for predicate edges + doc pointer.
+
 ## Response Contract
 
 Every batch update must include:
