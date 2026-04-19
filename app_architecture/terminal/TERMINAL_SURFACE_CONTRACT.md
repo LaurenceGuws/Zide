@@ -1,74 +1,80 @@
 # Terminal Surface Contract (host-agnostic)
 
-Date: 2026-04-19
+Date: 2026-04-19 (authority corrected 2026-04-19 — `CZH-B6-corrective`)
 
-Purpose: freeze the **terminal surface** layer that sits between **native host
-surface availability** (`app_architecture/platform/NATIVE_HOST_CONTRACT.md`) and
-**renderer backend mechanics** (`app_architecture/ui/RENDER_BACKEND_CONTRACT.md`).
-Android was the proving ground for “host gives a window/surface; Zide drives
-terminal truth and redraw bookkeeping” — but **Android is one host**, not the
-contract.
+Purpose: freeze the **terminal surface** contract for **shared GPU presentation**
+of terminal frames: what the host supplies, what Zide owns, and what stays in
+backend-specific mechanics (`app_architecture/ui/RENDER_BACKEND_CONTRACT.md`).
 
-This doc is authority for what must stay true on every first-class platform
-that embeds the terminal widget + GPU path.
+This sits alongside native lifecycle (`app_architecture/platform/NATIVE_HOST_CONTRACT.md`)
+but does **not** define windowing, swapchains, or platform view graphs as the
+frozen abstraction — those are how a host *may* obtain or wrap the shared GPU
+resource, not the contract center.
 
-## What “surface” means here
+Android proved “host hands in a drawable attachment; Zide owns terminal truth
+and generation bookkeeping” — **Android is one host**, not the definition.
 
-“Surface” is the **host-provided drawable attachment** for the terminal’s GPU
-presentation path: native window/view, swapchain or equivalent, and the
-lifecycle events that accompany it (resize, loss, replacement). It is **not**
-the terminal snapshot buffer and **not** the FFI struct mirror of cells — those
-live in **publication / VT core FFI**.
+## What the frozen abstraction is
+
+The contract centers on the **shared GPU texture or resource** the terminal
+draw path uses: the object (or opaque handle) the **active renderer backend**
+requires so the terminal widget can record draws into a **known, host-visible
+GPU attachment** that the host can then **bind and present** inside its
+platform frame lifecycle.
+
+- **Not** the terminal cell snapshot buffer (publication / **VT core FFI**).
+- **Not** GLES vs Metal vs Vulkan mechanics — those remain in
+  `RENDER_BACKEND_CONTRACT.md`.
 
 ## Ownership split (frozen)
 
 | Concern | Owner |
 | --- | --- |
-| Obtaining and handing a native GPU surface/window into the renderer backend | **Host** (`PlatformRenderHost` / platform glue) |
-| Binding backend context/devices/queues to that surface | **Host + `RendererBackend`** — mechanics stay backend-local per `RENDER_BACKEND_CONTRACT` |
-| Terminal **semantic** state, scrollback, damage at the engine/publication layer | **Zide terminal stack** (`TerminalCore` + publication) |
-| **Dirty tracking** for “what changed since last publish”, **published generation**, **needs_redraw**, **present generation** pairing | **Zide** — hosts must not invent parallel damage truth |
-| Turning publication/snapshot into draw work and scheduling redraw | **Zide renderer + terminal widget** (shared product path) |
-| **Presenting** a frame to the user and reporting **presentation completion** back into the terminal bridge | **Host** — but completion is reported through the **shared FFI present-ack** so Zide can retire generations honestly |
+| Initializing and passing the **shared GPU texture/resource attachment** the backend needs for terminal draws (opaque or typed per backend) | **Host** — in cooperation with **`RendererBackend`** setup; concrete object shape is backend-local |
+| GPU devices/queues/context objects and backend-specific upload paths | **`RendererBackend`** per `RENDER_BACKEND_CONTRACT.md` |
+| Terminal **semantic** state at engine/publication layer | **Zide terminal stack** (`TerminalCore` + publication) |
+| **Dirty tracking**, **published vs acknowledged generation**, **needs_redraw**, and update logic for **terminal content** (what must be redrawn and which generation is current) | **Zide** — hosts must not invent parallel damage or generation truth |
+| Scheduling terminal draw work against the shared GPU resource | **Zide renderer + terminal widget** (shared product path) |
+| **Binding** that shared resource into the host’s **platform presentation** (per-frame lifecycle, when pixels reach the display) and reporting **presentation completion** so generations can retire | **Host** — completion still flows through the **shared FFI present-ack** (`VT core FFI`) so Zide stays consistent |
 
 Interpretation:
 
-- The **host** passes **whatever opaque or typed surface handle** the active
-  backend requires; Zide does not standardize GLES vs Metal vs Vulkan objects
-  here — that belongs to `RENDER_BACKEND_CONTRACT`.
-- **Zide** owns the **update/dirty contract**: when the terminal must redraw,
-  which generation is current, and how present ack advances acknowledged
-  generation. Foreign hosts consume the same FFI fields as native.
-- The **host** owns **when** a frame hits the screen and **which** native
-  surface is current; it must not replace that responsibility with ad hoc
-  snapshot polling as a substitute for honest present feedback.
+- The **host** is responsible for making a **suitable shared GPU attachment**
+  available and keeping it live across the host’s frame lifecycle; the **frozen**
+  idea is “shared GPU resource the terminal draws into,” not “this OS window
+  handle” as the universal type.
+- **Zide** owns **dirty tracking and generation truth** for terminal **content**
+  and the **update contract** for what must be repainted into that resource.
+- **Backend-specific** details (Metal drawable vs GL surface vs Vulkan image)
+  stay out of this document by design.
 
-## FFI touchpoints (read-only contract, not behavior change)
+## FFI touchpoints (VT core FFI, read-only contract)
 
-Hosts observe terminal publication and redraw through the **VT core FFI**
-(`src/terminal/ffi/**`): e.g. `needs_redraw`, `redraw_state`, `published_generation`,
-`present_ack` / `acknowledged_generation`. Those symbols are the portable surface
-for “has the terminal advanced its frame contract” — separate from GLES/Metal
-types which never cross the FFI boundary as raw GPU handles in the shared
-design.
+Hosts observe redraw and generation pairing through **VT core FFI** symbols (e.g.
+`needs_redraw`, `redraw_state`, `published_generation`, `present_ack` /
+`acknowledged_generation`) — portable **logical** surface for frame contract
+state. Raw GPU handles do not need to cross that boundary for the contract to
+hold.
 
 ## Android mapping (example, not definition)
 
-On Android, `ANativeWindow` / surface lifecycle flows through platform code; the
-terminal FFI still speaks in **generations and acks**, not in JNI surface types.
-If Android-specific glue peeks at GPU objects, that remains **platform-local**
-and must not become a second publication truth.
+On Android, code may obtain a native window or surface on the way to a GLES
+texture or image; the **contract** here is still: shared GPU attachment for
+terminal draws + Zide-owned generations + host-owned presentation binding. JNI or
+`ANativeWindow` shape remains **platform-local**.
 
 ## Non-goals
 
-- Defining GLES vs Metal draw queues — see `RENDER_BACKEND_CONTRACT.md`.
-- Defining JNI or Activity shape — platform docs + `NATIVE_HOST_CONTRACT.md`.
+- Defining draw queues, passes, or backend resource types — see
+  `RENDER_BACKEND_CONTRACT.md`.
+- Defining JNI, Activity, or desktop window APIs — see `NATIVE_HOST_CONTRACT.md`
+  and platform docs.
 - Changing parser/engine semantics — `VT_CORE_DESIGN.md` / maturity campaign.
 
 ## Related documents
 
-- `app_architecture/platform/NATIVE_HOST_CONTRACT.md` — lifecycle + surface
-  availability.
+- `app_architecture/platform/NATIVE_HOST_CONTRACT.md` — lifecycle + native
+  surface availability patterns.
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` — backend responsibilities
   and adoption gates.
 - `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — where publication
