@@ -809,7 +809,6 @@ pub fn runRefreshedPresentablePresentation(
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
     view_geometry: TerminalViewGeometry,
-    view_cells_len: usize,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
@@ -826,6 +825,7 @@ pub fn runRefreshedPresentablePresentation(
         .glyph_ms = cycle_result.timing.glyph_ms,
         .kitty_ms = cycle_result.timing.kitty_ms,
     };
+    const view_cells_len = terminal_view.cells.len;
 
     const visible_w = surface_update_plan.geometry.visible_w;
     const visible_h = surface_update_plan.geometry.visible_h;
@@ -904,7 +904,6 @@ pub fn executeRefreshPresentFlow(
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
     view_geometry: TerminalViewGeometry,
-    view_cells_len: usize,
     hover_link_id: u32,
     composing_active: bool,
     composing_hash: u64,
@@ -925,7 +924,6 @@ pub fn executeRefreshPresentFlow(
         renderer: @TypeOf(renderer),
         terminal_view: view_state.TerminalViewModel,
         view_geometry: TerminalViewGeometry,
-        view_cells_len: usize,
         hover_link_id: u32,
         composing_active: bool,
         composing_hash: u64,
@@ -965,7 +963,6 @@ pub fn executeRefreshPresentFlow(
                 ctx.renderer,
                 ctx.terminal_view,
                 ctx.view_geometry,
-                ctx.view_cells_len,
                 ctx.draw_cursor,
                 ctx.cursor,
                 ctx.cursor_style,
@@ -985,7 +982,6 @@ pub fn executeRefreshPresentFlow(
         .renderer = renderer,
         .terminal_view = terminal_view,
         .view_geometry = view_geometry,
-        .view_cells_len = view_cells_len,
         .hover_link_id = hover_link_id,
         .composing_active = composing_active,
         .composing_hash = composing_hash,
@@ -1193,7 +1189,6 @@ pub fn runPresentation(
         recent_input_window_active: bool,
         execution_update_plan: PresentationUpdatePlan,
         note_present_ctx: @TypeOf(note_present_ctx),
-        view_cells_len: usize,
         bg_color: Color,
     };
     const Hooks = struct {
@@ -1314,7 +1309,6 @@ pub fn runPresentation(
                 renderer_local,
                 ctx.terminal_view,
                 ctx.view_geometry,
-                ctx.view_cells_len,
                 ctx.hover_link_id,
                 ctx.composing_active,
                 ctx.composing_hash,
@@ -1384,7 +1378,6 @@ pub fn runPresentation(
         .recent_input_window_active = recent_input_window_active,
         .execution_update_plan = execution_update_plan,
         .note_present_ctx = note_present_ctx,
-        .view_cells_len = view_cells_len,
         .bg_color = bg_color,
     };
     const fast = runFastPresentIfAvailable(
@@ -1392,7 +1385,6 @@ pub fn runPresentation(
         renderer,
         plan,
         terminal_view,
-        view_cells_len,
         draw_cursor,
         cursor,
         cursor_style,
@@ -1462,7 +1454,6 @@ pub fn tryFastPresentExisting(
     renderer: anytype,
     plan: TerminalPresentPlan,
     terminal_view: view_state.TerminalViewModel,
-    view_cells_len: usize,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
@@ -1482,7 +1473,7 @@ pub fn tryFastPresentExisting(
     const eligible = terminal_presentation_runtime.checkReuseEligibility(
         plan,
         .{
-            .view_cells_len = view_cells_len,
+            .view_cells_len = terminal_view.cells.len,
             .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
             .sync_updates_active = terminal_view.sync_updates_active,
             .supports_reuse_without_sync = renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer),
@@ -1523,7 +1514,6 @@ pub fn runFastPresentIfAvailable(
     renderer: anytype,
     plan: TerminalPresentPlan,
     terminal_view: view_state.TerminalViewModel,
-    view_cells_len: usize,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
@@ -1544,7 +1534,6 @@ pub fn runFastPresentIfAvailable(
         renderer,
         plan,
         terminal_view,
-        view_cells_len,
         draw_cursor,
         cursor,
         cursor_style,
