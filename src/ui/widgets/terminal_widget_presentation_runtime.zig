@@ -1558,7 +1558,7 @@ pub fn logUnavailable(
         .{ .key = "publication_generation", .value = .{ .unsigned = terminal_view.generation } },
         .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
-        .{ .key = "presentable_refresh", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
+        .{ .key = "renderer_presentable_refresh_tag", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
         .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.terminalPresentablePipelineReady() } },
         .{ .key = "host_surface_target_available", .value = .{ .boolean = present_state.target_available } },
         .{ .key = "shared_surface_attachment_ready", .value = .{ .boolean = surface_state.readSharedSurfaceAttachmentReady() } },
