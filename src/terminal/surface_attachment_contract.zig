@@ -27,6 +27,10 @@
 //! renderer `terminalPresentableInfo`) must not be labeled as full attachment without also
 //! threading the terminal presentable **pipeline** leg; `hostSharedSurfaceAttachmentReady` is
 //! the single conjunction for “attachment-ready” semantics.
+//!
+//! **Conjunction propagation (`CZH-S22`):** this module is **compute-only** (pure predicates from
+//! legs). It does not **store** runtime attachment state; widget state owns leg **storage** and
+//! call sites own **report** field naming on present results and logs.
 
 const std = @import("std");
 

@@ -10,6 +10,11 @@
 //! **Present-result ownership (`CZH-B26`):** `readSharedSurfaceAttachmentReady` is the only
 //! single-bool “full attachment” predicate here; `hostSurfaceTargetAvailable` remains host-target
 //! leg only.
+//!
+//! **Conjunction propagation (`CZH-S22`):** **compute** is `notePresentableAvailability` (writes the
+//! host-target leg, returns conjunction from stored legs); **store** is the pipeline and host-target
+//! fields on `PresentationState`; **report** is `readSharedSurfaceAttachmentReady` and the per-leg
+//! getters — not a separate hidden conjunction field.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");

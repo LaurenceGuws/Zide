@@ -9,6 +9,10 @@
 //! - **Full attachment:** `hostSharedSurfaceAttachmentReady(pipeline, target)` in
 //!   `surface_attachment_contract` — not stored as a single bool here; do not treat the host-target
 //!   leg alone as “attachment-ready” (`CZH-B26`).
+//!
+//! **Conjunction propagation (`CZH-S22`):** this struct **stores legs only**; conjunction is
+//! computed elsewhere (`notePresentableAvailability` / pure contract helpers) and must not be
+//! aliased onto one of these leg fields.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");

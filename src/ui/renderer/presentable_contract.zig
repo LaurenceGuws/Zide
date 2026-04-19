@@ -1,5 +1,9 @@
 //! Neutral terminal presentable draw payloads. OpenGL retained
 //! `PresentableTarget` / `PresentableTargetState` live in `gl_presentable_target.zig`.
+//!
+//! **Conjunction propagation (`CZH-S22`):** `TerminalPresentResult` **stores** per-outcome fields
+//! supplied by callers; it does not **compute** `shared_surface_attachment_ready` — runtime/widget
+//! paths compute conjunction and **report** through the same field names downstream.
 
 pub const PresentableDraw = struct {
     x: f32,

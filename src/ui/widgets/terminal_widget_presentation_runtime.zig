@@ -16,6 +16,12 @@
 //! **Present-result ownership (`CZH-B26`):** `ReusePresentOutcomeState` / `TerminalPresentResult`
 //! distinguish the host-target **leg** from the **full attachment** conjunction (`pipeline ∧ host
 //! target`) so bookkeeping cannot overload one bool for both (`CZH-753`..`CZH-754`).
+//!
+//! **Conjunction propagation phases (`CZH-S22`):** **compute** in `refreshPresentState` and
+//! `tryFastPresentExisting` via `TerminalWidgetSurfaceState.notePresentableAvailability`; **store**
+//! on `PresentationPresentState`, `ReusePresentOutcomeState`, and `TerminalPresentResult` fields;
+//! **report** through `logUnavailable`, `readSharedSurfaceAttachmentReady`, and consumers of present
+//! results — do not re-label a single leg as the conjunction on those paths.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
