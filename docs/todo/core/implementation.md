@@ -2228,14 +2228,24 @@ Execution source:
 | `PresentationState.terminal_presentable_ready` | **Pipeline leg** | Correct field name; module lacked `//!` seam vocabulary (`CZH-712`). |
 | `PresentationState.target_available` | **Host drawable target** | Pairs with pipeline in `hostSharedSurfaceAttachmentReady`; name ok. |
 | `PresentationState.last_render_generation` / `last_render_clear_generation` | **Generation (surface cache)** | Match `surface_contract` publication/clear vs last draw; naming ok. |
-| `PresentationUpdateDelta.presentable_ready` | **Pipeline leg** | Short name reads like full “ready”; converge to explicit `terminal_presentable_pipeline_ready` field (`CZH-715`). |
-| `buildTerminalPresentPlan` local `presentable_ready` | **Pipeline leg** | Alias of `presentableReady()`; rename for vocabulary (`CZH-713`/`714`). |
-| `tryFastPresentExisting` local `presentable_ready` | **Full attachment** | Holds **return** of `notePresentableAvailability` (conjunction) — name was ambiguous vs pipeline (`CZH-714`). |
-| `planUpdate` locals | **Mixed** | `publication_gen_mismatch` / `clear_gen_mismatch` / `terminal_presentable_pipeline_ready` already explicit (`CZH-B21`). |
-| `logUnavailable` JSON key `presentable_ready` | **Pipeline leg** | Operator field; optional rename for parity (`CZH-716`). |
-| `surface_contract` / `surface_attachment_contract` | **Authority** | Docs reference `presentationUpdateDelta.presentable_ready` — sync after field rename (`CZH-712`/`715`). |
+| `PresentationUpdateDelta.terminal_presentable_pipeline_ready` | **Pipeline leg** | Renamed from `presentable_ready` (`CZH-715`); sourced from `presentableReady()`. |
+| `buildTerminalPresentPlan` locals | **Mixed** | `publication_clear_pair_matches_last_surface_render` + `terminal_presentable_pipeline_ready` (`CZH-713`/`714`). |
+| `tryFastPresentExisting` `shared_surface_attachment_ready` | **Full attachment** | `notePresentableAvailability` return (`CZH-714`). |
+| `planUpdate` locals | **Mixed** | `publication_gen_mismatch` / `clear_gen_mismatch` / `terminal_presentable_pipeline_ready` (`CZH-B21`). |
+| `logUnavailable` / handoff log keys | **Pipeline leg** | `terminal_presentable_pipeline_ready` (`CZH-716`). |
+| `surface_contract` / `surface_attachment_contract` | **Authority** | Synced to delta field + log vocabulary (`CZH-712`/`715`). |
 
 **`CZH-719` hygiene scope:** same five widget/terminal modules as sprint targets; expect no new probe residue; sync `TERMINAL_SURFACE_CONTRACT.md` if field/log vocabulary shifts.
+
+#### `CZH-719` probe/doc hygiene (`CZH-S17`)
+
+- **Reviewed:** `terminal_widget_presentation_state.zig`, `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_runtime.zig`, `terminal_widget.zig`, `surface_contract.zig`,
+  `surface_attachment_contract.zig`.
+- **Removed:** nothing (no investigation-only probe callers in touched paths).
+- **Kept:** operator `logUnavailable` / generation handoff `terminal.generation_handoff` strings;
+  `terminal.ui.redraw` resize warnings in `presentation_state`.
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` pipeline field name aligned in `CZH-715` / `CZH-716`.
 
 ## Response Contract
 
