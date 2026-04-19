@@ -7,6 +7,25 @@ Code:
 - `src/editor/ffi/bridge.zig`
 - `src/editor/ffi/c_api.zig`
 
+## Position in the core split (`CZH-B6`)
+
+The editor backend FFI is one of the four frozen layers alongside VT core FFI,
+the optional bring-your-own-PTY host seam, and the terminal surface contract.
+That means:
+
+- this boundary exports **editor core behavior** for **foreign hosts** the same
+  way the terminal stack exports VT truth for foreign hosts — not an alternate
+  editor architecture.
+- **Native / in-process** code should continue to call editor core directly
+  where appropriate; routing through this FFI is for **out-of-process or
+  non-Zig embedders**, not for tightening internal call paths.
+- Future hosts (desktop JNI, WASM, second-party shells) must be able to rely on
+  this document + the C headers without reading `src/editor/*.zig` internals.
+
+Non-goals for this freeze doc (unchanged from below, but explicit): no widget
+protocol, no render backend handles, no terminal FFI mixing — those stay in
+their own contracts.
+
 ## Purpose
 
 The editor FFI exists so Zide's editor core can be reused outside the native
@@ -156,8 +175,24 @@ That means:
 - native app integration may call it directly
 - external hosts use the FFI bridge
 
+**Routing rule (frozen wording):** anything that is “which buffer, which
+window, which platform input path” stays in **app / platform** layers. The FFI
+only sees **editor handle + operations** — no SDL, no file paths from the host
+unless passed in as plain bytes through documented APIs.
+
 This is the same architectural direction as terminal:
 
 - strong subsystem core
 - app-specific routing outside the exported boundary
 - explicit external-host contract when reuse matters
+
+## Versioning and future host adoption
+
+- String ABI is explicitly versioned (`ZIDE_EDITOR_STRING_ABI_VERSION`). Broader
+  surface versioning remains **thin**: new exports should be additive when
+  possible; breaking changes require a deliberate ABI bump and doc update in
+  this file.
+- A future host must not require Zig build knowledge: C entrypoints in
+  `c_api.zig` + this document are the contract. If Java/Kotlin or other glue
+  duplicates structs, those bindings are **host-owned** and must track this
+  authority — not the other way around.

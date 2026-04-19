@@ -674,6 +674,14 @@ Architect note:
   bring-your-own-PTY host seam, bridge/facade glue, and explicit smell notes for
   post-freeze extraction.
 
+#### `CZH-603` editor backend FFI authority (recorded)
+
+- **Authority:** `app_architecture/editor/FFI_DESIGN.md` (freeze section +
+  routing/versioning notes).
+- **Outcome:** editor FFI scoped as the **editor backend** export for foreign
+  hosts; native app remains direct-to-core; platform routing and future JNI-style
+  glue stay host-owned and trace this doc.
+
 ## Response Contract
 
 Every batch update must include:
