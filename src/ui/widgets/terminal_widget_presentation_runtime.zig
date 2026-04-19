@@ -2632,3 +2632,47 @@ test "CZH-S29: integration follow-through — direct outcome folds correctly thr
     try std.testing.expect(result.shared_surface_attachment_ready == false);
 }
 
+test "CZH-S30: consolidation helper — unified fold composition pattern" {
+    // Verify that the consolidated fold composition helper correctly applies outcome-specific fields.
+    // This locks the consolidation pattern used by outcome-specific fold functions.
+
+    var result = TerminalPresentResult{
+        .outcome = .presented,
+        .cache_state_advanced = false,
+    };
+
+    // Test: applying followup fields through unified helper
+    applyOutcomeSpecificFields(&result, true, .target_unavailable);
+    try std.testing.expect(result.followup.required == true);
+    try std.testing.expectEqual(result.followup.reason, .target_unavailable);
+
+    // Test: applying neutral followup fields
+    var result2 = TerminalPresentResult{
+        .outcome = .presented,
+    };
+    applyOutcomeSpecificFields(&result2, false, .none);
+    try std.testing.expect(result2.followup.required == false);
+    try std.testing.expectEqual(result2.followup.reason, .none);
+}
+
+test "CZH-S30: consolidation helper — refresh outcome assertion unified pattern" {
+    // Verify that the consolidated refresh outcome assertion helper correctly validates
+    // followup coupling invariants. This locks the consolidation pattern.
+
+    // Test: valid state with followup required and reason set
+    const valid_with_followup = RefreshOutcomeState{
+        .outcome = .presented,
+        .followup_required = true,
+        .followup_reason = .target_unavailable,
+    };
+    assertRefreshOutcomeConsistency(valid_with_followup);
+
+    // Test: valid state with followup neutral
+    const valid_neutral = RefreshOutcomeState{
+        .outcome = .presented,
+        .followup_required = false,
+        .followup_reason = .none,
+    };
+    assertRefreshOutcomeConsistency(valid_neutral);
+}
+
