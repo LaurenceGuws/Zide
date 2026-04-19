@@ -304,6 +304,16 @@ test "PresentationPresentState type is consistent at widget/terminal boundary" {
     try std.testing.expect(widget_type == terminal_type);
 }
 
+test "Eligibility input types are consistent at widget/terminal boundary" {
+    const widget_reuse = terminal_widget_presentation_runtime.ReuseEligibilityInput;
+    const terminal_reuse = terminal_presentation_runtime.ReuseEligibilityInput;
+    try std.testing.expect(widget_reuse == terminal_reuse);
+
+    const widget_direct = terminal_widget_presentation_runtime.DirectPresentEligibilityInput;
+    const terminal_direct = terminal_presentation_runtime.DirectPresentEligibilityInput;
+    try std.testing.expect(widget_direct == terminal_direct);
+}
+
 test "PresentationPresentState carries expected fields from pure computation" {
     // Verify struct fields match expected pure-state snapshot shape
     const state = terminal_presentation_runtime.PresentationPresentState{

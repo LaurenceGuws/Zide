@@ -131,6 +131,8 @@ pub const RefreshedPresentablePresentationResult = terminal_presentation_runtime
 pub const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
 pub const DirectPresentOutcomeState = terminal_presentation_runtime.DirectPresentOutcomeState;
 pub const ReusePresentOutcomeState = terminal_presentation_runtime.ReusePresentOutcomeState;
+pub const ReuseEligibilityInput = terminal_presentation_runtime.ReuseEligibilityInput;
+pub const DirectPresentEligibilityInput = terminal_presentation_runtime.DirectPresentEligibilityInput;
 
 // Terminal-layer fold and classification helpers
 const presentResultFromOutcomeState = terminal_presentation_runtime.presentResultFromOutcomeState;
