@@ -2493,6 +2493,19 @@ Execution source:
 - classify alias retention/removal targets by seam ownership
 - record scoped hygiene targets for `CZH-749`
 
+**Classified alias pairs (canonical term → remove/retain):**
+
+| Concept | Dominant canonical term | Aliases to fold | Primary sites |
+| --- | --- | --- | --- |
+| Publication generation (view / draw path) | `publication_generation` (locals/params mirroring `terminal_view.generation`) | `terminal_generation` parameter/visitor field in glyph draw pass | `terminal_widget_presentation_runtime.zig` |
+| Surface cache generations | `last_render_generation`, `last_render_clear_generation` | none material | `terminal_widget_presentation_state.zig` |
+| Pipeline leg (stored bool) | `terminal_presentable_pipeline_ready` | `terminal_presentable_ready` on `PresentationState` (short form vs delta field) | `terminal_widget_presentation_state.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_draw_presentation.zig` |
+| Host drawable target leg (stored bool) | `host_surface_target_available` | `target_available` on `PresentationState` and present-path snapshots (`PresentationPresentState`, outcome states, `TerminalPresentResult`) | `terminal_widget_presentation_state.zig`, `terminal_widget_presentation_runtime.zig`, `presentable_contract.zig` |
+| Full attachment predicate | `readSharedSurfaceAttachmentReady` / `hostSharedSurfaceAttachmentReady` | none material (helpers already named) | `surface_attachment_contract.zig`, `terminal_widget_surface_state.zig` |
+| Surface contract primitives | `publicationGenerationDiffersFromLastSurfaceRender`, `publicationClearPair*` | informal “gen mismatch” phrasing in comments only | `surface_contract.zig` |
+
+**`CZH-749` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_draw.zig`, `terminal_widget.zig`, `surface_contract.zig`, `surface_attachment_contract.zig`, `terminal_widget_presentation_state.zig`, `terminal_widget_draw_presentation.zig`, `presentable_contract.zig`, and `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` if field renames land; expect no investigation-only probe callers; keep operator logs and debug samples unless proven stale.
+
 ## Response Contract
 
 Every batch update must include:
