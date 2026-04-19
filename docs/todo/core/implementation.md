@@ -2684,6 +2684,23 @@ Execution source:
 - classify per phase owner: compute vs storage vs report carrier
 - record scoped hygiene targets for `CZH-769`
 
+**Phase ownership (compute / store / report) — full-attachment conjunction (`CZH-S22`):**
+
+| Phase | Primary owner | Mechanism / carrier |
+| --- | --- | --- |
+| Compute (pure) | `surface_attachment_contract` | `hostSharedSurfaceAttachmentReady` / `FromPair` define conjunction from the two legs; no runtime state. |
+| Compute (widget) | `TerminalWidgetSurfaceState.notePresentableAvailability` | Writes the host-target leg on `PresentationState`, returns conjunction from stored pipeline ∧ host-target legs. |
+| Compute (reuse fast path) | `tryFastPresentExisting` | Conjunction local `shared_surface_attachment_ready` from `notePresentableAvailability` before packaging `ReusePresentOutcomeState`. |
+| Compute (refreshed present path) | `refreshPresentState` | Conjunction from `notePresentableAvailability` gates `present` / `log_unavailable` (canonical local naming in `CZH-763`..`CZH-764`). |
+| Store (attachment legs) | `PresentationState` | `terminal_presentable_pipeline_ready`, `host_surface_target_available` — legs only; no standalone conjunction field. |
+| Store (reuse / present results) | `ReusePresentOutcomeState`, `TerminalPresentResult` | `shared_surface_attachment_ready` is the conjunction snapshot on these carriers. |
+| Store (transient present gate) | `PresentationPresentState` | Host-target leg plus conjunction field for this tick’s gating (`ready` renamed to `shared_surface_attachment_ready` in `CZH-764`). |
+| Report (read helper) | `readSharedSurfaceAttachmentReady` | Re-reads conjunction from stored legs (same predicate as compute return after `notePresentableAvailability`). |
+| Report (operator JSON) | `logUnavailable` | Keys `host_surface_target_available`, `shared_surface_attachment_ready` (`CZH-765` ties report to stored snapshot where applicable). |
+| Report (downstream) | `TerminalPresentResult` consumers | Field vocabulary matches `presentable_contract` aggregation; refresh/direct paths default conjunction field when not computed. |
+
+**`CZH-769` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_state.zig`, `presentable_contract.zig`, `surface_attachment_contract.zig`, `terminal_widget_draw.zig`, `TERMINAL_SURFACE_CONTRACT.md`; confirm no investigation-only probe residue on product paths.
+
 ## Response Contract
 
 Every batch update must include:
