@@ -1079,7 +1079,7 @@ fn buildTerminalPresentPlan(
     );
     const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
-    const presentable_ready = self.surface.presentableReady();
+    const terminal_presentable_pipeline_ready = self.surface.presentableReady();
     const publication_clear_pair_matches_last_surface_render = surface_contract.publicationClearPairMatchesLastSurfaceRender(
         terminal_view.generation,
         terminal_view.clear_generation,
@@ -1097,7 +1097,7 @@ fn buildTerminalPresentPlan(
         delta.cursor_changed or
         overlay_changed or
         blink_requires_partial;
-    const reuse_allowed = presentable_ready and terminal_view.cells.len > 0;
+    const reuse_allowed = terminal_presentable_pipeline_ready and terminal_view.cells.len > 0;
     const reuse_requested = reuse_allowed and
         !viewport_shifted and
         (terminal_view.sync_updates_active or
@@ -1642,14 +1642,14 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) ReusePresentOutcomeState {
     if (plan.present_intent != .reuse) return .{};
-    const presentable_ready = surface_state.notePresentableAvailability(
+    const shared_surface_attachment_ready = surface_state.notePresentableAvailability(
         renderer_presentable_host.terminalPresentableInfo(renderer) != null,
     );
-    if (!(view_cells_len > 0 and presentable_ready and
+    if (!(view_cells_len > 0 and shared_surface_attachment_ready and
         (terminal_view.sync_updates_active or
             renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
         return .{
-            .target_available = presentable_ready,
+            .target_available = shared_surface_attachment_ready,
         };
     }
 
