@@ -22,8 +22,9 @@ pub const TerminalWidgetSurfaceState = struct {
         /// Same predicate as `surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear`
         /// for `(clear_generation, last_surface_render_clear_generation)`.
         clear_generation_changed: bool,
-        /// Terminal presentable **pipeline** ready (`presentableReady()`); not full
-        /// `surface_attachment_contract.hostSharedSurfaceAttachmentReady`.
+        /// Terminal presentable **pipeline** ready (same bool as `presentableReady()`); not
+        /// full `surface_attachment_contract.hostSharedSurfaceAttachmentReady`. Field
+        /// renamed to `terminal_presentable_pipeline_ready` in `CZH-715`.
         presentable_ready: bool,
         cursor_changed: bool,
         invalidation_flags: InvalidationFlags,

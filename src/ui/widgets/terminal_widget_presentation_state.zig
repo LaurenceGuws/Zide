@@ -1,3 +1,9 @@
+//! Cached terminal **presentation draw** state: partial row plans plus the last
+//! generations recorded for the terminal surface draw (see `surface_contract`
+//! composite helpers). **Pipeline readiness** (`terminal_presentable_ready`) and
+//! **host drawable target** (`target_available`) are separate legs; full shared-surface
+//! attachment readiness is their conjunction (`surface_attachment_contract`,
+//! `TerminalWidgetSurfaceState.notePresentableAvailability`).
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
@@ -19,9 +25,14 @@ pub const PresentationState = struct {
     partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
     partial_draw_cols_start: std.ArrayList(u16),
     partial_draw_cols_end: std.ArrayList(u16),
+    /// Terminal presentable **pipeline** is ready to accept draws (one leg of
+    /// `hostSharedSurfaceAttachmentReady`; not implied alone).
     terminal_presentable_ready: bool = false,
+    /// Host reports a drawable **target** for the shared attachment (other leg).
     target_available: bool = false,
+    /// Last **publication generation** applied to the terminal surface draw cache.
     last_render_generation: u64 = 0,
+    /// Last **clear generation** applied to the terminal surface draw cache.
     last_render_clear_generation: u64 = 0,
     last_alt_active: bool = false,
     last_cell_w_i: i32 = 0,
