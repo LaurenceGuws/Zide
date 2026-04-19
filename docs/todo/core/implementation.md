@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B19` (`in_progress`).
+- Current active macro batch: `CZH-B19` (`architect_review_pending` at `CZH-GATE-73`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S14_TICKETS.md`
 
@@ -1904,7 +1904,7 @@ Checkpoint packet: `docs/todo/core/CZH_S13_CHECKPOINT.md`.
   consume named `surface_contract` ffi wrappers with behavior/ABI preserved;
   scoped probe/doc hygiene is aligned.
 
-### `CZH-B19` Long-Loop Surface/FFI Convergence Pack (`in_progress`)
+### `CZH-B19` Long-Loop Surface/FFI Convergence Pack (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1980,6 +1980,21 @@ decomposition. Hygiene scope `CZH-689`: `surface_contract.zig`,
 - Layering docs in `surface_contract.zig`; redundant `CZH-S11` loop test removed
 - Widget + `core_api` tests converged to explicit composite / `ffi*` shapes
 - Convergence invariant tests (`CZH-687`, `CZH-688`); probe sweep note above
+
+#### `CZH-S14` engineer validation (`CZH-690`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-681`..`CZH-690` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S14_CHECKPOINT.md`.
 
 ## Response Contract
 

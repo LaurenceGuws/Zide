@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B19` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-73`): `CZH-B19` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -21,6 +21,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S11_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S12_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S13_CHECKPOINT.md`
+- Pending sprint checkpoint (Architect): `docs/todo/core/CZH_S14_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S14_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -46,12 +47,10 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B19`, active long-loop):
+Current batch intent (`CZH-B19`, submitted at `CZH-GATE-73`):
 
-- converge mixed primitive/composite/ffi seam consumers under explicit
-  `surface_contract` ownership
-- complete scoped probe/doc hygiene sweep in touched modules
-- keep one architect loop at `CZH-GATE-73` unless a real hard blocker appears
+- widget/FFI seam tests aligned to composite vs `ffi*` ownership; layered docs
+- scoped hygiene recorded; Architect review pending on checkpoint packet
 
 ## First Read Order
 
