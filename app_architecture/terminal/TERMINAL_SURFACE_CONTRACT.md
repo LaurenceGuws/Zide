@@ -57,11 +57,12 @@ state. Raw GPU handles do not need to cross that boundary for the contract to
 hold.
 
 **Zig seam (logical bundle):** `src/terminal/surface_contract.zig` names the same
-published vs acknowledged pairing and fills the extern `RedrawState` bundle;
-`src/terminal/ffi/core_api.zig` routes `redraw_state` / `needs_redraw` through
-that helper (`CZH-S7`). Host `present_ack` generation admissibility (vs publication
-truth and last ack) uses the same module (`presentAckGenerationAdmissible`;
-`CZH-S8`).
+published vs acknowledged pairing and fills the extern `RedrawState` bundle.
+`src/terminal/ffi/core_api.zig` routes `redraw_state` through
+`ffiRedrawStateFill`, `needs_redraw` through `ffiNeedsRedrawU8`, and `present_ack`
+admissibility through `ffiPresentAckGenerationAdmissible` (`CZH-S13`; primitives
+`fillRedrawState`, `needsRedrawFromPair`, `presentAckGenerationAdmissible` remain
+the underlying definitions).
 
 **Widget draw consumer:** Publication/clear vs last surface draw for widget reuse
 and invalidation is expressed through composite helpers

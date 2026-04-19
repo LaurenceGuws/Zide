@@ -1861,6 +1861,22 @@ to `CZH-GATE-72`.
 (`CZH-672`..`CZH-675`). Hygiene scope for `CZH-679`: `core_api.zig`,
 `surface_contract.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
 
+#### `CZH-679` probe/doc hygiene (`CZH-S13`)
+
+- **Reviewed:** `src/terminal/ffi/core_api.zig`, `src/terminal/surface_contract.zig`
+  (stale probe/debug sweep).
+- **Removed:** nothing (no investigation-only probe callers in touched seam paths;
+  existing `log.logf` warnings remain operator/error signals).
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` FFI paragraph updated to `ffi*`
+  entrypoints (`CZH-S13`).
+
+#### Landed (`CZH-672`..`CZH-679`)
+
+- VT FFI wrappers: `ffiRedrawStateFill`, `ffiNeedsRedrawU8`,
+  `ffiPresentAckGenerationAdmissible`; `core_api` routes through them
+- Seam invariant tests in `surface_contract.zig` and `core_api.zig`
+- Probe sweep + authority sync (`CZH-679`)
+
 ## Response Contract
 
 Every batch update must include:
