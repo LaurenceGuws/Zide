@@ -1,3 +1,8 @@
+//! Terminal widget draw path: publication generations live in `surface_contract`
+//! (via presentation delta / cache); host drawable attachment readiness is
+//! `surface_attachment_contract` (`presentableReady`, `notePresentableAvailability`).
+//! This module orchestrates draw and delegates presentation to
+//! `terminal_widget_presentation_runtime` (`CZH-S16`).
 const std = @import("std");
 const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const app_shell = @import("../../app_shell.zig");
