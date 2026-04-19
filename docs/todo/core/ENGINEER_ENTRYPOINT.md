@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S8_TICKETS.md`
+3. `docs/todo/core/CZH_S9_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,8 +20,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B13` — **`architect_review_pending`** at **`CZH-GATE-67`** (sprint `CZH-S8`):
-  `present_ack` admissibility seam landed. Packet `docs/todo/core/CZH_S8_CHECKPOINT.md`.
+- `CZH-B14` — **`in_progress`** (sprint `CZH-S9`): expand surface-contract seam
+  consumption into one additional bounded draw/presentation-facing path with
+  behavior-neutral wiring. Execute tickets `CZH-646`..`CZH-650`; stop only at
+  `CZH-GATE-68` or a real hard blocker.
 
 ## Hard Rules
 
@@ -37,8 +39,7 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S8` tickets `CZH-641`..`CZH-645` are complete at **`CZH-GATE-67`**
-  unless Architect reopens scope.
+- Sprint `CZH-S9` tickets `CZH-646`..`CZH-650` are the active execution set.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

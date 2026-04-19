@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B13` (`architect_review_pending` at `CZH-GATE-67`).
+- Current active macro batch: `CZH-B14` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S8_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S9_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1362,7 +1362,7 @@ Checkpoint packet: `docs/todo/core/CZH_S7_CHECKPOINT.md`.
   now exists in code and is wired through `core_api.redrawState` /
   `core_api.needsRedraw` without behavior or ABI drift.
 
-### `CZH-B13` Surface Contract Wiring Expansion (`architect_review_pending`)
+### `CZH-B13` Surface Contract Wiring Expansion (`accepted`)
 
 Queue line (exact):
 
@@ -1430,6 +1430,46 @@ paragraph updated.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S8_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B13`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `c8f6a41e`, `8657ff26`, `f8c5d492`, `7c036b79`,
+  `964ec2b9`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` `present_ack` admissibility now routes through the
+  explicit surface-contract seam with no behavior or ABI drift.
+
+### `CZH-B14` Surface Contract Consumer Expansion (`in_progress`)
+
+Queue line (exact):
+
+- expand surface-contract seam consumption to one additional bounded
+  draw/presentation-facing path while preserving behavior and host ABI
+
+Acceptance:
+
+- one additional bounded consumer path is selected via audit
+- minimal seam helpers/types for that path are added behavior-neutrally
+- selected path adopts the seam helpers/types with equivalent runtime behavior
+- queue/handoff/entrypoint and authority docs remain aligned
+- full stress ladder remains green through `CZH-GATE-68`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S9_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-646`..`CZH-650` in order from
+  `docs/todo/core/CZH_S9_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-68` or a real hard blocker
 
 ## Response Contract
 
