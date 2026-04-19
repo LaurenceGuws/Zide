@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B22` (`in_progress`, super-gate `CZH-GATE-76`).
+- Current active macro batch: `CZH-B22` (`architect_review_pending`, super-gate `CZH-GATE-76`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S17_TICKETS.md`
 
@@ -2186,7 +2186,7 @@ Checkpoint packet: `docs/todo/core/CZH_S16_CHECKPOINT.md`.
   touched widget/presentation call sites; terminology/docs/tests are aligned and
   behavior remained stable.
 
-### `CZH-B22` Long-Loop Surface Naming/State Convergence Pack (`in_progress`)
+### `CZH-B22` Long-Loop Surface Naming/State Convergence Pack (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -2246,6 +2246,27 @@ Execution source:
 - **Kept:** operator `logUnavailable` / generation handoff `terminal.generation_handoff` strings;
   `terminal.ui.redraw` resize warnings in `presentation_state`.
 - **Authority:** `TERMINAL_SURFACE_CONTRACT.md` pipeline field name aligned in `CZH-715` / `CZH-716`.
+
+#### `CZH-S17` engineer validation (`CZH-720`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-711`..`CZH-720` (one commit each).  
+- **SL-0** `zig build` — **PASS**  
+- **SL-1** `zig build test` — **PASS**  
+- **SL-2** `zig build -Dmode=terminal` — **PASS**  
+- **SL-3** `zig build -Dmode=editor` — **PASS**  
+- **`zig build test-config`** — **PASS**  
+- **`zig build test-editor`** — **PASS**  
+- **`zig build test-terminal-replay-all`** — **PASS**  
+- **Android guard** — **SKIP** (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S17_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B22`
+- `Verdict: architect_review_pending`
+- `Engineer handoff:` `CZH-GATE-76` (see checkpoint packet)
 
 ## Response Contract
 
