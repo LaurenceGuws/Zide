@@ -229,6 +229,12 @@ test "publicationClearPairMatchesLastSurfaceRender is conjunction of primitive n
     try std.testing.expect(!publicationClearPairMatchesLastSurfaceRender(5, 6, 5, 5));
 }
 
+test "CZH-S14: composite pair mismatch fields mirror per-coordinate inequality" {
+    const m = publicationClearPairMismatchesFromLastSurfaceRender(1, 2, 3, 4);
+    try std.testing.expectEqual(1 != 3, m.publication_mismatch);
+    try std.testing.expectEqual(2 != 4, m.clear_mismatch);
+}
+
 test "CZH-S13: ffiRedrawStateFill matches fillRedrawState" {
     var via_ffi: shared.RedrawState = undefined;
     var direct: shared.RedrawState = undefined;
