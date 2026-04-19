@@ -3,6 +3,7 @@
 //! - Outcome classification is pure (no widget dependencies)
 //! - Geometry computation is pure
 //! - Outcome folding is pure
+//! - `refreshPresentState` is pure state computation (no side effects)
 //! - Ownership boundary is clean (terminal layer can be used without widget imports)
 
 const std = @import("std");
@@ -261,4 +262,90 @@ test "Direct present eligibility requires view_cells_len > 0" {
 
     try std.testing.expect(with_cells == true);
     try std.testing.expect(no_cells == false);
+}
+
+// refreshPresentState purity: verifies the function performs pure state computation.
+// Fake types simulate the duck-typed interface (notePresentableAvailability, backend.presentableInfo).
+
+const FakeBackend = struct {
+    available: bool,
+    pub fn presentableInfo(self: @This(), _: anytype) ?bool {
+        return if (self.available) true else null;
+    }
+};
+
+const FakeRenderer = struct {
+    backend: FakeBackend,
+};
+
+const FakeSurface = struct {
+    attachment_ready: bool,
+    pub fn notePresentableAvailability(self: @This(), _: bool) bool {
+        return self.attachment_ready;
+    }
+};
+
+const FakeView = struct {
+    rows: usize = 24,
+    cols: usize = 80,
+};
+
+test "refreshPresentState is pure and deterministic" {
+    var surface = FakeSurface{ .attachment_ready = true };
+    const renderer = FakeRenderer{ .backend = .{ .available = true } };
+    const view = FakeView{};
+
+    const s1 = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
+    const s2 = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
+
+    try std.testing.expect(s1.updated == s2.updated);
+    try std.testing.expect(s1.present == s2.present);
+    try std.testing.expect(s1.shared_surface_attachment_ready == s2.shared_surface_attachment_ready);
+}
+
+test "refreshPresentState updated flag reflects refresh result" {
+    var surface = FakeSurface{ .attachment_ready = true };
+    const renderer = FakeRenderer{ .backend = .{ .available = true } };
+    const view = FakeView{};
+
+    const refreshed = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
+    const presented = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .presented, 800, 600, 1920);
+
+    try std.testing.expect(refreshed.updated == true);
+    try std.testing.expect(presented.updated == false);
+}
+
+test "refreshPresentState visible requires non-zero dimensions" {
+    var surface = FakeSurface{ .attachment_ready = true };
+    const renderer = FakeRenderer{ .backend = .{ .available = true } };
+    const view = FakeView{};
+
+    const visible = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
+    const invisible_w = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 0, 600, 1920);
+    const invisible_h = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 0, 1920);
+
+    try std.testing.expect(visible.present == true);
+    try std.testing.expect(invisible_w.present == false);
+    try std.testing.expect(invisible_h.present == false);
+}
+
+test "refreshPresentState log_unavailable when attachment absent and cells present" {
+    var surface = FakeSurface{ .attachment_ready = false };
+    const renderer = FakeRenderer{ .backend = .{ .available = false } };
+    const view = FakeView{};
+
+    const state = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
+
+    try std.testing.expect(state.shared_surface_attachment_ready == false);
+    try std.testing.expect(state.log_unavailable == true);
+}
+
+test "refreshPresentState log_unavailable suppressed when no view cells" {
+    var surface = FakeSurface{ .attachment_ready = false };
+    const renderer = FakeRenderer{ .backend = .{ .available = false } };
+    const view = FakeView{};
+
+    const state = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 0);
+
+    try std.testing.expect(state.log_unavailable == false);
 }
