@@ -217,7 +217,10 @@ pub const ReusePresentOutcomeState = struct {
 /// **Generic result fold (`CZH-791`, `CZH-S27`, `CZH-S28`, `CZH-S29`, `CZH-S30`):** construct host-facing `TerminalPresentResult` from outcome
 /// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
 /// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths (`CZH-S30`)**
-/// — routed through by outcome-specific folds.
+/// — all outcome-specific folds route through this function.
+/// **Consolidation (`CZH-S30`):** central hub of fold path composition — `presentResultFromRefreshOutcomeState`
+/// and `presentResultFromReuseOutcomeState` call this with outcome-specific parameters, then apply
+/// outcome-type-specific fields via `applyOutcomeSpecificFields`.
 /// **Hardening (`CZH-S29`):** validates output result consistency across all outcome types.
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
@@ -342,9 +345,13 @@ fn computeHostSurfaceAttachmentState(
     };
 }
 
-/// **Unified fold composition helper (`CZH-S30`):** applies outcome-type-specific field assignments
-/// to a base result. Consolidates the pattern used by `presentResultFromRefreshOutcomeState` and
-/// `presentResultFromReuseOutcomeState` to reduce duplication in fold path composition.
+/// **Unified fold composition pattern (`CZH-S30`):** Two-step fold for outcome types with followup fields.
+/// Step 1: Call `presentResultFromOutcomeState` to construct base result from core outcome fields.
+/// Step 2: Call `applyOutcomeSpecificFields` to add outcome-type-specific fields (e.g., followup).
+/// This consolidates the fold composition pattern and reduces duplication.
+///
+/// **Fold path routing (`CZH-S30`):** All outcome paths eventually route through
+/// `presentResultFromOutcomeState` (the canonical generic fold) with outcome-specific wrappers.
 fn applyOutcomeSpecificFields(
     result: *TerminalPresentResult,
     followup_required: bool,
