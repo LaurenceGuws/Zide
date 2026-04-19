@@ -238,3 +238,50 @@ pub fn computeHostSurfaceAttachmentState(
         .shared_surface_attachment_ready = shared_surface_attachment_ready,
     };
 }
+
+/// **Presentation surface geometry:** computed viewport and cell dimensions for rendering.
+pub const PresentationGeometry = struct {
+    render_scale: f32 = 1.0,
+    cell_w_i: i32 = 0,
+    cell_h_i: i32 = 0,
+    padding_x_i: i32 = 0,
+    surface_w: i32 = 0,
+    surface_h: i32 = 0,
+    visible_w: i32 = 0,
+    visible_h: i32 = 0,
+    viewport_w: f32 = 0.0,
+    viewport_h: f32 = 0.0,
+};
+
+/// **Compute presentation surface geometry:** derives viewport and cell dimensions from renderer and view model.
+pub fn computePresentationSurfaceGeometry(
+    renderer: anytype,
+    terminal_view: anytype,
+    view_geometry: anytype,
+) PresentationGeometry {
+    var geometry: PresentationGeometry = .{};
+    const rows = terminal_view.rows;
+    const cols = terminal_view.cols;
+    if (rows == 0 or cols == 0) return geometry;
+
+    const geom = renderer.terminalCellGeometry();
+    geometry.cell_w_i = geom.cell_width_device_px;
+    geometry.cell_h_i = geom.cell_height_device_px;
+    geometry.padding_x_i = @max(2, @divTrunc(geometry.cell_w_i, 2));
+    geometry.render_scale = 1.0 / renderer.devicePixelStep();
+
+    const scale = geometry.render_scale;
+    geometry.surface_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_w_i * @as(i32, @intCast(cols)) + geometry.padding_x_i)) / scale)));
+    geometry.surface_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_h_i * @as(i32, @intCast(rows)))) / scale)));
+    geometry.visible_w = @intFromFloat(std.math.round(view_geometry.viewport_width));
+    geometry.visible_h = @intFromFloat(std.math.round(view_geometry.viewport_height));
+    geometry.viewport_w = view_geometry.viewport_width;
+    geometry.viewport_h = view_geometry.viewport_height;
+    return geometry;
+}
+
+/// **Viewport shift state:** tracks scrolling region for partial updates.
+pub const ViewportShiftState = struct {
+    rows: i32 = 0,
+    exposed_only: bool = false,
+};

@@ -80,44 +80,11 @@ const TerminalPresentFollowupReason = @import("../renderer/presentable_contract.
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
 
-pub const PresentationGeometry = struct {
-    render_scale: f32 = 1.0,
-    cell_w_i: i32 = 0,
-    cell_h_i: i32 = 0,
-    padding_x_i: i32 = 0,
-    surface_w: i32 = 0,
-    surface_h: i32 = 0,
-    visible_w: i32 = 0,
-    visible_h: i32 = 0,
-    viewport_w: f32 = 0.0,
-    viewport_h: f32 = 0.0,
-};
+// Geometry types moved to terminal layer in CZH-874
+pub const PresentationGeometry = terminal_presentation_runtime.PresentationGeometry;
 
-pub fn computePresentationSurfaceGeometry(
-    renderer: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    view_geometry: TerminalViewGeometry,
-) PresentationGeometry {
-    var geometry: PresentationGeometry = .{};
-    const rows = terminal_view.rows;
-    const cols = terminal_view.cols;
-    if (rows == 0 or cols == 0) return geometry;
-
-    const geom = renderer.terminalCellGeometry();
-    geometry.cell_w_i = geom.cell_width_device_px;
-    geometry.cell_h_i = geom.cell_height_device_px;
-    geometry.padding_x_i = @max(2, @divTrunc(geometry.cell_w_i, 2));
-    geometry.render_scale = 1.0 / renderer.devicePixelStep();
-
-    const scale = geometry.render_scale;
-    geometry.surface_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_w_i * @as(i32, @intCast(cols)) + geometry.padding_x_i)) / scale)));
-    geometry.surface_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_h_i * @as(i32, @intCast(rows)))) / scale)));
-    geometry.visible_w = @intFromFloat(std.math.round(view_geometry.viewport_width));
-    geometry.visible_h = @intFromFloat(std.math.round(view_geometry.viewport_height));
-    geometry.viewport_w = view_geometry.viewport_width;
-    geometry.viewport_h = view_geometry.viewport_height;
-    return geometry;
-}
+// Geometry computation delegated to terminal layer
+const computePresentationSurfaceGeometry = terminal_presentation_runtime.computePresentationSurfaceGeometry;
 
 /// **Transient present-state snapshot (`CZH-S22`, CZH-791):** captures conjunction from
 /// `refreshPresentState` via `notePresentableAvailability`; dominant carrier for operator JSON
@@ -146,10 +113,8 @@ pub const PresentationUpdatePlan = struct {
     partial_plan: ?PresentationPartialDrawPlan = null,
 };
 
-pub const ViewportShiftState = struct {
-    rows: i32 = 0,
-    exposed_only: bool = false,
-};
+// Viewport shift state moved to terminal layer in CZH-874
+pub const ViewportShiftState = terminal_presentation_runtime.ViewportShiftState;
 
 pub const DirectPresentResult = struct {
     bg_ms: f64 = 0.0,
