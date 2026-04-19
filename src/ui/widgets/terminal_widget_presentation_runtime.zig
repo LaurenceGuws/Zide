@@ -233,6 +233,10 @@ fn presentResultFromRefreshOutcomeState(
     timing: renderer_presentable_host.TerminalPresentTiming,
     shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
+    // Harden: validate followup consistency
+    if (outcome_state.followup_required) {
+        std.debug.assert(outcome_state.followup_reason != .none);
+    }
     var result = presentResultFromOutcomeState(
         outcome_state.outcome,
         outcome_state.cache_state_advanced,
@@ -249,6 +253,13 @@ fn presentResultFromReuseOutcomeState(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
+    // Harden: validate input state before folding
+    if (outcome_state.reused) {
+        std.debug.assert(outcome_state.outcome == .reused);
+        std.debug.assert(outcome_state.cache_state_advanced == true);
+        std.debug.assert(outcome_state.host_surface_target_available == true);
+        std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
+    }
     return presentResultFromOutcomeState(
         outcome_state.outcome,
         outcome_state.cache_state_advanced,
