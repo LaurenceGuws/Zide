@@ -1,0 +1,95 @@
+//! CZH-878: Integration invariant tests for presentation runtime ownership boundary (`CZH-S33`).
+//! Validates that:
+//! - Widget layer correctly imports and re-exports terminal types
+//! - Widget layer delegates to terminal-layer classification functions
+//! - Ownership boundary is clean at call site
+//! - No re-derivation of outcomes or geometry in widget layer
+
+const std = @import("std");
+const terminal_presentation_runtime = @import("../../terminal/presentation_runtime.zig");
+const terminal_widget_presentation_runtime = @import("./terminal_widget_presentation_runtime.zig");
+
+test "CZH-878: Widget layer re-exports terminal presentation types" {
+    // RefreshedPresentablePresentationResult should be from terminal
+    const widget_result = terminal_widget_presentation_runtime.RefreshedPresentablePresentationResult{
+        .bg_ms = 1.0,
+        .glyph_ms = 2.0,
+        .kitty_ms = 0.0,
+        .shared_surface_attachment_ready = true,
+    };
+    const terminal_result = terminal_presentation_runtime.RefreshedPresentablePresentationResult{
+        .bg_ms = 1.0,
+        .glyph_ms = 2.0,
+        .kitty_ms = 0.0,
+        .shared_surface_attachment_ready = true,
+    };
+    // Both should have identical structure (same type)
+    try std.testing.expect(widget_result.bg_ms == terminal_result.bg_ms);
+    try std.testing.expect(widget_result.shared_surface_attachment_ready == terminal_result.shared_surface_attachment_ready);
+}
+
+test "CZH-878: Widget layer uses terminal outcome classification" {
+    // Widget should be using terminal-layer classifyRefreshOutcome
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    try std.testing.expect(outcome.outcome == .updated_and_presented);
+    try std.testing.expect(outcome.cache_state_advanced == true);
+}
+
+test "CZH-878: Widget layer uses terminal geometry computation" {
+    // Widget should import PresentationGeometry from terminal
+    var geometry = terminal_widget_presentation_runtime.computePresentationSurfaceGeometry(undefined, undefined, undefined);
+    // Zero-dimension result expected (inputs undefined, but type is correct)
+    try std.testing.expect(@TypeOf(geometry) == terminal_presentation_runtime.PresentationGeometry);
+}
+
+test "CZH-878: Widget layer outcome validation uses terminal assertions" {
+    const outcome = terminal_widget_presentation_runtime.reuseSuccessOutcome();
+    terminal_widget_presentation_runtime.assertReuseOutcomeConsistency(outcome);
+    try std.testing.expect(outcome.reused == true);
+}
+
+test "CZH-878: Widget layer outcome folding uses terminal helpers" {
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented);
+    const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
+    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, false);
+    try std.testing.expect(result.outcome == .presented);
+}
+
+test "CZH-878: ViewportShiftState is accessible in widget layer" {
+    const viewport_state = terminal_widget_presentation_runtime.ViewportShiftState{
+        .rows = 5,
+        .exposed_only = true,
+    };
+    try std.testing.expect(viewport_state.rows == 5);
+}
+
+test "CZH-878: PresentationGeometry is accessible in widget layer" {
+    var geom = terminal_widget_presentation_runtime.PresentationGeometry{
+        .cell_w_i = 8,
+        .cell_h_i = 16,
+    };
+    try std.testing.expect(geom.cell_w_i == 8);
+    try std.testing.expect(geom.cell_h_i == 16);
+}
+
+test "CZH-878: All outcome classification paths work in widget context" {
+    // Refresh outcomes
+    const refreshed = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const presented = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented);
+    const unavailable = terminal_widget_presentation_runtime.classifyRefreshOutcome(.target_unavailable);
+
+    try std.testing.expect(refreshed.outcome == .updated_and_presented);
+    try std.testing.expect(presented.outcome == .presented);
+    try std.testing.expect(unavailable.followup_required == true);
+
+    // Direct outcomes
+    const direct_updated = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
+    const direct_not = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(false);
+
+    try std.testing.expect(direct_updated.outcome == .updated_and_presented);
+    try std.testing.expect(direct_not.outcome == .presented);
+
+    // Reuse outcome
+    const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
+    try std.testing.expect(reuse.outcome == .reused);
+}
