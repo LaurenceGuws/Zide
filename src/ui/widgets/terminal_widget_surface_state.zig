@@ -252,6 +252,18 @@ test "overlayPresentationChanged tracks hover and composing signature" {
     try std.testing.expect(state.overlayPresentationChanged(17, true, 0x1234));
 }
 
+test "CZH-S15: notePresentableAvailability matches readSharedSurfaceAttachmentReady" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    state.presentation.terminal_presentable_ready = true;
+    try std.testing.expect(state.notePresentableAvailability(true));
+    try std.testing.expect(state.readSharedSurfaceAttachmentReady());
+
+    try std.testing.expect(!state.notePresentableAvailability(false));
+    try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
+}
+
 test "CZH-S14: composite pair mismatch matches per-leg inequality (widget seam shape)" {
     const mm = surface_contract.publicationClearPairMismatchesFromLastSurfaceRender(10, 20, 10, 30);
     try std.testing.expect(!mm.publication_mismatch);
