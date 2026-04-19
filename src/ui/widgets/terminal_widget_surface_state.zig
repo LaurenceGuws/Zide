@@ -298,6 +298,15 @@ test "CZH-S15: notePresentableAvailability matches readSharedSurfaceAttachmentRe
     try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
 }
 
+test "CZH-777: widget surface exposes leg getters and conjunction reporting bridge" {
+    comptime {
+        const T = TerminalWidgetSurfaceState;
+        if (!@hasDecl(T, "readSharedSurfaceAttachmentReady")) @compileError("CZH-777: bridge missing");
+        if (!@hasDecl(T, "hostSurfaceTargetAvailable")) @compileError("CZH-777: host leg missing");
+        if (!@hasDecl(T, "terminalPresentablePipelineReady")) @compileError("CZH-777: pipeline leg missing");
+    }
+}
+
 test "CZH-767: conjunction compute return matches stored legs and report read" {
     var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
     defer state.deinit(std.testing.allocator);
