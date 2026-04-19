@@ -1155,6 +1155,34 @@ Execution source:
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-65` or a real hard blocker
 
+#### `CZH-631` destroy debug-hook audit (`CZH-S6`)
+
+**Read/write paths (`main` pre-change)**
+
+| Site | Role |
+| --- | --- |
+| `src/terminal/ffi/core_api.zig` | `pub var destroy_debug_pause_ms_for_tests` (atomic `u32`). |
+| `core_api.destroy` | If `builtin.is_test` and value \> 0: `Thread.sleep` that many ms after `destroying.store(true)`. |
+| `tests/terminal_ffi_smoke_tests.zig` | `store(150)` before spawning destroy thread; `defer store(0)`. |
+
+**Intent of** `test "ffi destroy blocks host-visible transport and event calls once teardown begins"`:
+concurrent destroy vs main thread; main observes `invalid_argument` (`1`) on FFI
+calls while teardown is in progress. The 150 ms pause **widened** the window
+where `destroying` stays true during deinit.
+
+**Replacement plan (no product globals)**
+
+- **`CZH-632`:** Delete the atomic, delete the `builtin.is_test` sleep block, drop
+  `builtin` import if unused. **`destroy`:** keep `destroying.store(true, .release)`
+  as the first effect; single-line `///` (no test-hook wording).
+- **`CZH-633`:** Tests import `src/terminal/ffi/shared.zig`, resolve
+  `shared.fromOpaque(handle).?`, spin until `raw.destroying.load(.acquire)` after
+  spawning `zide_terminal_destroy`, **then** run the same FFI assertions (remove
+  `core_api` global usage). This is test-only observation of an atomic already on
+  `Handle`; no new product seam.
+- **`CZH-634`:** Update `CZH-606` removal queue row, `CZH-608` destroy row, and any
+  `implementation.md` / handoff lines that still name the removed hook.
+
 #### `CZH-626` FFI/export doc drift audit (`CZH-S5`)
 
 **Stale history (fix in `CZH-629`):** the `CZH-608` module-doc table still lists
