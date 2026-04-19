@@ -14,6 +14,10 @@
 //! `hostSharedSurfaceAttachmentReady` conjunction. Present-plan reuse uses the pipeline
 //! leg alone by design; full readiness uses `notePresentableAvailability` /
 //! `readSharedSurfaceAttachmentReady`.
+//!
+//! **Observability (`CZH-B24`):** structured logs surface the pipeline leg and host-target leg
+//! with distinct keys; their logical **and** is the full shared-surface attachment predicate
+//! (`hostSharedSurfaceAttachmentReady` / widget `readSharedSurfaceAttachmentReady`).
 
 const std = @import("std");
 

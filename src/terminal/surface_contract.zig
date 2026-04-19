@@ -27,6 +27,10 @@
 //! **`CZH-S16` / `CZH-S17` / `CZH-S18`:** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
 //! mirrors the pipeline leg (`terminalPresentablePipelineReady()`); composite
 //! publication/clear fields remain generation-owned via `publicationClearPair*` above.
+//!
+//! **Observability (`CZH-B24`):** operator logs that carry generation counters should name
+//! publication vs last-surface-render generations consistently with the helpers above; pipeline
+//! and attachment legs are not generation predicates — see `surface_attachment_contract`.
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 

@@ -3,6 +3,10 @@
 //! pipeline leg (`terminal_presentable_ready` / delta field); host target leg
 //! (`target_available`); full attachment uses `surface_attachment_contract` via
 //! `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
+//!
+//! **Observability (`CZH-B24`):** operator logs should use the same identifiers as the getters
+//! (`terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`, `readSharedSurfaceAttachmentReady`)
+//! when surfacing pipeline vs target vs full attachment — no paraphrased synonyms on those legs.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");

@@ -5,6 +5,12 @@
 //! (`CZH-S15`). `buildTerminalPresentPlan` reuse gating uses
 //! `terminalPresentablePipelineReady()` (pipeline leg only), not the full attachment
 //! conjunction — intentional.
+//!
+//! **Observability (`CZH-B24`):** operator JSON on present failure (`logUnavailable`) names
+//! publication generation on the view model, view/update flags, the renderer presentable refresh
+//! cycle tag, the terminal presentable **pipeline** leg, the host drawable **target** leg, and
+//! viewport geometry — aligned with `surface_contract` / `surface_attachment_contract` vocabulary
+//! (full attachment is the conjunction of the pipeline and host-target legs).
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
@@ -1534,6 +1540,10 @@ pub fn refreshPresentState(
     return state;
 }
 
+/// Operator `renderer.terminal_present` JSON when present cannot proceed because the drawable
+/// shared-surface attachment is unavailable. Vocabulary: **generation** on the view model;
+/// view/update flags; renderer presentable **refresh cycle** enum; **pipeline** vs **host-target**
+/// legs per `surface_attachment_contract`; viewport geometry (`CZH-B24`).
 pub fn logUnavailable(
     surface_state: anytype,
     terminal_view: view_state.TerminalViewModel,
