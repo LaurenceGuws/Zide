@@ -20,7 +20,7 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B28` — **`in_progress`** at **`CZH-GATE-82`** (sprint `CZH-S23`):
+- `CZH-B28` — **`architect_review_pending`** at **`CZH-GATE-82`** (sprint `CZH-S23`):
   long-loop present-time reporting-carrier consolidation for conjunction visibility
   across selected runtime/widget seams (`docs/todo/core/CZH_S23_TICKETS.md`).
 

@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B28` (`in_progress`, super-gate `CZH-GATE-82`).
+- Current active macro batch: `CZH-B28` (`architect_review_pending`, super-gate `CZH-GATE-82`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S23_TICKETS.md`
 
@@ -2737,7 +2737,7 @@ Checkpoint packet: `docs/todo/core/CZH_S22_CHECKPOINT.md`.
 - `Acceptance judgment:` conjunction compute/store/report propagation is explicit
   in touched paths with no behavior or ABI drift.
 
-### `CZH-B28` Long-Loop Present Reporting Carrier Consolidation (`in_progress`)
+### `CZH-B28` Long-Loop Present Reporting Carrier Consolidation (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -2802,6 +2802,21 @@ Execution source:
 - **Kept:** operator `logUnavailable` / `terminal.generation_handoff`; comptime reporting-carrier tests
   (`CZH-777`, `CZH-778`).
 - **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — operator log conjunction carrier note (`CZH-772` / `CZH-S23`).
+
+#### `CZH-S23` engineer validation (`CZH-780`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-771`..`CZH-780` (one commit each).  
+- **SL-0** `zig build` — **PASS**  
+- **SL-1** `zig build test` — **PASS**  
+- **SL-2** `zig build -Dmode=terminal` — **PASS**  
+- **SL-3** `zig build -Dmode=editor` — **PASS**  
+- **`zig build test-config`** — **PASS**  
+- **`zig build test-editor`** — **PASS**  
+- **`zig build test-terminal-replay-all`** — **PASS**  
+- **Android guard** — **SKIP** (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S23_CHECKPOINT.md`.
 
 ## Response Contract
 
