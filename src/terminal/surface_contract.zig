@@ -21,6 +21,17 @@ pub fn needsRedrawFromPair(published_generation: u64, acknowledged_generation: u
     return published_generation != acknowledged_generation;
 }
 
+/// Whether `generation` is admissible for host `present_ack`: must not exceed
+/// current publication generation or regress before `last_acknowledged_generation`
+/// (`TERMINAL_SURFACE_CONTRACT.md` — presentation completion vs Zide truth).
+pub fn presentAckGenerationAdmissible(
+    generation: u64,
+    published_generation: u64,
+    last_acknowledged_generation: u64,
+) bool {
+    return generation <= published_generation and generation >= last_acknowledged_generation;
+}
+
 /// Fills the VT FFI `RedrawState` from publication truth + last acknowledged generation.
 pub fn fillRedrawState(
     published_generation: u64,
