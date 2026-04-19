@@ -20,7 +20,7 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B27` — **`in_progress`** at **`CZH-GATE-81`** (sprint `CZH-S22`):
+- `CZH-B27` — **`architect_review_pending`** at **`CZH-GATE-81`** (sprint `CZH-S22`):
   long-loop full-attachment conjunction propagation lock across selected present/runtime/state seams
   (`docs/todo/core/CZH_S22_TICKETS.md`).
 
