@@ -281,14 +281,14 @@ test "Callback contract: terminal classification used regardless of widget execu
     try std.testing.expect(reuse_outcome.outcome == .reused);
 }
 
-test "CZH-903 boundary: PresentationPresentState type is consistent at widget/terminal boundary" {
+test "PresentationPresentState type is consistent at widget/terminal boundary" {
     // Widget re-exports PresentationPresentState from terminal layer — same type, not re-definition
     const widget_type = terminal_widget_presentation_runtime.PresentationPresentState;
     const terminal_type = terminal_presentation_runtime.PresentationPresentState;
     try std.testing.expect(widget_type == terminal_type);
 }
 
-test "CZH-903 boundary: PresentationPresentState carries expected fields from pure computation" {
+test "PresentationPresentState carries expected fields from pure computation" {
     // Verify struct fields match expected pure-state snapshot shape
     const state = terminal_presentation_runtime.PresentationPresentState{
         .updated = true,
@@ -302,7 +302,7 @@ test "CZH-903 boundary: PresentationPresentState carries expected fields from pu
     try std.testing.expect(state.log_unavailable == false);
 }
 
-test "CZH-903 boundary: widget PresentationPresentState is accessible from re-export" {
+test "Widget PresentationPresentState is accessible from re-export" {
     // Widget layer should expose PresentationPresentState; callers can use it without terminal import
     const state = terminal_widget_presentation_runtime.PresentationPresentState{
         .updated = false,
