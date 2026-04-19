@@ -444,3 +444,46 @@ test "CZH-787: cached PresentationState omits conjunction field present on Termi
         std.debug.assert(conj == 1);
     }
 }
+
+test "CZH-S31: initialization contract - first call without prior pipeline leg setup" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    // On first initialization, both legs default to false. This test verifies that
+    // notePresentableAvailability and readSharedSurfaceAttachmentReady work correctly
+    // without requiring prior notePresentationUpdated call.
+    //
+    // Pipeline leg: false (default, not yet updated by presentation)
+    // Host target leg: will be set by notePresentableAvailability
+    //
+    // Expected: conjunction is false (false AND any_value = false)
+    const first_call_result = state.notePresentableAvailability(true);
+    try std.testing.expect(!first_call_result); // false (pipeline) AND true (host target) = false
+
+    const read_result = state.readSharedSurfaceAttachmentReady();
+    try std.testing.expect(!read_result); // should match compute result
+
+    // Now simulate notePresentationUpdated being called (pipeline ready)
+    state.presentation.terminal_presentable_pipeline_ready = true;
+    const second_call_result = state.notePresentableAvailability(true);
+    try std.testing.expect(second_call_result); // true (pipeline) AND true (host target) = true
+
+    const second_read_result = state.readSharedSurfaceAttachmentReady();
+    try std.testing.expect(second_read_result); // should match compute result
+}
+
+test "CZH-S31: leg defaults enable first call without pre-initialization" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    // Verify that both legs have sensible defaults (false) that work correctly
+    // on first refresh path where notePresentableAvailability is called before
+    // notePresentationUpdated.
+    try std.testing.expect(state.presentation.terminal_presentable_pipeline_ready == false);
+    try std.testing.expect(state.presentation.host_surface_target_available == false);
+
+    // First call to notePresentableAvailability should work without assertion
+    // (removed spurious assertLegsInitialized check)
+    const result = state.notePresentableAvailability(false);
+    try std.testing.expect(!result); // false AND false = false
+}
