@@ -105,7 +105,8 @@ pub const PresentationPresentState = struct {
     updated: bool = false,
     presentable_refresh: TerminalPresentableRefresh = .unsupported,
     host_surface_target_available: bool = false,
-    ready: bool = false,
+    /// Full shared-surface attachment for this tick (`notePresentableAvailability`); not the host-target leg alone.
+    shared_surface_attachment_ready: bool = false,
     visible: bool = false,
     present: bool = false,
     log_unavailable: bool = false,
@@ -1553,9 +1554,9 @@ pub fn refreshPresentState(
 
     state.host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
     const shared_surface_attachment_ready = surface_state.notePresentableAvailability(state.host_surface_target_available);
-    state.ready = shared_surface_attachment_ready;
-    state.present = state.ready and state.visible;
-    state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
+    state.shared_surface_attachment_ready = shared_surface_attachment_ready;
+    state.present = state.shared_surface_attachment_ready and state.visible;
+    state.log_unavailable = !state.shared_surface_attachment_ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
 
     return state;
 }

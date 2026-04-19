@@ -2597,7 +2597,7 @@ Execution source:
 | --- | --- | --- | --- |
 | `surface_attachment_contract` | `SharedSurfaceAttachmentPipelinePair.host_surface_target_available` | `hostSharedSurfaceAttachmentReady` / `FromPair` | Authority only; no present-result struct. |
 | `TerminalWidgetSurfaceState` | `presentation.host_surface_target_available`, `hostSurfaceTargetAvailable()` | `readSharedSurfaceAttachmentReady()`, `notePresentableAvailability` | Stored legs + conjunction helpers; distinct names (`CZH-B25`). |
-| `PresentationPresentState` | `host_surface_target_available` (from `terminalPresentableInfo`) | `ready` / `present` via `notePresentableAvailability` (conjunction) | Two fields: target leg vs gated readiness (`CZH-S15`). |
+| `PresentationPresentState` | `host_surface_target_available` (from `terminalPresentableInfo`) | `shared_surface_attachment_ready` / `present` via `notePresentableAvailability` (conjunction) | Two fields: target leg vs gated readiness (`CZH-S15`); field name locked in `CZH-764`. |
 | `tryFastPresentExisting` / `ReusePresentOutcomeState` | Renderer `terminalPresentableInfo` → host-target leg local | `notePresentableAvailability` → `shared_surface_attachment_ready` | Both carried on `ReusePresentOutcomeState` (`CZH-753`). |
 | `TerminalPresentResult` | `host_surface_target_available` | `shared_surface_attachment_ready` | Landed (`CZH-754`); non-reuse present paths default full-attachment field to `false`. |
 | `RefreshOutcomeState` | `host_surface_target_available` (refresh saw drawable target) | Not represented in outcome | Leave unset in present result (`false`) unless a future path computes widget conjunction (`CZH-754`). |
@@ -2694,7 +2694,7 @@ Execution source:
 | Compute (refreshed present path) | `refreshPresentState` | Conjunction from `notePresentableAvailability` gates `present` / `log_unavailable` (canonical local naming in `CZH-763`..`CZH-764`). |
 | Store (attachment legs) | `PresentationState` | `terminal_presentable_pipeline_ready`, `host_surface_target_available` — legs only; no standalone conjunction field. |
 | Store (reuse / present results) | `ReusePresentOutcomeState`, `TerminalPresentResult` | `shared_surface_attachment_ready` is the conjunction snapshot on these carriers. |
-| Store (transient present gate) | `PresentationPresentState` | Host-target leg plus conjunction field for this tick’s gating (`ready` renamed to `shared_surface_attachment_ready` in `CZH-764`). |
+| Store (transient present gate) | `PresentationPresentState` | Host-target leg plus `shared_surface_attachment_ready` (conjunction for this tick’s gating). |
 | Report (read helper) | `readSharedSurfaceAttachmentReady` | Re-reads conjunction from stored legs (same predicate as compute return after `notePresentableAvailability`). |
 | Report (operator JSON) | `logUnavailable` | Keys `host_surface_target_available`, `shared_surface_attachment_ready` (`CZH-765` ties report to stored snapshot where applicable). |
 | Report (downstream) | `TerminalPresentResult` consumers | Field vocabulary matches `presentable_contract` aggregation; refresh/direct paths default conjunction field when not computed. |
