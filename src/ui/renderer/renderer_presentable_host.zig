@@ -1,3 +1,9 @@
+//! Renderer present execution wrapper: dispatches to refresh or direct flow based on backend mode.
+//! **Result ownership (`CZH-S26`, `CZH-B31`):** this module mediates between backend dispatch
+//! and widget presentation runtime. `TerminalPresentResult` from `presentable_contract` is the
+//! single result type used by all flows; runtime populates it via canonical outcome-folding helpers
+//! in `terminal_widget_presentation_runtime.zig`. This module does not derive or compute present
+//! state or result values — it routes to the appropriate flow via `Hooks`.
 const present_feedback_host = @import("present_feedback_host.zig");
 const capability_contract = @import("capability_contract.zig");
 const presentable_contract = @import("presentable_contract.zig");

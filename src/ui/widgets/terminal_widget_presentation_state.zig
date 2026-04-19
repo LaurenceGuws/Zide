@@ -10,17 +10,20 @@
 //!   `surface_attachment_contract` — not stored as a single bool here; do not treat the host-target
 //!   leg alone as “attachment-ready” (`CZH-B26`).
 //!
-//! **Conjunction propagation (`CZH-S22`):** this struct **stores legs only**; conjunction is
-//! computed elsewhere (`notePresentableAvailability` / pure contract helpers) and must not be
-//! aliased onto one of these leg fields.
+//! **Conjunction propagation (`CZH-S22`, **single derivation story CZH-S26**):** this struct
+//! **stores legs only**; conjunction is computed exclusively via `TerminalWidgetSurfaceState.notePresentableAvailability()`
+//! or read-only via `readSharedSurfaceAttachmentReady()` — both routes thread through canonical helper
+//! `surface_attachment_contract.hostSharedSurfaceAttachmentReady()`. Must not be aliased onto one
+//! of these leg fields or re-derived elsewhere.
 //!
 //! **Reporting-carrier (`CZH-S23`):** leg fields here **feed** `readSharedSurfaceAttachmentReady` /
 //! operator logs indirectly; this struct does **not** carry a standalone conjunction bool — do not
 //! use it as the reporting carrier for “full attachment” without going through the widget seam.
 //!
-//! **Reporting/result cohesion (`CZH-S24`):** leg **storage** only; **`TerminalPresentResult`**
-//! carries the parallel leg + conjunction **result** shape for host export — same vocabulary, distinct
-//! structs and roles.
+//! **Reporting/result cohesion (`CZH-S24`, **single flow verification CZH-S26**):** this struct stores leg
+//! **storage only**; **`TerminalPresentResult`** carries the parallel leg + conjunction **result** shape
+//! for host export — same vocabulary, distinct structs and roles. All result folding goes through
+//! canonical outcome helpers in `terminal_widget_presentation_runtime` (CZH-B30, CZH-B31).
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
