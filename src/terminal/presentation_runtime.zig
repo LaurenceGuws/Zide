@@ -285,3 +285,13 @@ pub const ViewportShiftState = struct {
     rows: i32 = 0,
     exposed_only: bool = false,
 };
+
+/// **Outcome from refresh + presentation (`CZH-791`):** timing and attachment state after refresh cycle handling.
+/// Produced by `runRefreshedPresentablePresentation` (widget layer orchestration).
+/// Canonically owns outcome aggregation responsibility from CZH-S33.
+pub const RefreshedPresentablePresentationResult = struct {
+    bg_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
+    shared_surface_attachment_ready: bool = false,
+};

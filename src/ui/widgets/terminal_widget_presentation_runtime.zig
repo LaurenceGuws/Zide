@@ -136,13 +136,7 @@ pub const PresentationExecutionResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
-pub const RefreshedPresentablePresentationResult = struct {
-    bg_ms: f64 = 0.0,
-    glyph_ms: f64 = 0.0,
-    kitty_ms: f64 = 0.0,
-    /// Conjunction computed via canonical helper in `refreshPresentState` (`CZH-791`).
-    shared_surface_attachment_ready: bool = false,
-};
+pub const RefreshedPresentablePresentationResult = terminal_presentation_runtime.RefreshedPresentablePresentationResult;
 
 /// **Refresh outcome snapshot (`CZH-791`, `CZH-S27`, `CZH-S29`):** classifies refresh cycle result (updated or not).
 /// Does not carry conjunction — passed separately to fold function. Host-target leg only.
