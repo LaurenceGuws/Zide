@@ -217,13 +217,19 @@ fn presentResultFromOutcomeState(
     timing: renderer_presentable_host.TerminalPresentTiming,
     shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
-    return .{
+    const result: TerminalPresentResult = .{
         .outcome = outcome,
         .cache_state_advanced = cache_state_advanced,
         .host_surface_target_available = host_surface_target_available,
         .shared_surface_attachment_ready = shared_surface_attachment_ready,
         .timing = timing,
     };
+    // Harden: validate output result consistency
+    if (outcome == .reused) {
+        std.debug.assert(result.cache_state_advanced == true);
+        std.debug.assert(result.shared_surface_attachment_ready == true);
+    }
+    return result;
 }
 
 /// **Canonical outcome fold for refresh path (`CZH-791`, `CZH-S28`):** uses conjunction computed in refresh cycle.
