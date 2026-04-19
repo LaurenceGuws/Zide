@@ -3,7 +3,8 @@
 //! **Vocabulary:** generation pairing vs last draw uses `surface_contract`; pipeline leg
 //! (`terminal_presentable_pipeline_ready`) and host target leg (`host_surface_target_available`)
 //! represent the two components of shared surface attachment readiness; full attachment uses
-//! `surface_attachment_contract` via `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
+//! `presentation_bridge` (delegates to `surface_attachment_contract`) via `notePresentableAvailability` /
+//! `readSharedSurfaceAttachmentReady`.
 //!
 //! **Operability:** operator logs use the same identifiers as the getters
 //! (`terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`, `readSharedSurfaceAttachmentReady`)
@@ -13,10 +14,9 @@
 //! `hostSurfaceTargetAvailable` remains host-target leg only. `TerminalPresentResult` carries
 //! the parallel leg + conjunction result shape for host export, distinct from this widget storage.
 //!
-//! **Conjunction computation:** **compute** via `notePresentableAvailability` (writes host-target leg,
-//! returns conjunction via canonical helper); **store** legs on `PresentationState` (no separate
-//! conjunction field); **report** via `readSharedSurfaceAttachmentReady` (reads conjunction from
-//! legs via canonical helper) and per-leg getters — no derived conjunction stored locally.
+//! **Conjunction computation:** This module does NOT compute conjunction directly. Widget delegates
+//! both compute and read paths to `presentation_bridge` in terminal layer. **Store** legs on
+//! `PresentationState` only; conjunction is computed on-demand via bridge for consistency.
 //!
 //! **Reporting-carrier:** **`readSharedSurfaceAttachmentReady`** is the dominant widget-surface
 //! **report** for conjunction when no `PresentationPresentState` snapshot applies (e.g., diagnostics
