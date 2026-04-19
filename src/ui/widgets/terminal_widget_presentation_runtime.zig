@@ -2676,3 +2676,44 @@ test "CZH-S30: consolidation helper — refresh outcome assertion unified patter
     assertRefreshOutcomeConsistency(valid_neutral);
 }
 
+test "CZH-S30: integration consolidation — all fold paths route through canonical generic fold" {
+    // Verify that all outcome-specific fold paths correctly route through the canonical
+    // generic fold function with outcome-type-specific wrapping. This locks the
+    // consolidation pattern across all outcome types.
+
+    const timing = renderer_presentable_host.TerminalPresentTiming{};
+
+    // Refresh path: uses generic fold + followup wrapper
+    const refresh_outcome = RefreshOutcomeState{
+        .outcome = .updated_and_presented,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+        .followup_required = false,
+        .followup_reason = .none,
+    };
+    const refresh_result = presentResultFromRefreshOutcomeState(refresh_outcome, timing, true);
+    try std.testing.expectEqual(refresh_result.outcome, .updated_and_presented);
+    try std.testing.expect(refresh_result.cache_state_advanced == true);
+    try std.testing.expect(refresh_result.followup.required == false);
+
+    // Reuse path: uses generic fold with input validation
+    const reuse_outcome = reuseSuccessOutcome();
+    const reuse_result = presentResultFromReuseOutcomeState(reuse_outcome, timing);
+    try std.testing.expectEqual(reuse_result.outcome, .reused);
+    try std.testing.expect(reuse_result.cache_state_advanced == true);
+    try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
+
+    // Direct path: uses generic fold directly without wrapper
+    const direct_outcome = classifyDirectPresentOutcome(false);
+    const direct_result = presentResultFromOutcomeState(
+        direct_outcome.outcome,
+        direct_outcome.cache_state_advanced,
+        direct_outcome.host_surface_target_available,
+        timing,
+        direct_outcome.shared_surface_attachment_ready,
+    );
+    try std.testing.expectEqual(direct_result.outcome, .presented);
+    try std.testing.expect(direct_result.cache_state_advanced == true);
+    try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
+}
+
