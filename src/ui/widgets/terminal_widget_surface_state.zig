@@ -3,6 +3,7 @@ const presentation_state_mod = @import("terminal_widget_presentation_state.zig")
 const view_state = @import("terminal_widget_view_state.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const std = @import("std");
+const surface_contract = @import("../../terminal/surface_contract.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 
 const KittyState = kitty_mod.KittyState;
@@ -114,8 +115,14 @@ pub const TerminalWidgetSurfaceState = struct {
             .cell_metrics_changed = surface_geometry.cell_w_i != self.presentation.last_cell_w_i or
                 surface_geometry.cell_h_i != self.presentation.last_cell_h_i,
             .render_scale_changed = surface_geometry.render_scale != self.presentation.last_render_scale,
-            .generation_changed = terminal_view.generation != self.presentation.last_render_generation,
-            .clear_generation_changed = terminal_view.clear_generation != self.presentation.last_render_clear_generation,
+            .generation_changed = surface_contract.publicationGenerationDiffersFromLastSurfaceRender(
+                terminal_view.generation,
+                self.presentation.last_render_generation,
+            ),
+            .clear_generation_changed = surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear(
+                terminal_view.clear_generation,
+                self.presentation.last_render_clear_generation,
+            ),
             .presentable_ready = self.presentation.terminal_presentable_ready,
             .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
             .invalidation_flags = self.presentation.invalidation_flags,
