@@ -14,6 +14,8 @@
 //! `terminal_presentable_pipeline_ready` and `host_surface_target_available` — keep those distinct
 //! in operator-facing strings. **Present-result ownership (`CZH-B26`):** do not treat host-target
 //! availability alone as full attachment when reading `TerminalPresentResult` / reuse outcomes.
+//! **Reporting carrier (`CZH-S23`):** draw does not emit `renderer.terminal_present`; conjunction in
+//! that log is owned by presentation runtime (`PresentationPresentState.shared_surface_attachment_ready`).
 const std = @import("std");
 const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const app_shell = @import("../../app_shell.zig");
