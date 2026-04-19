@@ -2159,3 +2159,17 @@ test "CZH-S19: presentation delta pipeline field matches observability vocabular
         std.debug.assert(found == 1);
     }
 }
+
+test "CZH-S21: TerminalPresentResult exposes host-target and full-attachment carriers" {
+    comptime {
+        const fields = @typeInfo(TerminalPresentResult).@"struct".fields;
+        var host: usize = 0;
+        var shared: usize = 0;
+        for (fields) |f| {
+            if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) shared += 1;
+        }
+        std.debug.assert(host == 1 and shared == 1);
+    }
+}
+
