@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B37` (review_gate, super-gate `CZH-GATE-91`).
+- Current active macro batch: `CZH-B38` (in_progress, super-gate `CZH-GATE-92`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Completed sprint: `CZH-S32` (Maturity follow-through + caller ownership mobility). Checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`.
+- Completed sprint: `CZH-S32` (accepted). Checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`.
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
   they must not block core correction work unless a change intentionally touches
@@ -3425,7 +3425,7 @@ Checkpoint packet: `docs/todo/core/CZH_S31_CHECKPOINT.md`.
 - `Process finding:` checkpoint text claimed Android environment issues, but
   architect rerun passed compile/deploy/start; keep validation reporting strict.
 
-### `CZH-B37` VT-Core Maturity Follow-Through + Caller Mobility (`in_progress`)
+### `CZH-B37` VT-Core Maturity Follow-Through + Caller Mobility (`accepted`)
 
 Queue line (exact):
 
@@ -3462,6 +3462,34 @@ Execution source:
   split between VT core FFI, BYO-PTY, editor backend FFI, and terminal
   presentation/runtime ownership
 - lock exact move targets and comment-hygiene scope for `CZH-869`
+
+`Verdict: accepted`
+
+- Architect review confirmed the caller-ownership move is real (widget delegates conjunction compute/read to terminal-owned `presentation_bridge`).
+- Corrective cut removed ticket-history wording from touched comments and removed unused callback path without behavior drift.
+- Validation spot-check stays green: core Zig ladder pass, bounded Linux GUI startup smoke pass, Android compile/deploy/start/logcat smoke pass.
+
+### `CZH-B38` Terminal Presentation Runtime Ownership Extraction (`in_progress`)
+
+Queue line (exact):
+
+- move terminal presentation orchestration ownership from widget runtime into a terminal-owned runtime module while keeping widget as a thin facade
+
+Acceptance:
+
+- terminal-owned runtime module is the canonical owner for refresh/reuse outcome orchestration in this seam
+- widget runtime layer becomes delegation-focused (no duplicate orchestration logic)
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- touched source comments remain present-tense architecture only
+- Linux and connected Android validation stay green through `CZH-GATE-92`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S33_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 ## Response Contract
 

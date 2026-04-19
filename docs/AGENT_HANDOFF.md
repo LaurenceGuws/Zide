@@ -6,9 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`review_gate`, super-gate `CZH-GATE-91`): `CZH-B37` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-92`): `CZH-B38` in
   `docs/todo/core/implementation.md`
-- Completed sprint checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md` (ready for architect review)
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S31_CHECKPOINT.md`
 - Rejected sprint checkpoint: `docs/todo/core/CZH_S30_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S29_CHECKPOINT.md`
@@ -41,7 +41,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S32_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S33_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Connected Android device for this checkpoint: `RF8M74JDWEK`.
@@ -68,20 +68,18 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch status (`CZH-B37`, review_gate at `CZH-GATE-91`):
+Current batch status (`CZH-B38`, in progress toward `CZH-GATE-92`):
 
-- ✓ VT-core maturity follow-through complete: caller ownership moves (presentation_bridge seam)
-- ✓ Architecture lock removed: file placement no longer implicit authority
-- ✓ Validation complete: Linux green, Android platform-agnostic, tests locked
-- ✓ Source comment hygiene done: present-tense architecture only in touched product files
-- Ready for architect review at `CZH-GATE-91`
+- target: move terminal presentation orchestration ownership out of widget runtime and into terminal layer
+- keep widget layer as thin facade over terminal-owned runtime helpers
+- preserve behavior and host ABI while extracting caller ownership cleanly
 
 ## First Read Order
 
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 2. `docs/todo/core/implementation.md`
 3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/CZH_S32_TICKETS.md`
+4. `docs/todo/core/CZH_S33_TICKETS.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
@@ -93,7 +91,7 @@ Current batch status (`CZH-B37`, review_gate at `CZH-GATE-91`):
 - Execute only the active macro batch marked in `docs/todo/core/implementation.md`
   (`in_progress` or `architect_review_pending` per batch state).
 - Engineer executes the current sprint tickets in `docs/todo/core/JIRA_BOARD.md`
-  and `docs/todo/core/CZH_S32_TICKETS.md` in listed order.
+  and `docs/todo/core/CZH_S33_TICKETS.md` in listed order.
 - Engineer batching target: **8–14 validated commits** per macro batch unless a
   real hard stop occurs.
 - Architect review cadence: avoid interim review loops; review once at the
