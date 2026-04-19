@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B21` (`architect_review_pending`, super-gate `CZH-GATE-75`).
+- Current active macro batch: `CZH-B22` (`in_progress`, super-gate `CZH-GATE-76`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S16_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S17_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2098,7 +2098,7 @@ Checkpoint packet: `docs/todo/core/CZH_S15_CHECKPOINT.md`.
 - `Acceptance judgment:` host shared-surface attachment seam is explicit,
   behavior-neutral, and cleanly layered with generation/presentable ownership.
 
-### `CZH-B21` Long-Loop Surface Seams Convergence Pack (`architect_review_pending`)
+### `CZH-B21` Long-Loop Surface Seams Convergence Pack (`accepted`)
 
 Queue line (exact):
 
@@ -2177,8 +2177,59 @@ Checkpoint packet: `docs/todo/core/CZH_S16_CHECKPOINT.md`.
 #### Architect gate result
 
 - `Review chunk: CZH-B21`
-- `Verdict: architect_review_pending`
-- `Engineer handoff:` `CZH-GATE-75` (see checkpoint packet)
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `ade57c19`, `82c151e1`, `1bc19081`, `5c973f96`,
+  `a0870ccd`, `3a610823`, `212d6942`, `4e071fae`, `b3367d7f`, `a2cdf043`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` generation-vs-attachment ownership is explicit in
+  touched widget/presentation call sites; terminology/docs/tests are aligned and
+  behavior remained stable.
+
+### `CZH-B22` Long-Loop Surface Naming/State Convergence Pack (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to converge selected
+  presentation-state and call-site naming around pipeline-ready vs
+  attachment-ready seams, tightening helpers/tests/docs while preserving
+  behavior and ABI
+
+Acceptance:
+
+- selected touched paths use explicit naming for pipeline leg vs full
+  attachment readiness with no ambiguous mixed terminology
+- no behavior/ABI changes; present-plan and redraw semantics unchanged
+- integration tests cover pipeline-only vs full-attachment distinctions in
+  selected runtime/widget paths
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-76`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S17_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-711`..`CZH-720` in order from
+  `docs/todo/core/CZH_S17_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-76` or a real hard blocker
+
+#### `CZH-711` naming/state drift audit + cut plan (`CZH-S17`)
+
+- map selected naming/state ownership drift in:
+  `terminal_widget_presentation_state.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_runtime.zig`,
+  `surface_attachment_contract.zig`,
+  `surface_contract.zig`
+- classify touched fields/callers as pipeline-leg, attachment-conjunction, or
+  generation-state
+- record scoped hygiene targets for `CZH-719`
 
 ## Response Contract
 
