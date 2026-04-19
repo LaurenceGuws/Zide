@@ -3,6 +3,9 @@
 //! target** legs and their **full attachment** conjunction are `surface_attachment_contract`
 //! (`TerminalWidgetSurfaceState`: `terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`,
 //! `notePresentableAvailability`).
+//! **Conjunction propagation (`CZH-S22`):** this draw module does **not** compute or store the
+//! conjunction; presentation runtime does (`notePresentableAvailability` →
+//! `PresentationPresentState.shared_surface_attachment_ready` / `TerminalPresentResult` fields).
 //! This module orchestrates draw and delegates presentation to
 //! `terminal_widget_presentation_runtime` (`CZH-S16`, vocabulary lock `CZH-S18`).
 //!
