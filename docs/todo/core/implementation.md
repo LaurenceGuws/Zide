@@ -2871,6 +2871,18 @@ Execution source:
 - classify primary ownership and no-overlap rules (leg vs conjunction) per flow
 - record scoped hygiene targets for `CZH-789`
 
+**Reporting vs present-result cohesion map (`CZH-S24`):**
+
+| Surface | Dominant reporting role | Present-result / aggregation role | No-overlap rule |
+| --- | --- | --- | --- |
+| `PresentationPresentState` | Per-tick **report** snapshot for operator JSON (`shared_surface_attachment_ready`); host-target **leg** for same tick | Not a `TerminalPresentResult`; feeds gating + `logUnavailable` only | Do not treat as `TerminalPresentResult`; conjunction field is **report**-shaped, not host-export aggregation. |
+| `ReusePresentOutcomeState` | N/A (intermediate reuse bookkeeping) | **Feeds** `presentResultFromReuseOutcomeState` → `TerminalPresentResult` with matching field names | Leg and conjunction fields must stay **pair-aligned** with `TerminalPresentResult`; no overload of one bool. |
+| `TerminalPresentResult` | Consumed by hosts as **aggregated** present outcome | **Stores** `host_surface_target_available` (leg) + `shared_surface_attachment_ready` (conjunction when computed) | **Never** use `host_surface_target_available` as the conjunction carrier; reporting **into** logs uses `PresentationPresentState` or getters, not this struct in isolation for operator `renderer.terminal_present`. |
+| `PresentationState` (cached draw) | Leg **storage** feeding `readSharedSurfaceAttachmentReady` | Does **not** embed `TerminalPresentResult` | Conjunction is **derived** via bridge getter, not stored as a third bool here. |
+| `readSharedSurfaceAttachmentReady` | Widget-surface **read/report** bridge from stored legs | Not a struct field; informs diagnostics outside transient present tick | Same predicate family as conjunction on results when legs match; not a substitute for `TerminalPresentResult` fields in aggregation paths. |
+
+**`CZH-789` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_state.zig`, `presentable_contract.zig`, `terminal_widget_draw.zig`, `terminal_widget.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
+
 ## Response Contract
 
 Every batch update must include:
