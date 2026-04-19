@@ -2591,6 +2591,19 @@ Execution source:
 - classify which structs should carry host-target only vs full-attachment only
 - record scoped hygiene targets for `CZH-759`
 
+**Classified ownership (host-target leg vs full attachment):**
+
+| Site | Host-target leg (drawable target from host/renderer) | Full attachment (pipeline ∧ host target) | Drift / cut |
+| --- | --- | --- | --- |
+| `surface_attachment_contract` | `SharedSurfaceAttachmentPipelinePair.host_surface_target_available` | `hostSharedSurfaceAttachmentReady` / `FromPair` | Authority only; no present-result struct. |
+| `TerminalWidgetSurfaceState` | `presentation.host_surface_target_available`, `hostSurfaceTargetAvailable()` | `readSharedSurfaceAttachmentReady()`, `notePresentableAvailability` | Stored legs + conjunction helpers; distinct names (`CZH-B25`). |
+| `PresentationPresentState` | `host_surface_target_available` (from `terminalPresentableInfo`) | `ready` / `present` via `notePresentableAvailability` (conjunction) | Two fields: target leg vs gated readiness (`CZH-S15`). |
+| `tryFastPresentExisting` / `ReusePresentOutcomeState` | Renderer `terminalPresentableInfo` → local `host_surface_target_available` | `notePresentableAvailability` → `shared_surface_attachment_ready` | Early return must carry **both** signals explicitly; `TerminalPresentResult` today only surfaces host-target (`CZH-753`..`754`). |
+| `TerminalPresentResult` | `host_surface_target_available` | (missing explicit carrier) | Add `shared_surface_attachment_ready` alongside host-target (`CZH-754`). |
+| `RefreshOutcomeState` | `host_surface_target_available` (refresh saw drawable target) | Not represented in outcome | Leave unset in present result (`false`) unless a future path computes widget conjunction (`CZH-754`). |
+
+**`CZH-759` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_state.zig`, `presentable_contract.zig`, `surface_attachment_contract.zig`, `terminal_widget_draw.zig`, `TERMINAL_SURFACE_CONTRACT.md`; no investigation-only probe callers expected.
+
 ## Response Contract
 
 Every batch update must include:
