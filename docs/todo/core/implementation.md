@@ -2779,6 +2779,19 @@ Execution source:
 - classify primary reporting carrier vs secondary debug/diagnostic carriers
 - record scoped hygiene targets for `CZH-779`
 
+**Reporting-carrier map (present-time conjunction visibility) — `CZH-S23`:**
+
+| Flow | Dominant conjunction reporting carrier | Companion / non-carrier (same vocabulary, different role) |
+| --- | --- | --- |
+| Refreshed-present operator JSON (`logUnavailable`) | `PresentationPresentState.shared_surface_attachment_ready` (per-tick snapshot after `refreshPresentState` compute) | Predicate equivalence with `readSharedSurfaceAttachmentReady()` when legs match; **not** a second log source — log reads the present-state field only. |
+| Widget surface outside transient present tick | `TerminalWidgetSurfaceState.readSharedSurfaceAttachmentReady()` | Reads stored legs on `PresentationState`; no `PresentationPresentState` in scope. |
+| Present outcome / host aggregation | `TerminalPresentResult.shared_surface_attachment_ready` | `host_surface_target_available` is **leg-only** on the same struct — never substitute it for conjunction reporting. |
+| Pure definition / tests | `surface_attachment_contract.hostSharedSurfaceAttachmentReady` / `FromPair` | Authority predicate; not a log or widget-runtime carrier. |
+
+**Secondary (leg reporters, not conjunction carriers):** `terminal_presentable_pipeline_ready` in operator JSON; `host_surface_target_available` on `PresentationPresentState` / present results — each names one leg for observability, not the ∧ alone.
+
+**`CZH-779` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_state.zig`, `presentable_contract.zig`, `terminal_widget_draw.zig`, `TERMINAL_SURFACE_CONTRACT.md`; confirm no investigation-only probe residue on product paths.
+
 ## Response Contract
 
 Every batch update must include:
