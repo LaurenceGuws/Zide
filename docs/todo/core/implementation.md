@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B26` (`architect_review_pending`, super-gate `CZH-GATE-80`).
+- Current active macro batch: `CZH-B27` (`in_progress`, super-gate `CZH-GATE-81`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S21_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S22_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2549,7 +2549,7 @@ Checkpoint packet: `docs/todo/core/CZH_S20_CHECKPOINT.md`.
   drift; one semantic naming mismatch in reuse-return bookkeeping was corrected
   in-place and does not change draw/present control flow.
 
-### `CZH-B26` Long-Loop Present Result Ownership Lock (`architect_review_pending`)
+### `CZH-B26` Long-Loop Present Result Ownership Lock (`accepted`)
 
 Queue line (exact):
 
@@ -2634,7 +2634,55 @@ Checkpoint packet: `docs/todo/core/CZH_S21_CHECKPOINT.md`.
 #### Architect gate result
 
 - `Review chunk: CZH-B26`
-- `Verdict: pending` — submitted for Architect review (`CZH-GATE-80`).
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `d4c13024`, `321d0406`, `707bd546`, `ea40fbe8`,
+  `fea2b910`, `357722da`, `8a3440be`, `bad751b8`, `136ceb82`, `da3aaff2`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` host-target leg vs full-attachment ownership is now
+  explicit in selected present/runtime/state carriers with no ABI drift.
+
+### `CZH-B27` Long-Loop Present Readiness Conjunction Propagation (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to lock where the
+  full-attachment conjunction is computed vs stored vs reported in selected
+  present/runtime/state paths, with test/doc lock and no ABI changes
+
+Acceptance:
+
+- selected touched paths have one explicit source of truth for full-attachment
+  conjunction per phase (compute/store/report), with no leg/conjunction mixing
+- no host ABI/C export changes
+- selected tests/docs assert conjunction propagation boundaries
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-81`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S22_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-761`..`CZH-770` in order from
+  `docs/todo/core/CZH_S22_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-81` or a real hard blocker
+
+#### `CZH-761` conjunction propagation audit + cut plan (`CZH-S22`)
+
+- map where full-attachment is computed, stored, and reported across:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_state.zig`,
+  `presentable_contract.zig`,
+  `surface_attachment_contract.zig`
+- classify per phase owner: compute vs storage vs report carrier
+- record scoped hygiene targets for `CZH-769`
 
 ## Response Contract
 
