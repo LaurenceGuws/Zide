@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S33_TICKETS.md`
+3. `docs/todo/core/CZH_S34_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B38` — **`in_progress`** toward **`CZH-GATE-92`** (sprint `CZH-S33`):
-  terminal presentation runtime ownership extraction (widget facade contraction + terminal-owned orchestration).
-  Ticket source: `docs/todo/core/CZH_S33_TICKETS.md`.
+- `CZH-B39` — **`in_progress`** toward **`CZH-GATE-93`** (sprint `CZH-S34`):
+  runtime orchestration ownership completion (terminal-owned orchestration helpers + widget facade contraction).
+  Ticket source: `docs/todo/core/CZH_S34_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S33` tickets `CZH-871`..`CZH-880` are active; run to
-  **`CZH-GATE-92`** unless blocked.
+- Sprint `CZH-S34` tickets `CZH-881`..`CZH-890` are active; run to
+  **`CZH-GATE-93`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

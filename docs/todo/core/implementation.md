@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B38` (architect_review_pending, super-gate `CZH-GATE-92`).
+- Current active macro batch: `CZH-B39` (in_progress, super-gate `CZH-GATE-93`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Completed sprint: `CZH-S32` (accepted). Checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`.
+- Completed sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
   they must not block core correction work unless a change intentionally touches
@@ -3469,7 +3469,7 @@ Execution source:
 - Corrective cut removed ticket-history wording from touched comments and removed unused callback path without behavior drift.
 - Validation spot-check stays green: core Zig ladder pass, bounded Linux GUI startup smoke pass, Android compile/deploy/start/logcat smoke pass.
 
-### `CZH-B38` Terminal Presentation Runtime Ownership Extraction (`architect_review_pending`)
+### `CZH-B38` Terminal Presentation Runtime Ownership Extraction (`accepted`)
 
 Queue line (exact):
 
@@ -3488,6 +3488,34 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S33_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+`Verdict: accepted`
+
+- Architect review confirmed runtime ownership extraction landed without behavior or ABI drift.
+- Corrective passes removed historical ticket/sprint lineage from touched source comments and runtime seam tests.
+- Validation spot-check stayed green: Zig ladder pass, bounded Linux GUI startup smoke pass, Android compile guard pass.
+
+### `CZH-B39` Runtime Orchestration Ownership Completion (`in_progress`)
+
+Queue line (exact):
+
+- finish moving terminal presentation orchestration ownership from widget runtime into terminal-owned runtime seams while keeping widget as integration facade
+
+Acceptance:
+
+- orchestration helpers that are pure terminal presentation logic are terminal-owned
+- widget runtime remains integration/orchestration facade only for renderer/shell context wiring
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- touched source comments remain present-tense architecture only
+- Linux and connected Android validation stay green through `CZH-GATE-93`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S34_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
