@@ -270,6 +270,16 @@ test "CZH-S15: notePresentableAvailability matches readSharedSurfaceAttachmentRe
     try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
 }
 
+test "CZH-S16: pipeline leg ready without host target splits presentableReady vs attachment" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    state.presentation.terminal_presentable_ready = true;
+    state.presentation.target_available = false;
+    try std.testing.expect(state.presentableReady());
+    try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
+}
+
 test "CZH-S14: composite pair mismatch matches per-leg inequality (widget seam shape)" {
     const mm = surface_contract.publicationClearPairMismatchesFromLastSurfaceRender(10, 20, 10, 30);
     try std.testing.expect(!mm.publication_mismatch);
