@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B10` (`in_progress`).
+- Current active macro batch: `CZH-B10` (`architect_review_pending` at `CZH-GATE-64`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S5_TICKETS.md`
 
@@ -1059,7 +1059,7 @@ Checkpoint packet: `docs/todo/core/CZH_S4_CHECKPOINT.md`.
   finally aligned with the accepted split. Bridge behavior and exported C
   symbols remained stable through the move.
 
-### `CZH-B10` FFI/Export Doc-Alignment Closure (`in_progress`)
+### `CZH-B10` FFI/Export Doc-Alignment Closure (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1140,6 +1140,25 @@ explicit. Editor + terminal facades above already carry `//!`; no packaging move
 
 **`CZH-629`:** rewrite the `CZH-608` table + “Doc-alignment queue” bullets so
 they match this audit; drop completed “add `//!` to editor FFI” items.
+
+**Completion (`CZH-627`..`CZH-629` landed):** `terminal_ffi_exports` `//!` expanded;
+`CZH-608` table synced; `///` work per `CZH-628` list applied in
+`src/terminal/ffi/core_api.zig` and `src/editor/ffi/bridge.zig`.
+
+#### `CZH-S5` engineer validation (`CZH-630`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-626`..`CZH-630` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
 
 ## Response Contract
 

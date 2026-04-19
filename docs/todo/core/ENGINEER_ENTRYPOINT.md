@@ -20,10 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B10` — **`in_progress`** (sprint `CZH-S5`): close the remaining
-  FFI/export doc-alignment drift so queue audits, authority docs, and current
-  code agree on ownership and documentation state. Execute tickets
-  `CZH-626`..`CZH-630`; stop only at `CZH-GATE-64` or a real hard blocker.
+- `CZH-B10` — **`architect_review_pending`** at **`CZH-GATE-64`** (sprint `CZH-S5`):
+  FFI/export doc drift closed in tree; **stop** for Architect gate. Packet:
+  `docs/todo/core/CZH_S5_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -39,7 +38,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S5` tickets `CZH-626`..`CZH-630` are the active execution set.
+- Sprint `CZH-S5` tickets `CZH-626`..`CZH-630` are complete at **`CZH-GATE-64`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

@@ -6,12 +6,13 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B10` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-64`): `CZH-B10` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S3_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S4_CHECKPOINT.md`
+- Pending Architect review: `docs/todo/core/CZH_S5_CHECKPOINT.md` (`CZH-GATE-64`)
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S5_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -37,14 +38,12 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B10`, engineer work in progress):
+Current batch intent (`CZH-B10`, engineer work at `CZH-GATE-64`):
 
-- close remaining FFI/export doc-alignment drift after the accepted BYO-PTY
-  extraction
-- correct stale queue/audit rows that still contradict committed code state
-- add any still-missing concise ownership docs on important FFI/editor-FFI/export
-  entrypoints
-- keep behavior stable and the stress ladder green through `CZH-GATE-64`
+- `CZH-608` queue rows and `CZH-B10` audit match editor + terminal FFI/export code
+- `terminal_ffi_exports`, editor bridge, and `core_api` carry truthful module and
+  entrypoint docs where scoped in `CZH-S5`
+- **Architect** accepts or requests changes via **`CZH-GATE-64`**
 
 ## First Read Order
 
