@@ -132,7 +132,7 @@ pub const TerminalWidgetSurfaceState = struct {
             .render_scale_changed = surface_geometry.render_scale != self.presentation.last_render_scale,
             .generation_changed = gen_clear_mismatch.publication_mismatch,
             .clear_generation_changed = gen_clear_mismatch.clear_mismatch,
-            .presentable_ready = self.presentation.terminal_presentable_ready,
+            .presentable_ready = self.presentableReady(),
             .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
             .invalidation_flags = self.presentation.invalidation_flags,
         };
