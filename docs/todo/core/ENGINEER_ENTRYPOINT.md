@@ -20,9 +20,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B9` — **in_progress** via sprint `CZH-S4` at **`CZH-GATE-63`**:
-  extract the optional BYO-PTY seam out of `src/terminal/ffi/` while keeping
-  bridge behavior and exported C symbols stable.
+- `CZH-B9` — **`architect_review_pending`** at **`CZH-GATE-63`** (sprint `CZH-S4`):
+  BYO-PTY seam lives at `src/terminal/byo_pty_host.zig` (outside `ffi/`); bridge
+  and C exports stable. **Stop:** await Architect gate; packet
+  `docs/todo/core/CZH_S4_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -38,9 +39,10 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Execute `CZH-621`..`CZH-625` sequentially from
-  `docs/todo/core/CZH_S4_TICKETS.md`.
-- Keep one ticket per commit.
+- Sprint `CZH-S4` tickets `CZH-621`..`CZH-625` are complete at **`CZH-GATE-63`**
+  (see `docs/todo/core/CZH_S4_CHECKPOINT.md`). Do not restart unless Architect
+  reopens scope.
+- Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
 

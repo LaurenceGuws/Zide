@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B9` (`in_progress`).
+- Current active macro batch: `CZH-B9` (`architect_review_pending` at `CZH-GATE-63`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S4_TICKETS.md`
 
@@ -620,8 +620,8 @@ Objective:
    runtime, or transport ownership.
 2. **optional bring-your-own-PTY host seam** — session / runtime / input /
    transport path when the host drives a local PTY-backed or equivalent loop.
-   **Target:** distinct from VT core FFI; BYO seam is now `byo_pty_host.zig`
-   alongside `core_api.zig` under `src/terminal/ffi/` (explicit filename).
+   **Target:** distinct from VT core FFI; packaged as `src/terminal/byo_pty_host.zig`
+   (terminal-owned sibling to `ffi/`, not inside it — see `CZH-S4`).
 3. editor backend FFI
 4. terminal surface contract — host initializes/passes the **shared GPU
    texture/resource attachment** the backend needs; Zide owns dirty tracking,
@@ -914,7 +914,7 @@ Execution source:
   (`byo_pty_host.zig`) without behavior change or C export churn. The split is
   cleaner in code, not just in docs.
 
-### `CZH-B9` Extract BYO-PTY Out Of `terminal/ffi` Packaging (`in_progress`)
+### `CZH-B9` Extract BYO-PTY Out Of `terminal/ffi` Packaging (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1027,6 +1027,21 @@ Execution source:
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S3_CHECKPOINT.md`.
+
+#### `CZH-S4` engineer validation (`CZH-625`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-621`..`CZH-625` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S4_CHECKPOINT.md`.
 
 ## Response Contract
 
