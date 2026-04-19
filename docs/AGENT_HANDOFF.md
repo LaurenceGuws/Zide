@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B16` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-70`): `CZH-B16` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -18,6 +18,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S8_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S9_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S10_CHECKPOINT.md`
+- Pending sprint checkpoint (Architect): `docs/todo/core/CZH_S11_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S11_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -43,11 +44,10 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B16`, active):
+Current batch intent (`CZH-B16`, submitted at `CZH-GATE-70`):
 
-- `presentationUpdateDelta` generation/clear-generation mismatch limbs route
-  through `surface_contract`
-- seam cut is behavior-neutral; no host ABI drift
+- `presentationUpdateDelta` mismatch limbs route through `surface_contract`
+- seam cut is behavior-neutral; Architect review pending on checkpoint packet
 
 ## First Read Order
 
@@ -66,7 +66,7 @@ Current batch intent (`CZH-B16`, active):
 - Execute only the active macro batch marked in `docs/todo/core/implementation.md`
   (`in_progress` or `architect_review_pending` per batch state).
 - Engineer executes the current sprint tickets in `docs/todo/core/JIRA_BOARD.md`
-  and `docs/todo/core/CZH_S10_TICKETS.md` in listed order.
+  and `docs/todo/core/CZH_S11_TICKETS.md` in listed order.
 - Engineer batching target: **5–10 validated commits** per macro batch unless a
   real hard stop occurs.
 - Keep changes single-path and behavior-stable unless the batch explicitly

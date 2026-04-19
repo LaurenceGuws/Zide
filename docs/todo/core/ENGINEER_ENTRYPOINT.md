@@ -20,10 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B16` — **`in_progress`** (sprint `CZH-S11`): `presentationUpdateDelta`
-  generation/clear-generation mismatch limbs route through `surface_contract`
-  in one bounded behavior-neutral seam cut. Ticket source:
-  `docs/todo/core/CZH_S11_TICKETS.md`.
+- `CZH-B16` — **`architect_review_pending`** at **`CZH-GATE-70`** (sprint `CZH-S11`):
+  `presentationUpdateDelta` uses `surface_contract` mismatch helpers. Packet:
+  `docs/todo/core/CZH_S11_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -39,8 +38,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S11` tickets `CZH-656`..`CZH-660` are active in order; stop at
-  **`CZH-GATE-70`** or a real hard blocker.
+- Sprint `CZH-S11` tickets `CZH-656`..`CZH-660` are complete at **`CZH-GATE-70`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

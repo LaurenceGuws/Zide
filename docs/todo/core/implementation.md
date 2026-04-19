@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B16` (`in_progress`).
+- Current active macro batch: `CZH-B16` (`architect_review_pending` at `CZH-GATE-70`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S11_TICKETS.md`
 
@@ -1606,7 +1606,7 @@ Checkpoint packet: `docs/todo/core/CZH_S10_CHECKPOINT.md`.
 - `Acceptance judgment:` clear-generation reuse limb now consumes
   `surface_contract` in a behavior-neutral cut; host ABI unchanged.
 
-### `CZH-B16` Surface Contract Consumer Expansion III (`in_progress`)
+### `CZH-B16` Surface Contract Consumer Expansion III (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1665,6 +1665,21 @@ new predicate surface beyond doc binding where needed.
   clear mismatch helpers
 - `presentationUpdateDelta` routes both `*_changed` fields through those helpers
 - unit test + `TERMINAL_SURFACE_CONTRACT.md` widget consumer line
+
+#### `CZH-S11` engineer validation (`CZH-660`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-656`..`CZH-660` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S11_CHECKPOINT.md`.
 
 ## Response Contract
 
