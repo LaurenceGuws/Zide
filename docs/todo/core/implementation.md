@@ -2883,6 +2883,17 @@ Execution source:
 
 **`CZH-789` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_state.zig`, `presentable_contract.zig`, `terminal_widget_draw.zig`, `terminal_widget.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
 
+#### `CZH-789` scoped probe/doc hygiene + authority sync (`CZH-S24`)
+
+- **Reviewed:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_state.zig`, `presentable_contract.zig`, `terminal_widget_draw.zig`,
+  `terminal_widget.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
+- **Removed:** nothing (no investigation-only probe callers on product paths; `std.debug.assert` remains
+  in tests only).
+- **Kept:** operator `logUnavailable` / `terminal.generation_handoff`; cohesion comptime tests (`CZH-787`,
+  `CZH-788`).
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — reporting vs present-result cohesion note (`CZH-782` / `CZH-S24`).
+
 ## Response Contract
 
 Every batch update must include:
