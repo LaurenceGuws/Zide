@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B20` (`in_progress`, super-gate `CZH-GATE-74`).
+- Current active macro batch: `CZH-B20` (`architect_review_pending` at `CZH-GATE-74`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S14_TICKETS.md`
 
@@ -2008,7 +2008,7 @@ Checkpoint packet: `docs/todo/core/CZH_S14_CHECKPOINT.md`.
   explicit and consistent in touched widget + FFI seam consumers; convergence
   tests are stronger and behavior-neutral.
 
-### `CZH-B20` Long-Loop Surface Attachment Contract Shaping (`in_progress`)
+### `CZH-B20` Long-Loop Surface Attachment Contract Shaping (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -2071,6 +2071,21 @@ Cross-link from `surface_contract.zig` / widget docs. Hygiene `CZH-699`:
 - `surface_attachment_contract.zig` primitive/composite; `notePresentableAvailability` wiring
 - Docs in `surface_contract`, presentation runtime; draw test + widget integration test
 - Authority + sweep note above
+
+#### `CZH-S15` engineer validation (`CZH-700`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-691`..`CZH-700` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S15_CHECKPOINT.md`.
 
 ## Response Contract
 

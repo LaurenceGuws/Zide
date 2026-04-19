@@ -20,8 +20,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B20` — **`in_progress`** toward **`CZH-GATE-74`** (sprint `CZH-S15`):
-  host-shared-surface attachment seam shaping in Zig (`docs/todo/core/CZH_S15_TICKETS.md`).
+- `CZH-B20` — **`architect_review_pending`** at **`CZH-GATE-74`** (sprint `CZH-S15`):
+  `surface_attachment_contract` landed. Packet: `docs/todo/core/CZH_S15_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -37,8 +37,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S15` tickets `CZH-691`..`CZH-700` are active; run to
-  **`CZH-GATE-74`** unless blocked.
+- Sprint `CZH-S15` tickets `CZH-691`..`CZH-700` are complete at **`CZH-GATE-74`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

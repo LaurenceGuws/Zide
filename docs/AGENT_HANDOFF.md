@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-74`): `CZH-B20` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-74`): `CZH-B20` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -22,6 +22,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S12_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S13_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S14_CHECKPOINT.md`
+- Pending sprint checkpoint (Architect): `docs/todo/core/CZH_S15_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S15_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -47,11 +48,9 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B20`, in progress toward `CZH-GATE-74`):
+Current batch intent (`CZH-B20`, submitted at `CZH-GATE-74`):
 
-- shape an explicit host-shared-surface attachment seam in Zig
-- converge selected widget/runtime consumers to one attachment helper shape
-- keep behavior and ABI stable; complete scoped hygiene/doc lock at super-gate
+- `surface_attachment_contract` + widget wiring; Architect review pending on packet
 
 ## First Read Order
 
