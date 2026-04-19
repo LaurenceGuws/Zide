@@ -1085,14 +1085,15 @@ fn mapColor(color: types.Color) shared.Color {
     return .{ .r = color.r, .g = color.g, .b = color.b, .a = color.a };
 }
 
-test "CZH-S13: core_api redraw seam uses same RedrawState bundle as direct ffi fill" {
-    var a: shared.RedrawState = undefined;
-    var b: shared.RedrawState = undefined;
-    surface_contract.ffiRedrawStateFill(3, 4, &a);
-    surface_contract.fillRedrawState(3, 4, &b);
-    try std.testing.expectEqual(b.needs_redraw, a.needs_redraw);
-    try std.testing.expectEqual(b.published_generation, a.published_generation);
-    try std.testing.expectEqual(b.acknowledged_generation, a.acknowledged_generation);
+test "CZH-S14: core_api redraw_state seam — ffiRedrawStateFill matches pair-derived needs_redraw" {
+    var s: shared.RedrawState = undefined;
+    surface_contract.ffiRedrawStateFill(3, 4, &s);
+    try std.testing.expectEqual(@as(u64, 3), s.published_generation);
+    try std.testing.expectEqual(@as(u64, 4), s.acknowledged_generation);
+    try std.testing.expectEqual(
+        @as(u8, @intFromBool(surface_contract.needsRedrawFromPair(3, 4))),
+        s.needs_redraw,
+    );
 }
 
 test "CZH-S13: core_api needsRedraw byte shape matches ffiNeedsRedrawU8" {
