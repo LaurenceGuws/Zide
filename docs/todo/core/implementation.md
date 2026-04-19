@@ -612,14 +612,18 @@ Objective:
 - turn the current broad "cleanup" lane into a small number of explicit layer
   contracts that the engineer can execute against without drifting
 
+**Four target layers (name consistently everywhere):**
+
+1. VT core FFI
+2. optional bring-your-own-PTY host seam
+3. editor backend FFI
+4. terminal surface contract (host passes shared GPU resource/surface; Zide
+   owns dirty tracking/update logic; host owns binding/presentation)
+
 Acceptance:
 
-- authority docs explicitly define these four target layers:
-  1. VT core FFI
-  2. optional PTY/session host seam
-  3. editor backend FFI
-  4. terminal surface contract (host passes shared GPU resource/surface;
-     Zide owns dirty tracking/update logic; host owns binding/presentation)
+- authority docs explicitly define these four target layers (same list as
+  above)
 - current files are classified into those target layers with explicit keep/move
   boundaries and non-goals
 - hard-rule audits exist for:
@@ -642,7 +646,7 @@ Internal milestones (`CZH6-M1..M6`, executed through Jira tickets `CZH-601`..`CZ
 | --- | --- |
 | `CZH6-M1` | establish Jira/board/ticket authority and flatten the active focus |
 | `CZH6-M2` | audit current file ownership across terminal FFI, editor FFI, Android/native host glue, and renderer surface paths |
-| `CZH6-M3` | write/freeze the target split docs for VT core FFI, optional PTY host seam, editor backend FFI, and terminal surface contract |
+| `CZH6-M3` | write/freeze the target split docs for VT core FFI, optional bring-your-own-PTY host seam, editor backend FFI, and terminal surface contract |
 | `CZH6-M4` | run the three hard-rule audits (probe/debug, compat/fallback, doc strings) against the layer set |
 | `CZH6-M5` | shape the first implementation sprint from that authority |
 | `CZH6-M6` | checkpoint packet + review gate |

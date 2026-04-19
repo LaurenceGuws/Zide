@@ -9,6 +9,7 @@ Read in this exact order:
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+8. `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 
 ## Active Batch Rule
 
@@ -18,8 +19,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B6` — **in_progress** (layer freeze: VT core FFI / optional PTY host /
-  editor backend FFI / terminal surface contract).
+- `CZH-B6` — **in_progress** (layer freeze: **VT core FFI**; **optional
+  bring-your-own-PTY host seam**; **editor backend FFI**; **terminal surface
+  contract**).
 
 ## Hard Rules
 

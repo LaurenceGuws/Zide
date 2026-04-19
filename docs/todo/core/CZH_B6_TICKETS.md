@@ -18,7 +18,9 @@ Super-gate: `CZH-GATE-60`
 
 Goal:
 
-- replace the vague hygiene-first framing with the explicit four-layer focus
+- replace the vague hygiene-first framing with the explicit four-layer focus:
+  VT core FFI; optional bring-your-own-PTY host seam; editor backend FFI;
+  terminal surface contract
 
 Required outputs:
 
@@ -38,7 +40,7 @@ Goal:
 
 - classify current terminal FFI files into:
   - VT core FFI
-  - optional PTY/session host seam
+  - optional bring-your-own-PTY host seam
   - bridge/facade glue
   - current smell/misalignment
 
