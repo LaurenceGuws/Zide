@@ -17,11 +17,13 @@
 //! distinguish the host-target **leg** from the **full attachment** conjunction (`pipeline ∧ host
 //! target`) so bookkeeping cannot overload one bool for both (`CZH-753`..`CZH-754`).
 //!
-//! **Conjunction propagation phases (`CZH-S22`):** **compute** in `refreshPresentState` and
-//! `tryFastPresentExisting` via `TerminalWidgetSurfaceState.notePresentableAvailability`; **store**
-//! on `PresentationPresentState`, `ReusePresentOutcomeState`, and `TerminalPresentResult` fields;
-//! **report** through `logUnavailable`, `readSharedSurfaceAttachmentReady`, and consumers of present
-//! results — do not re-label a single leg as the conjunction on those paths.
+//! **Conjunction propagation phases (`CZH-S22`, **canonical routes CZH-791**):** **compute** in
+//! `refreshPresentState` and `tryFastPresentExisting` via **canonical helper**
+//! `TerminalWidgetSurfaceState.notePresentableAvailability` (calls
+//! `surface_attachment_contract.hostSharedSurfaceAttachmentReady`); **store** on transient
+//! `PresentationPresentState`, outcome `ReusePresentOutcomeState`, and result `TerminalPresentResult`;
+//! **report** through `logUnavailable`, `readSharedSurfaceAttachmentReady`, and consumers of results
+//! — do not re-derive or re-label a single leg as the conjunction on those paths.
 //!
 //! **Reporting-carrier boundaries (`CZH-S23`):** for operator JSON on present failure, the **dominant**
 //! conjunction carrier is **`PresentationPresentState.shared_surface_attachment_ready`** (see
@@ -112,11 +114,15 @@ pub fn computePresentationSurfaceGeometry(
     return geometry;
 }
 
+/// **Transient present-state snapshot (`CZH-S22`, CZH-791):** captures conjunction from
+/// `refreshPresentState` via `notePresentableAvailability`; dominant carrier for operator JSON
+/// in `logUnavailable` (`CZH-S23`, CZH-B24). Never alias this conjunction onto result structs.
 pub const PresentationPresentState = struct {
     updated: bool = false,
     presentable_refresh: TerminalPresentableRefresh = .unsupported,
     host_surface_target_available: bool = false,
-    /// Full shared-surface attachment for this tick (`notePresentableAvailability`); not the host-target leg alone.
+    /// Full shared-surface attachment for this tick (from `notePresentableAvailability`); not the host-target leg alone.
+    /// **Reporting carrier (`CZH-S23`):** `logUnavailable` reads this field only; do not re-derive conjunction.
     shared_surface_attachment_ready: bool = false,
     visible: bool = false,
     present: bool = false,
@@ -180,13 +186,15 @@ pub const DirectPresentOutcomeState = struct {
     host_surface_target_available: bool = true,
 };
 
+/// **Outcome snapshot from reuse path (`CZH-B26`, CZH-791):** carries result of the reuse attempt.
 pub const ReusePresentOutcomeState = struct {
     reused: bool = false,
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,
-    /// Host drawable-target **leg** only (renderer `terminalPresentableInfo`); not the pipeline ∧ target conjunction.
+    /// **Leg only** — host drawable-target (renderer `terminalPresentableInfo`); not conjunction.
     host_surface_target_available: bool = false,
-    /// Full shared-surface attachment (`surface_attachment_contract.hostSharedSurfaceAttachmentReady` shape).
+    /// **Full conjunction** — terminal presentable pipeline ∧ host target (from `notePresentableAvailability`).
+    /// **Canonical route (`CZH-791`):** must be populated by canonical helper, never hardcoded or re-derived.
     shared_surface_attachment_ready: bool = false,
 };
 
@@ -1530,6 +1538,9 @@ pub fn beginViewportClip(
     );
 }
 
+/// **Canonical compute+store route for refresh path (`CZH-S22`, CZH-791):** computes conjunction
+/// via `notePresentableAvailability`; stores snapshot on `PresentationPresentState` for tick.
+/// Only `logUnavailable()` should read the conjunction field from the returned state.
 pub fn refreshPresentState(
     surface_state: anytype,
     renderer: anytype,
@@ -1670,6 +1681,9 @@ pub fn presentDraw(
     );
 }
 
+/// **Canonical compute route for reuse path (`CZH-S22`, CZH-791):** computes conjunction via
+/// `notePresentableAvailability`; populates `ReusePresentOutcomeState` with conjunction result
+/// for folding into `TerminalPresentResult`.
 pub fn tryFastPresentExisting(
     surface_state: anytype,
     renderer: anytype,

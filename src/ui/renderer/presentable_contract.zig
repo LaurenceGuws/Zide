@@ -145,7 +145,7 @@ pub const TerminalPresentFollowup = struct {
     reason: TerminalPresentFollowupReason = .none,
 };
 
-/// Aggregated present result (`CZH-B26` ownership, report wording `CZH-S23`, cohesion `CZH-S24`):
+/// **Host-facing aggregation result (`CZH-B26`, `CZH-791`):** populated by runtime outcome folding.
 /// **`host_surface_target_available`** is **only** the host drawable-target **leg** for this execution
 /// — **not** “attachment ready” alone. **`shared_surface_attachment_ready`** is the **full attachment**
 /// predicate (terminal presentable pipeline ∧ host target) when the caller computes it; default `false`

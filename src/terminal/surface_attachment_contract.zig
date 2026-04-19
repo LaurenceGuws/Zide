@@ -34,8 +34,10 @@
 
 const std = @import("std");
 
-/// True when the terminal can draw into the presentable **and** the host exposes
-/// a surface target for that attachment (logical AND — no extra policy).
+/// **Canonical conjunction helper (CZH-S18, CZH-791):** True when the terminal can draw into the presentable
+/// **and** the host exposes a surface target for that attachment. This is the **sole** conjunction
+/// compute function in this module; all callers deriving the conjunction must use this or its pair-wrapper.
+/// Logical AND — no extra policy, no hidden state checks.
 pub fn hostSharedSurfaceAttachmentReady(
     terminal_presentable_pipeline_ready: bool,
     host_surface_target_available: bool,
@@ -49,6 +51,8 @@ pub const SharedSurfaceAttachmentPipelinePair = struct {
     host_surface_target_available: bool,
 };
 
+/// **Canonical conjunction wrapper (CZH-S18, CZH-791):** applies `hostSharedSurfaceAttachmentReady`
+/// to a pair struct. Used by widget-level readers that extract stored legs before deriving conjunction.
 pub fn hostSharedSurfaceAttachmentReadyFromPair(pair: SharedSurfaceAttachmentPipelinePair) bool {
     return hostSharedSurfaceAttachmentReady(
         pair.terminal_presentable_pipeline_ready,
