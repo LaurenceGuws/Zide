@@ -4,105 +4,53 @@
 **Scope:** Identify orchestration functions requiring callback extraction and define interface shapes.  
 **Authority:** CZH-S35 sprint, terminal orchestrator ownership completion via callbacks.
 
-## Functions Requiring Callback Extraction
+## Current State (Authoritative)
 
-### Refresh Orchestration Group
+The seam is already extracted into terminal-owned orchestration with widget-owned
+hook execution, expressed as Zig `ctx` + comptime `Hooks` rather than runtime
+fn-pointer tables.
 
-**Functions to extract:**
-1. `executeRefreshPresentFlow` — top-level refresh orchestration
-2. `runPresentableRefreshCycle` — execute refresh cycle
-3. `runRefreshedPresentablePresentation` — process refresh results
+Terminal-owned entrypoints:
 
-**Widget-only operations (callbacks needed):**
-- `executePresentableUpdate(...)` — GPU drawing execution
-- `refreshPresentState(...)` — viewport state refresh
-- `beginViewportClip(...)` / `endClip(...)` — renderer viewport state
-- `logUnavailable(...)` — operator reporting
-- `presentDraw(...)` — present callback
+1. Refresh orchestration:
+   - `src/terminal/presentation_runtime.zig`: `executeRefreshPresentFlow(rows, cols, ctx, Hooks)`
+2. Reuse decision + fold helpers:
+   - `checkReuseEligibility`, `reuseSuccessOutcome`, `presentResultFromReuseOutcomeState`
+3. Direct-present decision + fold helpers:
+   - `checkDirectPresentEligibility`, `classifyDirectPresentOutcome`
 
-**Callback interface shape:**
-```zig
-PresentationRefreshCallbacks = struct {
-    executePresentableUpdate: fn(ctx: anytype, ...) ExecutionResult,
-    refreshPresentState: fn(ctx: anytype, ...) PresentationPresentState,
-    beginViewportClip: fn(renderer: anytype, ...) void,
-    endClip: fn(renderer: anytype) void,
-    logUnavailable: fn(...) void,
-    presentDraw: fn(...) void,
-}
-```
+Widget-owned integration facade:
 
-### Reuse Orchestration Group
+1. `src/ui/widgets/terminal_widget_presentation_runtime.zig` builds `ctx` and `Hooks` and
+   delegates orchestration/classification/fold to terminal.
+2. Widget retains GPU drawing, cache mutation, renderer/shell integration, and
+   operator reporting wiring.
 
-**Functions to extract:**
-1. `tryFastPresentExisting` — reuse eligibility decision
-2. `runFastPresentIfAvailable` — reuse execution wrapper
+## What Remains (This Sprint)
 
-**Widget-only operations (callbacks needed):**
-- `advancePresentationCache(...)` — cache state advancement
+The remaining work is not “extract callbacks”; it is “reduce boundary payload
+width and harden contracts”:
 
-**Callback interface shape:**
-```zig
-PresentationReuseCallbacks = struct {
-    advancePresentationCache: fn(ctx: anytype, ...) void,
-}
-```
-
-### Direct-Present Orchestration Group
-
-**Functions to extract:**
-1. `directPresent` — direct present orchestration
-
-**Widget-only operations (callbacks needed):**
-- GPU drawing execution
-- Result reporting
-
-**Callback interface shape:**
-```zig
-PresentationDirectCallbacks = struct {
-    executeDirectPresent: fn(ctx: anytype, ...) DirectPresentResult,
-}
-```
-
-## Extraction Priority
-
-1. **High value, moderate complexity:** `directPresent` (simpler, fewer callbacks)
-2. **High value, moderate complexity:** Reuse group (`tryFastPresentExisting`, `advancePresentationCache`)
-3. **Highest value, highest complexity:** Refresh group (`executeRefreshPresentFlow`, `runPresentableRefreshCycle`, `runRefreshedPresentablePresentation`)
+1. Remove implicit ctx-shape requirements across the renderer-refresh host wrapper.
+2. Collapse “argument soup” booleans/lengths into small structs for reuse/direct eligibility.
+3. Lock invariants with helper-level and integration-level tests.
+4. Keep the widget runtime as a facade (no duplicated decision/fold seams).
 
 ## Architecture Outcome
 
-**Terminal-owned after extraction:**
-- All refresh/reuse/direct orchestration logic
-- All outcome classification and folding
-- All geometry and attachment readiness computation
-- Callback-based integration for widget-specific operations
+**Terminal-owned:**
+- Orchestration, classification, folding, geometry computation
+- Attachment leg/conjunction computation helpers
 
 **Widget-retained:**
-- Callback implementations
 - GPU drawing execution
 - State mutation
 - Integration with renderer/shell
-- Thin facade pattern for calling terminal orchestrators
-
-## Callback Pattern Benefits
-
-1. **Clean ownership:** Terminal owns decision logic, widget owns execution
-2. **Testable:** Terminal orchestrators can be tested with mock callbacks
-3. **Flexible:** Future integrations can provide different callbacks
-4. **No circular dependencies:** Callbacks passed explicitly, no widget imports in terminal
-
-## Estimated Line Changes
-
-- **Refresh extraction:** ~300 lines moved (decision + callbacks)
-- **Reuse extraction:** ~80 lines moved
-- **Direct extraction:** ~50 lines moved
-- **Total:** ~430 lines of orchestration logic to terminal
+- Facade pattern: build `ctx` + `Hooks` then call terminal-owned helpers
 
 ## Next Steps
 
-- CZH-892: Authority tightening documentation
-- CZH-893: Refresh orchestrator extraction
-- CZH-894: Reuse orchestrator extraction  
-- CZH-895: Direct orchestrator extraction
-- CZH-896: Widget facade contraction
+- CZH-911: Boundary audit + reduction map (this sprint)
+- CZH-912: Authority tightening documentation (doc-only)
+- CZH-913..916: Reduce refresh/reuse/direct boundary surfaces + widget facade contraction
+- CZH-917/918: Helper-level + integration boundary invariants

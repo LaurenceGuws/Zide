@@ -6,56 +6,53 @@
 
 ## Terminal Orchestrator Authority (Callback Pattern)
 
-Terminal layer owns orchestration functions that take explicit callback parameters for widget-only operations. This pattern separates decision logic (terminal-owned) from execution (widget-implemented).
+Terminal layer owns orchestration functions that take explicit callback hooks for
+widget-only operations. This pattern separates decision logic (terminal-owned)
+from execution (widget-implemented) without importing widget modules into the
+terminal layer.
 
-**Terminal-owned orchestration signatures:**
+## Canonical Mechanism: `ctx` + comptime `Hooks`
+
+Zide uses a Zig-native callback mechanism:
+
+- A widget-owned `ctx` struct carries the widget-local state needed for a single
+  present tick (shell/renderer, view model, geometry, cursor/composition inputs).
+- A widget-owned `Hooks` type (comptime) provides the widget-only operations as
+  functions.
+- Terminal-owned orchestration code receives `ctx` + `Hooks` and calls only the
+  hook functions; all decision logic, classification, and folding stays terminal-owned.
+
+This is still “callbacks”, but it is expressed as `ctx` + comptime `Hooks`
+instead of runtime fn-pointer tables. It avoids dynamic dispatch and preserves
+resource discipline.
+
+## Terminal-Owned Orchestration Surfaces (Current)
 
 ```zig
-// Refresh orchestration with callbacks
-pub fn executeRefreshPresentFlowWithCallbacks(
-    renderer: anytype,
-    terminal_view: anytype,
-    view_geometry: anytype,
-    refresh_callbacks: PresentationRefreshCallbacks,
+// Refresh orchestration: widget provides Hooks.runCycle and Hooks.runPresentation.
+pub fn executeRefreshPresentFlow(
+    rows: usize,
+    cols: usize,
+    ctx: anytype,
+    comptime Hooks: type,
 ) TerminalPresentResult
 
-// Reuse orchestration with callbacks
-pub fn tryFastPresentExistingWithCallbacks(
-    renderer: anytype,
-    terminal_view: anytype,
-    reuse_callbacks: PresentationReuseCallbacks,
-) ReusePresentOutcomeState
+// Reuse decision helpers (eligibility + folding helpers).
+pub fn checkReuseEligibility(...) bool
+pub fn reuseSuccessOutcome() ReusePresentOutcomeState
+pub fn presentResultFromReuseOutcomeState(...) TerminalPresentResult
 
-// Direct present orchestration with callbacks
-pub fn directPresentWithCallbacks(
-    terminal_view: anytype,
-    direct_callbacks: PresentationDirectCallbacks,
-) TerminalPresentResult
+// Direct-present decision helpers (eligibility + classification/folding helpers).
+pub fn checkDirectPresentEligibility(...) bool
+pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState
 ```
 
-**Callback interface definitions:**
+## Hook Shapes (Refresh)
 
 ```zig
-pub const PresentationRefreshCallbacks = struct {
-    // GPU drawing execution
-    executePresentableUpdate: fn(ctx: anytype, ...) TerminalPresentableRefreshExecutionResult,
-    // State refresh
-    refreshPresentState: fn(ctx: anytype, ...) PresentationPresentState,
-    // Renderer viewport management
-    beginViewportClip: fn(renderer: anytype, ...) void,
-    endClip: fn(renderer: anytype) void,
-    // Operator reporting
-    logUnavailable: fn(ctx: anytype, ...) void,
-    // Present handling
-    presentDraw: fn(renderer: anytype, ...) void,
-};
-
-pub const PresentationReuseCallbacks = struct {
-    advancePresentationCache: fn(ctx: anytype, ...) void,
-};
-
-pub const PresentationDirectCallbacks = struct {
-    executeDirectPresent: fn(ctx: anytype, ...) DirectPresentResult,
+pub const Hooks = struct {
+    pub fn runCycle(ctx: Ctx) TerminalPresentableRefreshExecutionResult;
+    pub fn runPresentation(ctx: Ctx, cycle: TerminalPresentableRefreshExecutionResult) RefreshedPresentablePresentationResult;
 };
 ```
 
@@ -64,14 +61,14 @@ pub const PresentationDirectCallbacks = struct {
 | Concern | Owner | Delivery |
 |---------|-------|----------|
 | **Orchestration decision logic** | Terminal | Pure function (no widget deps) |
-| **Callback interface definition** | Terminal | Typed struct of fn pointers |
+| **Callback interface definition** | Widget | `ctx` + comptime `Hooks` type |
 | **Outcome classification** | Terminal | Pure computation |
 | **Outcome folding** | Terminal | Pure computation |
 | **Geometry computation** | Terminal | Pure computation |
-| **Callback implementation** | Widget | Called from terminal via pointers |
-| **GPU drawing execution** | Widget | Callback-implemented |
-| **State mutation** | Widget | Callback-implemented |
-| **Renderer integration** | Widget | Callback-implemented |
+| **Callback implementation** | Widget | Hook function bodies |
+| **GPU drawing execution** | Widget | Hook-executed |
+| **State mutation** | Widget | Hook-executed |
+| **Renderer integration** | Widget | Hook-executed |
 
 ## Widget Facade Pattern
 
@@ -82,27 +79,23 @@ pub fn updateAndPresent(
     self: anytype,
     ...,
 ) SurfacePresentResult {
-    // Gather state
-    const terminal_view = ...;
-    const renderer = ...;
-    // Build callbacks
-    const callbacks = PresentationRefreshCallbacks{
-        .executePresentableUpdate = executeUpdateCb,
-        .refreshPresentState = refreshStateCb,
-        .beginViewportClip = beginClipCb,
-        .endClip = endClipCb,
-        .logUnavailable = logCb,
-        .presentDraw = drawCb,
+    // Gather widget-local state into `ctx`.
+    const ctx = Ctx{ ... };
+
+    // Provide widget-only operations via `Hooks`.
+    const Hooks = struct {
+        pub fn runCycle(ctx: Ctx) TerminalPresentableRefreshExecutionResult { ... }
+        pub fn runPresentation(ctx: Ctx, cycle: TerminalPresentableRefreshExecutionResult) RefreshedPresentablePresentationResult { ... }
     };
-    // Call terminal orchestrator
-    const result = terminal_presentation_runtime.executeRefreshPresentFlowWithCallbacks(
-        renderer,
-        terminal_view,
-        ...,
-        callbacks,
+
+    // Delegate orchestration/classification/fold to terminal.
+    const result = terminal_presentation_runtime.executeRefreshPresentFlow(
+        terminal_view.rows,
+        terminal_view.cols,
+        ctx,
+        Hooks,
     );
-    // Handle result
-    return aggregateResult(result);
+    return aggregateResult(result); // widget-owned aggregation/reporting
 }
 ```
 
@@ -111,19 +104,16 @@ pub fn updateAndPresent(
 1. **Clean separation:** Terminal owns logic; widget owns execution
 2. **Testability:** Terminal orchestrators can be tested with mock callbacks
 3. **No circular deps:** Callbacks passed explicitly; no widget imports in terminal
-4. **Type-safe:** Callback interfaces are typed, not generic fn() pointers
-5. **Future-proof:** Callbacks can be reimplemented for different hosts
+4. **Zero overhead:** comptime hooks avoid runtime dispatch cost
+5. **Future-proof:** Different hosts can provide different hook implementations
 
 ## Implementation Notes
 
-- All callbacks are `anytype` for maximum flexibility with duck typing
+- `ctx` and `Hooks` are `anytype`/comptime to preserve duck-typing flexibility
 - Terminal layer never imports widget-specific modules
-- Callbacks must not capture state; all state passed as parameters
-- Callbacks must preserve behavior (no logic changes allowed)
+- Hook bodies must preserve behavior; decision logic remains in terminal layer
 
 ## Next Steps
 
-CZH-893..895: Extract refresh/reuse/direct orchestrators with callback parameters
-CZH-896: Contract widget facade to pure callback aggregation
-CZH-897/898: Test callback orchestration equivalence
-CZH-899/900: Hygiene and validation
+- The core seam already uses `ctx` + `Hooks`; remaining work focuses on reducing
+  boundary payload width and hardening runtime boundary contracts without semantic drift.
