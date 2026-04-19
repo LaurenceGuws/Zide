@@ -214,9 +214,10 @@ pub const ReusePresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
-/// **Generic result fold (`CZH-791`, `CZH-S27`, `CZH-S28`, `CZH-S29`):** construct host-facing `TerminalPresentResult` from outcome
+/// **Generic result fold (`CZH-791`, `CZH-S27`, `CZH-S28`, `CZH-S29`, `CZH-S30`):** construct host-facing `TerminalPresentResult` from outcome
 /// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
-/// **conjunction** when supplied (not report snapshot). Canonical fold helper for all outcome paths.
+/// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths (`CZH-S30`)**
+/// — routed through by outcome-specific folds.
 /// **Hardening (`CZH-S29`):** validates output result consistency across all outcome types.
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
@@ -247,8 +248,9 @@ fn presentResultFromOutcomeState(
     return result;
 }
 
-/// **Canonical outcome fold for refresh path (`CZH-791`, `CZH-S28`, `CZH-S29`):** uses conjunction computed in refresh cycle.
+/// **Canonical outcome fold for refresh path (`CZH-791`, `CZH-S28`, `CZH-S29`, `CZH-S30`):** uses conjunction computed in refresh cycle.
 /// **Hardening (`CZH-S29`):** validates outcome -> result threading and followup propagation.
+/// **Consolidation (`CZH-S30`):** routes refresh outcomes through generic fold with followup assignment.
 fn presentResultFromRefreshOutcomeState(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -277,6 +279,8 @@ fn presentResultFromRefreshOutcomeState(
     return result;
 }
 
+/// **Canonical outcome fold for reuse path (`CZH-791`, `CZH-S27`, `CZH-S28`, `CZH-S30`):** validates input consistency before folding.
+/// **Consolidation (`CZH-S30`):** routes reuse outcomes through generic fold with input validation.
 fn presentResultFromReuseOutcomeState(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
