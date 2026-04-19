@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S11_TICKETS.md`
+3. `docs/todo/core/CZH_S12_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B16` — **`architect_review_pending`** at **`CZH-GATE-70`** (sprint `CZH-S11`):
-  `presentationUpdateDelta` uses `surface_contract` mismatch helpers. Packet:
-  `docs/todo/core/CZH_S11_CHECKPOINT.md`.
+- `CZH-B17` — **`in_progress`** (sprint `CZH-S12`): long-loop seam pack
+  (two bounded surface-contract consumer consolidations + scoped hygiene
+  sweep), behavior-neutral. Ticket source:
+  `docs/todo/core/CZH_S12_TICKETS.md`.
 
 ## Hard Rules
 
@@ -36,10 +37,11 @@ Read in this exact order:
 
 ## Engineer Cadence
 
-- Target **5–10 validated commits** inside the batch before super-gate.
+- Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S11` tickets `CZH-656`..`CZH-660` are complete at **`CZH-GATE-70`**
-  unless Architect reopens scope.
+- Sprint `CZH-S12` tickets `CZH-661`..`CZH-670` are active in order; do not
+  bounce early for architect review before **`CZH-GATE-71`** unless a real hard
+  blocker appears.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

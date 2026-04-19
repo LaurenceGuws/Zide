@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B16` (`architect_review_pending` at `CZH-GATE-70`).
+- Current active macro batch: `CZH-B17` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S11_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S12_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1606,7 +1606,7 @@ Checkpoint packet: `docs/todo/core/CZH_S10_CHECKPOINT.md`.
 - `Acceptance judgment:` clear-generation reuse limb now consumes
   `surface_contract` in a behavior-neutral cut; host ABI unchanged.
 
-### `CZH-B16` Surface Contract Consumer Expansion III (`architect_review_pending`)
+### `CZH-B16` Surface Contract Consumer Expansion III (`accepted`)
 
 Queue line (exact):
 
@@ -1680,6 +1680,75 @@ new predicate surface beyond doc binding where needed.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S11_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B16`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `c3f5d301`, `98d25d25`, `7cdabc0d`, `c46a4831`,
+  `616800ac`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` `presentationUpdateDelta` generation/clear-generation
+  mismatch fields now consume the explicit `surface_contract` seam in a
+  behavior-neutral cut; host ABI unchanged.
+
+### `CZH-B17` Long-Loop Surface Contract Pack + Hygiene Sweep (`in_progress`)
+
+Queue line (exact):
+
+- execute a longer engineering loop (10-ticket pack) that lands two bounded
+  surface-contract consumer consolidations plus a scoped probe/doc hygiene pass
+  while preserving behavior and host ABI
+
+Acceptance:
+
+- two additional bounded draw/presentation-facing consumers are routed through
+  explicit `surface_contract` helper ownership
+- one scoped probe/doc hygiene sweep is completed across touched modules with no
+  behavior drift
+- queue/handoff/entrypoint and authority docs remain aligned
+- full stress ladder remains green through `CZH-GATE-71`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S12_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-661`..`CZH-670` in order from
+  `docs/todo/core/CZH_S12_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-71` or a real hard blocker
+
+#### `CZH-661` multi-consumer + hygiene audit (`CZH-S12`)
+
+**Selected target set:**
+
+- `src/ui/widgets/terminal_widget_presentation_runtime.zig`:
+  `generation_matches_presented` conjunct ownership path
+- `src/ui/widgets/terminal_widget_surface_state.zig`:
+  `presentationUpdateDelta` helper-wiring follow-through path
+- `src/terminal/surface_contract.zig`:
+  helper ownership center and doc locks
+
+**Plan (`CZH-662`..`CZH-666`):**
+
+- add small composite seam helpers for generation/clear generation pairing
+- route runtime and surface-state call sites through those helpers
+- keep behavior/ABI unchanged
+
+**Plan (`CZH-667`..`CZH-669`):**
+
+- strengthen seam tests for composite helper invariants
+- run scoped probe/doc hygiene sweep in touched modules
+- align authority docs to landed terms only
+
+**`CZH-670`:** validation ladder + checkpoint packet + board/queue/handoff sync
+to `CZH-GATE-71`.
 
 ## Response Contract
 
