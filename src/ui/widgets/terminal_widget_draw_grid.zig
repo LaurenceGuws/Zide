@@ -125,7 +125,7 @@ fn bestTextPaintCapture(sample: ?*TextPaintSample, row_idx: usize, cursor_pos: C
 
 fn captureTextPaintSample(
     sample: *TextPaintSample,
-    generation: u64,
+    publication_generation: u64,
     row_idx: usize,
     cursor_col: usize,
     abs_col: usize,
@@ -149,7 +149,7 @@ fn captureTextPaintSample(
         abs_col - cursor_col;
     sample.* = .{
         .valid = true,
-        .generation = generation,
+        .generation = publication_generation,
         .row = row_idx,
         .col = abs_col,
         .covers_cursor = covers_cursor,
@@ -1368,7 +1368,7 @@ pub fn drawRowGlyphs(
     cursor_pos: CursorPos,
     cursor_style: anytype,
     ligature_strategy: TerminalDisableLigaturesStrategy,
-    generation: u64,
+    publication_generation: u64,
     stats: ?*GlyphDrawStats,
     text_paint_sample: ?*TextPaintSample,
     metal_fallback_sample: ?*MetalTerminalFallbackSample,
@@ -1407,7 +1407,7 @@ pub fn drawRowGlyphs(
                 null;
             if (cell.combining_len == 0) {
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, fallback_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, cell_x, cell_y, cell_w_span, cell_h, style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, fallback_col, cell, style.width_units, cell_x, cell_y)) {
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, fallback_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, cell_x, cell_y, cell_w_span, cell_h, style.fg, &row_sprite_cache, stats, capture_special, publication_generation, row_idx, cursor_pos.col, fallback_col, cell, style.width_units, cell_x, cell_y)) {
                         if (metal_fallback_sample) |sample| {
                             sample.special_sprite_glyphs += 1;
                             sample.shaped_special_glyphs += 1;
@@ -1429,7 +1429,7 @@ pub fn drawRowGlyphs(
             if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, fallback_col, style.width_units)) {
                 captureTextPaintSample(
                     text_paint_sample.?,
-                    generation,
+                    publication_generation,
                     row_idx,
                     cursor_pos.col,
                     fallback_col,
@@ -1610,7 +1610,7 @@ pub fn drawRowGlyphs(
                     style.fg.toRgba(),
                     stats,
                     capture_direct,
-                    generation,
+                    publication_generation,
                     row_idx,
                     cursor_pos.col,
                     direct_col,
@@ -1648,7 +1648,7 @@ pub fn drawRowGlyphs(
                 else
                     null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
-                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, special_col, cell, style.width_units, box_x, box_y);
+                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_special, publication_generation, row_idx, cursor_pos.col, special_col, cell, style.width_units, box_x, box_y);
                     continue;
                 }
             }
@@ -1775,7 +1775,7 @@ pub fn drawRowGlyphs(
                 if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, fb_col, style.width_units)) {
                     captureTextPaintSample(
                         text_paint_sample.?,
-                        generation,
+                        publication_generation,
                         row_idx,
                         cursor_pos.col,
                         fb_col,
@@ -1853,7 +1853,7 @@ pub fn drawRowGlyphs(
                 else
                     null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
-                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_shaped_special, generation, row_idx, cursor_pos.col, abs_col, cell, style.width_units, box_x, box_y);
+                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_shaped_special, publication_generation, row_idx, cursor_pos.col, abs_col, cell, style.width_units, box_x, box_y);
                     continue;
                 }
             }
@@ -1881,7 +1881,7 @@ pub fn drawRowGlyphs(
                 followed_by_space,
                 style.fg.toRgba(),
                 capture_shaped,
-                generation,
+                publication_generation,
                 row_idx,
                 cursor_pos.col,
                 abs_col,

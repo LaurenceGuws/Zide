@@ -506,7 +506,7 @@ fn drawPresentationGlyphPass(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
-    terminal_generation: u64,
+    publication_generation: u64,
     surface_update_plan: PresentationUpdatePlan,
     glyph_draw_stats: *GlyphDrawStats,
 ) f64 {
@@ -530,7 +530,7 @@ fn drawPresentationGlyphPass(
         cursor: CursorPos,
         cursor_style: terminal_types.CursorStyle,
         disable_ligatures: @TypeOf(renderer.font_config.terminal_disable_ligatures),
-        terminal_generation: u64,
+        publication_generation: u64,
         glyph_draw_stats: *GlyphDrawStats,
         metal_fallback_sample: ?*@import("terminal_widget_debug_geometry.zig").MetalTerminalFallbackSample,
 
@@ -554,7 +554,7 @@ fn drawPresentationGlyphPass(
                 ctx.cursor,
                 ctx.cursor_style,
                 ctx.disable_ligatures,
-                ctx.terminal_generation,
+                ctx.publication_generation,
                 ctx.glyph_draw_stats,
                 ctx.self_widget.debug.textPaintSampleSink(),
                 ctx.metal_fallback_sample,
@@ -577,7 +577,7 @@ fn drawPresentationGlyphPass(
         .cursor = cursor,
         .cursor_style = cursor_style,
         .disable_ligatures = renderer.font_config.terminal_disable_ligatures,
-        .terminal_generation = terminal_generation,
+        .publication_generation = publication_generation,
         .glyph_draw_stats = glyph_draw_stats,
         .metal_fallback_sample = self.debug.metalFallbackSampleSink(),
     };
