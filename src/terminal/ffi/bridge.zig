@@ -1,8 +1,8 @@
-//! Terminal FFI Zig facade: shared ABI types plus forwards to two modules —
-//! `core_api.zig` (**VT core FFI**: publication, snapshots, redraw, metadata) and
-//! `byo_pty_host.zig` (**optional BYO-PTY host seam**: session loop, encoded input,
-//! runtime reports). Order below interleaves by host-facing surface, not by
-//! “single implementation center.”
+//! Terminal FFI Zig facade: shared ABI types plus forwards to VT core FFI
+//! (`core_api.zig`: publication, snapshots, redraw, metadata) and the optional
+//! BYO-PTY host seam (`../byo_pty_host.zig`, terminal-owned — not under `ffi/`).
+//! Order below interleaves by host-facing surface, not by “single implementation
+//! center.”
 const shared = @import("shared.zig");
 const byo_pty_host = @import("../byo_pty_host.zig");
 const core_api = @import("core_api.zig");

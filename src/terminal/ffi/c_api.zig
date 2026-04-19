@@ -1,6 +1,7 @@
 //! C ABI layer: typedef aliases and thin wrappers over `bridge.zig` for stable
-//! exported symbol names. `bridge` fans out to VT core (`core_api`) and BYO-PTY
-//! (`byo_pty_host`); this file stays a name-stable edge only.
+//! exported symbol names. `bridge` fans out to VT core (`core_api`) and the
+//! BYO-PTY seam (`byo_pty_host`, implemented in `../byo_pty_host.zig`); this file
+//! stays a name-stable edge only.
 const bridge = @import("bridge.zig");
 
 pub const ZideTerminalHandle = bridge.ZideTerminalHandle;

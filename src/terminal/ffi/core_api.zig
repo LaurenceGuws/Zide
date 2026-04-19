@@ -1,6 +1,7 @@
 //! VT core FFI: publication and query surface for hosts — snapshots, diffs,
 //! redraw/generation, metadata, events, clipboard/selection strings, and handle
-//! lifecycle. Session/transport entrypoints live in `byo_pty_host.zig` (BYO-PTY seam).
+//! lifecycle. Session/transport entrypoints live in `../byo_pty_host.zig` (BYO-PTY
+//! seam; terminal-owned, not under `ffi/`).
 const builtin = @import("builtin");
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
