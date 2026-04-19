@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B18` (`in_progress`).
+- Current active macro batch: `CZH-B18` (`architect_review_pending` at `CZH-GATE-72`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S13_TICKETS.md`
 
@@ -1801,7 +1801,7 @@ Checkpoint packet: `docs/todo/core/CZH_S12_CHECKPOINT.md`.
   ownership center for present-plan reuse and `presentationUpdateDelta`; scoped
   probe/doc hygiene completed with no behavior or ABI drift.
 
-### `CZH-B18` Long-Loop FFI/Surface Consolidation Pack (`in_progress`)
+### `CZH-B18` Long-Loop FFI/Surface Consolidation Pack (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1876,6 +1876,21 @@ to `CZH-GATE-72`.
   `ffiPresentAckGenerationAdmissible`; `core_api` routes through them
 - Seam invariant tests in `surface_contract.zig` and `core_api.zig`
 - Probe sweep + authority sync (`CZH-679`)
+
+#### `CZH-S13` engineer validation (`CZH-680`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-671`..`CZH-680` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S13_CHECKPOINT.md`.
 
 ## Response Contract
 

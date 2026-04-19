@@ -20,10 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B18` — **`in_progress`** (sprint `CZH-S13`): long-loop VT FFI redraw /
-  present-ack seam consolidation under `surface_contract` + scoped hygiene
-  sweep, behavior-neutral. Ticket source:
-  `docs/todo/core/CZH_S13_TICKETS.md`.
+- `CZH-B18` — **`architect_review_pending`** at **`CZH-GATE-72`** (sprint `CZH-S13`):
+  VT FFI seam wrappers + hygiene sweep landed. Packet:
+  `docs/todo/core/CZH_S13_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -39,9 +38,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S13` tickets `CZH-671`..`CZH-680` are active in order; do not
-  bounce early for architect review before **`CZH-GATE-72`** unless a real hard
-  blocker appears.
+- Sprint `CZH-S13` tickets `CZH-671`..`CZH-680` are complete at **`CZH-GATE-72`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
