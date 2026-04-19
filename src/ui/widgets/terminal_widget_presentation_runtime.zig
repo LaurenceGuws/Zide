@@ -1306,13 +1306,20 @@ fn buildExecutionUpdatePlan(
 /// Invariant: outcome == .unavailable only when followup_required; followup_reason non-.none only when required.
 /// **Hardening (`CZH-S29`):** validates followup coupling to catch invalid state combinations early.
 fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeState {
-    return .{
+    const outcome_state: RefreshOutcomeState = .{
         .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
         .cache_state_advanced = refresh == .refreshed,
         .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
         .followup_required = refresh == .target_unavailable,
         .followup_reason = if (refresh == .target_unavailable) .target_unavailable else .none,
     };
+    // Harden: validate followup coupling
+    if (outcome_state.followup_required) {
+        std.debug.assert(outcome_state.followup_reason != .none);
+    } else {
+        std.debug.assert(outcome_state.followup_reason == .none);
+    }
+    return outcome_state;
 }
 
 /// **Classify direct present outcome (`CZH-S28`, `CZH-S29`):** derive outcome from direct draw completion.
