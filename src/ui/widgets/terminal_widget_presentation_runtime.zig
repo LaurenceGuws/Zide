@@ -1,50 +1,40 @@
-//! Terminal widget presentation runtime: draw/present into the host-owned shared
-//! surface. Publication/clear generations use `surface_contract`; host **attachment**
+//! Terminal widget presentation runtime: draw/present into the host-owned shared surface.
+//!
+//! **Ownership:** Publication/clear generations use `surface_contract`; host attachment
 //! readiness (presentable pipeline ∧ host drawable target) is named in
-//! `surface_attachment_contract` and wired through `TerminalWidgetSurfaceState`
-//! (`CZH-S15`). `buildTerminalPresentPlan` reuse gating uses
-//! `terminalPresentablePipelineReady()` (pipeline leg only), not the full attachment
-//! conjunction — intentional.
+//! `surface_attachment_contract` and wired through `TerminalWidgetSurfaceState`.
+//! `buildTerminalPresentPlan` reuse gating uses `terminalPresentablePipelineReady()`
+//! (pipeline leg only), not the full attachment conjunction — intentional separation.
 //!
-//! **Observability (`CZH-B24`, reporting carrier `CZH-S23`):** operator JSON on present failure
-//! (`logUnavailable`) names publication generation on the view model, view/update flags, the renderer
-//! presentable refresh cycle tag, the terminal presentable **pipeline** leg, the host drawable
-//! **target** leg, and viewport geometry — aligned with `surface_contract` /
-//! `surface_attachment_contract` vocabulary. Full attachment in that log is reported **only** from
-//! **`PresentationPresentState.shared_surface_attachment_ready`** (JSON key `shared_surface_attachment_ready`).
+//! **Delegation:** Outcome classification, folding, and geometry computation are owned by
+//! terminal layer (`src/terminal/presentation_runtime.zig`). Widget layer delegates to
+//! terminal-layer helpers and re-exports their types. Pure computation ownership explicit;
+//! widget owns presentation orchestration and renderer/shell integration (drawing, timing).
 //!
-//! **Present-result ownership (`CZH-B26`):** `ReusePresentOutcomeState` / `TerminalPresentResult`
-//! distinguish the host-target **leg** from the **full attachment** conjunction (`pipeline ∧ host
-//! target`) so bookkeeping cannot overload one bool for both (`CZH-753`..`CZH-754`).
+//! **Invariants:** Two attachment state legs maintained separately:
+//! - `host_surface_target_available`: host drawable-target leg (from renderer)
+//! - `shared_surface_attachment_ready`: full conjunction (pipeline ∧ host target)
+//! Result structs distinguish leg from conjunction to prevent overloading one bool.
+//! Do not re-derive or re-label legs as conjunction in reporting/result paths.
 //!
-//! **Conjunction propagation phases (`CZH-S22`, **canonical routes CZH-791**):** **compute** in
-//! `refreshPresentState` and `tryFastPresentExisting` via **canonical helper**
-//! `TerminalWidgetSurfaceState.notePresentableAvailability` (calls
-//! `surface_attachment_contract.hostSharedSurfaceAttachmentReady`); **store** on transient
-//! `PresentationPresentState`, outcome `ReusePresentOutcomeState`, and result `TerminalPresentResult`;
-//! **report** through `logUnavailable`, `readSharedSurfaceAttachmentReady`, and consumers of results
-//! — do not re-derive or re-label a single leg as the conjunction on those paths.
+//! **Conjunction computation:** Happens in `refreshPresentState` and `tryFastPresentExisting`
+//! via canonical helper `TerminalWidgetSurfaceState.notePresentableAvailability`. Stored on
+//! transient `PresentationPresentState` and outcome/result structs. Reported through
+//! `logUnavailable`, `readSharedSurfaceAttachmentReady`, and result consumers.
 //!
-//! **Reporting-carrier boundaries (`CZH-S23`):** for operator JSON on present failure, the **dominant**
-//! conjunction carrier is **`PresentationPresentState.shared_surface_attachment_ready`** (see
-//! `logUnavailable`). For ad-hoc reads without a present-state snapshot, the **dominant** carrier is
-//! **`readSharedSurfaceAttachmentReady`** on `TerminalWidgetSurfaceState` — do not log the
-//! conjunction from the getter when a `PresentationPresentState` is already in scope for that tick.
+//! **Reporting carriers:** For operator JSON on present failure, conjunction carrier is
+//! `PresentationPresentState.shared_surface_attachment_ready` (see `logUnavailable`).
+//! For ad-hoc reads without a present-state snapshot, carrier is `readSharedSurfaceAttachmentReady`
+//! on `TerminalWidgetSurfaceState`. Do not log conjunction from getter when snapshot already in scope.
 //!
-//! **Reporting/result cohesion (`CZH-S24`):** operator **reporting** uses transient `PresentationPresentState`
-//! and widget **read** APIs; **`TerminalPresentResult`** is the host-facing **aggregation** struct (leg +
-//! conjunction fields). Do not merge those roles: logs are not populated from `TerminalPresentResult`
-//! alone, and present results are not interchangeable with per-tick present-state snapshots.
+//! **Reporting cohesion:** Operator reporting uses transient `PresentationPresentState` and widget
+//! read APIs. `TerminalPresentResult` is host-facing aggregation struct (leg + conjunction fields).
+//! Do not merge those roles: logs not populated from result alone; results not interchangeable
+//! with per-tick present-state snapshots.
 //!
-//! **Terminal ownership (`CZH-S33`):** outcome classification, folding, and geometry computation moved to
-//! `src/terminal/presentation_runtime.zig` (CZH-873/874/875). Widget layer delegates: re-exports terminal
-//! types and calls terminal-layer helpers. Pure computation ownership now explicit; widget owns orchestration
-//! (calling helpers together) and renderer/shell integration (drawing, timing, input handling).
-//!
-//! **Outcome hardening follow-through (`CZH-S29`):** debug assertions in outcome classification and fold
-//! functions (terminal layer, `presentation_runtime.zig`) catch invalid state combinations early in
-//! development/testing. All hardening maintains behavior freeze: assertions validate that existing patterns
-//! remain consistent, no success-path changes.
+//! **Hardening:** Debug assertions in outcome classification/folding (terminal layer) catch
+//! invalid state combinations early. All hardening maintains behavior freeze: assertions validate
+//! existing patterns remain consistent, no success-path changes.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
@@ -86,21 +76,21 @@ const TerminalPresentFollowupReason = @import("../renderer/presentable_contract.
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
 
-// Geometry types moved to terminal layer in CZH-874
+// Geometry types moved to terminal layer
 pub const PresentationGeometry = terminal_presentation_runtime.PresentationGeometry;
 
 // Geometry computation delegated to terminal layer
 const computePresentationSurfaceGeometry = terminal_presentation_runtime.computePresentationSurfaceGeometry;
 
-/// **Transient present-state snapshot (`CZH-S22`, CZH-791):** captures conjunction from
+/// **Transient present-state snapshot:** captures conjunction from
 /// `refreshPresentState` via `notePresentableAvailability`; dominant carrier for operator JSON
-/// in `logUnavailable` (`CZH-S23`, CZH-B24). Never alias this conjunction onto result structs.
+/// in `logUnavailable`. Never alias this conjunction onto result structs.
 pub const PresentationPresentState = struct {
     updated: bool = false,
     presentable_refresh: TerminalPresentableRefresh = .unsupported,
     host_surface_target_available: bool = false,
     /// Full shared-surface attachment for this tick (from `notePresentableAvailability`); not the host-target leg alone.
-    /// **Reporting carrier (`CZH-S23`):** `logUnavailable` reads this field only; do not re-derive conjunction.
+    /// **Reporting carrier:** `logUnavailable` reads this field only; do not re-derive conjunction.
     shared_surface_attachment_ready: bool = false,
     visible: bool = false,
     present: bool = false,
@@ -119,7 +109,7 @@ pub const PresentationUpdatePlan = struct {
     partial_plan: ?PresentationPartialDrawPlan = null,
 };
 
-// Viewport shift state moved to terminal layer in CZH-874
+// Viewport shift state moved to terminal layer
 pub const ViewportShiftState = terminal_presentation_runtime.ViewportShiftState;
 
 pub const DirectPresentResult = struct {
@@ -144,16 +134,16 @@ pub const PresentationExecutionResult = struct {
 
 pub const RefreshedPresentablePresentationResult = terminal_presentation_runtime.RefreshedPresentablePresentationResult;
 
-/// **Refresh outcome snapshot (`CZH-791`, `CZH-S27`, `CZH-S29`):** classifies refresh cycle result (updated or not).
+/// **Refresh outcome snapshot:** classifies refresh cycle result (updated or not).
 /// Does not carry conjunction — passed separately to fold function. Host-target leg only.
-/// **Invariants (`CZH-S29`):** `followup_required` and `followup_reason` are coupled — must both indicate unavailability
+/// *Invariants:* `followup_required` and `followup_reason` are coupled — must both indicate unavailability
 /// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
-// Outcome structs moved to terminal layer in CZH-873
+// Outcome structs moved to terminal layer
 pub const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
 pub const DirectPresentOutcomeState = terminal_presentation_runtime.DirectPresentOutcomeState;
 pub const ReusePresentOutcomeState = terminal_presentation_runtime.ReusePresentOutcomeState;
 
-// Fold and classification helpers moved to terminal layer in CZH-873
+// Fold and classification helpers moved to terminal layer
 const presentResultFromOutcomeState = terminal_presentation_runtime.presentResultFromOutcomeState;
 const presentResultFromRefreshOutcomeState = terminal_presentation_runtime.presentResultFromRefreshOutcomeState;
 const presentResultFromReuseOutcomeState = terminal_presentation_runtime.presentResultFromReuseOutcomeState;
@@ -1149,10 +1139,10 @@ fn buildExecutionUpdatePlan(
     );
 }
 
-/// **Classify refresh outcome (`CZH-791`, `CZH-S28`, `CZH-S29`):** derive outcome state from refresh cycle result.
+/// **Classify refresh outcome:** derive outcome state from refresh cycle result.
 /// Invariant: outcome == .unavailable only when followup_required; followup_reason non-.none only when required.
-/// **Hardening (`CZH-S29`):** validates followup coupling to catch invalid state combinations early.
-// Classification functions moved to terminal layer in CZH-873
+/// *Hardening:* validates followup coupling to catch invalid state combinations early.
+// Classification functions moved to terminal layer
 
 pub fn runPresentation(
     self: anytype,
@@ -1452,7 +1442,7 @@ pub fn beginViewportClip(
     );
 }
 
-/// **Canonical compute+store route for refresh path (`CZH-S22`, CZH-791):** computes conjunction
+/// **Canonical compute+store route for refresh path:** computes conjunction
 /// via `notePresentableAvailability`; stores snapshot on `PresentationPresentState` for tick.
 /// Only `logUnavailable()` should read the conjunction field from the returned state.
 pub fn refreshPresentState(
@@ -1491,7 +1481,7 @@ pub fn refreshPresentState(
         );
     }
 
-    // **Canonical conjunction derivation (`CZH-791`, `CZH-S27`):** consolidated via helper.
+    // **Canonical conjunction derivation ** consolidated via helper.
     const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
     state.host_surface_target_available = attachment_state.host_surface_target_available;
     state.shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
@@ -1502,11 +1492,11 @@ pub fn refreshPresentState(
 }
 
 /// Operator `renderer.terminal_present` JSON when present cannot proceed because the drawable
-/// shared-surface attachment is unavailable. **Conjunction key (`CZH-S23`):** the full-attachment
+/// shared-surface attachment is unavailable. **Conjunction key:** the full-attachment
 /// boolean is reported **only** from **`present_state.shared_surface_attachment_ready`** (same
 /// predicate family as `readSharedSurfaceAttachmentReady` when legs match). Other keys: **generation**
 /// on the view model; view/update flags; renderer presentable **refresh cycle** enum; **pipeline** vs
-/// **host-target** legs per `surface_attachment_contract`; viewport geometry (`CZH-B24`).
+/// **host-target** legs per `surface_attachment_contract`; viewport geometry.
 pub fn logUnavailable(
     surface_state: anytype,
     terminal_view: view_state.TerminalViewModel,
@@ -1595,11 +1585,11 @@ pub fn presentDraw(
     );
 }
 
-/// **Canonical compute route for reuse path (`CZH-S22`, CZH-791):** computes conjunction via
+/// **Canonical compute route for reuse path:** computes conjunction via
 /// `notePresentableAvailability`; populates `ReusePresentOutcomeState` with conjunction result
 /// for folding into `TerminalPresentResult`.
 /// Reuse present path: attempt fast present of existing cached draw. **Canonical conjunction derivation
-/// (`CZH-791`, `CZH-S27`):** compute host-target leg from renderer, pass to `notePresentableAvailability`,
+/// ** compute host-target leg from renderer, pass to `notePresentableAvailability`,
 /// and store outcome conjunction on result state.
 pub fn tryFastPresentExisting(
     surface_state: anytype,

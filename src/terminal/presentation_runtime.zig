@@ -23,7 +23,7 @@ const TerminalPresentFollowupReason = presentable_contract.TerminalPresentFollow
 const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
 const TerminalPresentableRefresh = renderer_presentable_host.TerminalPresentableRefresh;
 
-/// **Outcome snapshot from refresh cycle (`CZH-791`, `CZH-S28`, `CZH-S30`):** carries result and followup state.
+/// **Outcome snapshot from refresh cycle:** carries result and followup state.
 pub const RefreshOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = false,
@@ -32,10 +32,10 @@ pub const RefreshOutcomeState = struct {
     followup_reason: TerminalPresentFollowupReason = .none,
 };
 
-/// **Direct present outcome snapshot (`CZH-791`, `CZH-S27`, `CZH-S29`):** result when drawing directly bypasses reuse path.
+/// **Direct present outcome snapshot:** result when drawing directly bypasses reuse path.
 /// Host-target leg hardcoded to `true` (drawing implies renderer is available).
 /// Conjunction hardcoded to `false` (direct path does not verify full attachment before returning).
-/// **Invariants (`CZH-S29`):** `cache_state_advanced` always true (drawing implies advancement); both legs fixed.
+/// *Invariants:* `cache_state_advanced` always true (drawing implies advancement); both legs fixed.
 /// Hardening assertions validate invariants in `classifyDirectPresentOutcome()`.
 pub const DirectPresentOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
@@ -44,7 +44,7 @@ pub const DirectPresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
-/// **Outcome snapshot from reuse path (`CZH-B26`, CZH-791):** carries result of the reuse attempt.
+/// **Outcome snapshot from reuse path:** carries result of the reuse attempt.
 pub const ReusePresentOutcomeState = struct {
     reused: bool = false,
     outcome: TerminalPresentOutcome = .skipped,
@@ -52,14 +52,14 @@ pub const ReusePresentOutcomeState = struct {
     /// **Leg only** — host drawable-target (renderer `terminalPresentableInfo`); not conjunction.
     host_surface_target_available: bool = false,
     /// **Full conjunction** — terminal presentable pipeline ∧ host target (from `notePresentableAvailability`).
-    /// **Canonical route (`CZH-791`):** must be populated by canonical helper, never hardcoded or re-derived.
+    /// *Canonical route:* must be populated by canonical helper, never hardcoded or re-derived.
     shared_surface_attachment_ready: bool = false,
 };
 
-/// **Classify refresh cycle outcome (`CZH-791`, `CZH-S28`, `CZH-S30`):** derives outcome from refresh result.
+/// **Classify refresh cycle outcome:** derives outcome from refresh result.
 /// Maps `TerminalPresentableRefresh` enum to `RefreshOutcomeState` fields: outcome, cache advancement,
 /// host availability, and followup requirements.
-/// **Hardening (`CZH-S30`):** validates outcome consistency before returning.
+/// *Hardening:* validates outcome consistency before returning.
 pub fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeState {
     const outcome_state: RefreshOutcomeState = .{
         .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
@@ -72,9 +72,9 @@ pub fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcom
     return outcome_state;
 }
 
-/// **Classify direct present outcome (`CZH-S28`, `CZH-S29`):** derive outcome from direct draw completion.
+/// **Classify direct present outcome:** derive outcome from direct draw completion.
 /// Invariant: both legs and conjunction are fixed to correct values (drawing succeeded).
-/// **Hardening (`CZH-S29`):** validates invariant fields to catch invalid state early.
+/// *Hardening:* validates invariant fields to catch invalid state early.
 pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     const outcome_state: DirectPresentOutcomeState = .{
         .outcome = if (updated) .updated_and_presented else .presented,
@@ -83,7 +83,7 @@ pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     return outcome_state;
 }
 
-/// **Outcome for successful reuse (`CZH-791`, `CZH-S27`, `CZH-S28`):** when reuse path completes successfully,
+/// **Outcome for successful reuse:** when reuse path completes successfully,
 /// construct outcome state with all fields true (reuse succeeded, cache advanced, attachment ready).
 /// Invariant: outcome == .reused requires cache_state_advanced && host_surface_target_available && shared_surface_attachment_ready.
 pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
@@ -98,14 +98,14 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
     return outcome;
 }
 
-/// **Generic result fold (`CZH-791`, `CZH-S27`, `CZH-S28`, `CZH-S29`, `CZH-S30`):** construct host-facing `TerminalPresentResult` from outcome
+/// **Generic result fold:** construct host-facing `TerminalPresentResult` from outcome
 /// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
-/// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths (`CZH-S30`)**
+/// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths**
 /// — all outcome-specific folds route through this function.
-/// **Consolidation (`CZH-S30`):** central hub of fold path composition — `presentResultFromRefreshOutcomeState`
+/// *Consolidation:* central hub of fold path composition — `presentResultFromRefreshOutcomeState`
 /// and `presentResultFromReuseOutcomeState` call this with outcome-specific parameters, then apply
 /// outcome-type-specific fields via `applyOutcomeSpecificFields`.
-/// **Hardening (`CZH-S29`):** validates output result consistency across all outcome types.
+/// *Hardening:* validates output result consistency across all outcome types.
 pub fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
@@ -135,9 +135,9 @@ pub fn presentResultFromOutcomeState(
     return result;
 }
 
-/// **Canonical outcome fold for refresh path (`CZH-791`, `CZH-S28`, `CZH-S29`, `CZH-S30`):** uses conjunction computed in refresh cycle.
-/// **Hardening (`CZH-S29`):** validates outcome -> result threading and followup propagation.
-/// **Consolidation (`CZH-S30`):** routes refresh outcomes through generic fold with followup assignment.
+/// **Canonical outcome fold for refresh path:** uses conjunction computed in refresh cycle.
+/// *Hardening:* validates outcome -> result threading and followup propagation.
+/// *Consolidation:* routes refresh outcomes through generic fold with followup assignment.
 pub fn presentResultFromRefreshOutcomeState(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -160,8 +160,8 @@ pub fn presentResultFromRefreshOutcomeState(
     return result;
 }
 
-/// **Canonical outcome fold for reuse path (`CZH-791`, `CZH-S27`, `CZH-S28`, `CZH-S30`):** validates input consistency before folding.
-/// **Consolidation (`CZH-S30`):** routes reuse outcomes through generic fold with input validation.
+/// **Canonical outcome fold for reuse path:** validates input consistency before folding.
+/// *Consolidation:* routes reuse outcomes through generic fold with input validation.
 pub fn presentResultFromReuseOutcomeState(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -286,9 +286,9 @@ pub const ViewportShiftState = struct {
     exposed_only: bool = false,
 };
 
-/// **Outcome from refresh + presentation (`CZH-791`):** timing and attachment state after refresh cycle handling.
+/// **Outcome from refresh + presentation:** timing and attachment state after refresh cycle handling.
 /// Produced by `runRefreshedPresentablePresentation` (widget layer orchestration).
-/// Canonically owns outcome aggregation responsibility from CZH-S33.
+/// Canonically owns outcome aggregation responsibility.
 pub const RefreshedPresentablePresentationResult = struct {
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
