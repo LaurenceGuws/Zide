@@ -270,6 +270,21 @@ test "CZH-S15: notePresentableAvailability matches readSharedSurfaceAttachmentRe
     try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
 }
 
+test "CZH-S17: readSharedSurfaceAttachmentReady matches FromPair on presentation legs" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    state.presentation.terminal_presentable_ready = true;
+    state.presentation.target_available = false;
+    try std.testing.expectEqual(
+        state.readSharedSurfaceAttachmentReady(),
+        surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
+            .terminal_presentable_pipeline_ready = state.presentation.terminal_presentable_ready,
+            .host_surface_target_available = state.presentation.target_available,
+        }),
+    );
+}
+
 test "CZH-S16: pipeline leg ready without host target splits presentableReady vs attachment" {
     var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
     defer state.deinit(std.testing.allocator);
