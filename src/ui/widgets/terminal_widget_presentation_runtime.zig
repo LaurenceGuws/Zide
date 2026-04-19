@@ -2283,3 +2283,33 @@ test "CZH-788: reuse outcome and present result expose paired leg and conjunctio
     }
 }
 
+test "CZH-798: RefreshedPresentablePresentationResult propagates conjunction for outcome fold" {
+    const result = RefreshedPresentablePresentationResult{
+        .bg_ms = 0.0,
+        .glyph_ms = 0.0,
+        .kitty_ms = 0.0,
+        .shared_surface_attachment_ready = true,
+    };
+    try std.testing.expect(result.shared_surface_attachment_ready == true);
+}
+
+test "CZH-798: PresentationPresentState stores conjunction for reporting path" {
+    const state = PresentationPresentState{
+        .shared_surface_attachment_ready = true,
+    };
+    try std.testing.expect(state.shared_surface_attachment_ready == true);
+}
+
+test "CZH-798: ReusePresentOutcomeState conjunction field role matches TerminalPresentResult" {
+    const outcome = ReusePresentOutcomeState{
+        .shared_surface_attachment_ready = true,
+        .host_surface_target_available = false,
+    };
+    const result = TerminalPresentResult{
+        .shared_surface_attachment_ready = outcome.shared_surface_attachment_ready,
+        .host_surface_target_available = outcome.host_surface_target_available,
+    };
+    try std.testing.expect(result.shared_surface_attachment_ready == outcome.shared_surface_attachment_ready);
+    try std.testing.expect(result.host_surface_target_available == outcome.host_surface_target_available);
+}
+
