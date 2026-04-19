@@ -2448,6 +2448,21 @@ test "CZH-S28: helper hardening — reuse outcome assertion validates consistenc
     assertReuseOutcomeConsistency(non_reused);
 }
 
+test "CZH-S29: helper hardening — direct outcome assertion validates invariants" {
+    // Verify that the direct outcome hardening assertion validates invariant fields.
+    // Direct draws always advance cache, have renderer available, and do not pre-verify conjunction.
+    const valid_direct = classifyDirectPresentOutcome(true);
+    assertDirectPresentOutcomeConsistency(valid_direct);
+    try std.testing.expect(valid_direct.cache_state_advanced == true);
+    try std.testing.expect(valid_direct.host_surface_target_available == true);
+    try std.testing.expect(valid_direct.shared_surface_attachment_ready == false);
+
+    const direct_not_updated = classifyDirectPresentOutcome(false);
+    assertDirectPresentOutcomeConsistency(direct_not_updated);
+    try std.testing.expect(direct_not_updated.cache_state_advanced == true);
+    try std.testing.expectEqual(direct_not_updated.outcome, .presented);
+}
+
 test "CZH-S26: integration lock — PresentationPresentState conjunction equals outcome conjunction" {
     const present_state = PresentationPresentState{
         .shared_surface_attachment_ready = true,
