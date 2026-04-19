@@ -161,3 +161,16 @@ test "geometry content and overlay invalidation discard cached presentation cont
         try std.testing.expect(state.host_surface_target_available);
     }
 }
+
+test "CZH-S20: PresentationState uses dominant pipeline and host-target field names" {
+    comptime {
+        const fields = @typeInfo(PresentationState).@"struct".fields;
+        var pipeline: usize = 0;
+        var host: usize = 0;
+        for (fields) |f| {
+            if (std.mem.eql(u8, f.name, "terminal_presentable_pipeline_ready")) pipeline += 1;
+            if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
+        }
+        std.debug.assert(pipeline == 1 and host == 1);
+    }
+}
