@@ -240,6 +240,18 @@ test "CZH-S14: composite pair mismatch fields mirror per-coordinate inequality" 
     try std.testing.expectEqual(2 != 4, m.clear_mismatch);
 }
 
+test "CZH-S17: publicationClearPairMatchesLastSurfaceRender is negation of any mismatch leg" {
+    const pg: u64 = 11;
+    const cg: u64 = 12;
+    const lr: u64 = 10;
+    const lrc: u64 = 12;
+    const mm = publicationClearPairMismatchesFromLastSurfaceRender(pg, cg, lr, lrc);
+    try std.testing.expectEqual(
+        publicationClearPairMatchesLastSurfaceRender(pg, cg, lr, lrc),
+        !(mm.publication_mismatch or mm.clear_mismatch),
+    );
+}
+
 test "CZH-S16: composite mismatch legs match planUpdate surface_contract primitives" {
     const pg: u64 = 9;
     const cg: u64 = 3;
