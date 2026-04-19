@@ -1960,6 +1960,13 @@ Execution source:
 **`CZH-690`:** validation ladder + checkpoint packet + board/queue/handoff sync
 to `CZH-GATE-73`.
 
+**Engineer (CZH-681):** Confirmed convergence: **widget** paths keep **composite**
+pair helpers as the explicit consumer shape; **FFI** paths keep **`ffi*`** as the
+explicit export shape; **primitives** remain building blocks and bundle fill
+(`fillRedrawState`) inside `surface_contract` tests only where they lock
+decomposition. Hygiene scope `CZH-689`: `surface_contract.zig`,
+`terminal_widget_surface_state.zig`, `core_api.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
+
 ## Response Contract
 
 Every batch update must include:
