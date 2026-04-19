@@ -170,6 +170,8 @@ pub const RefreshedPresentablePresentationResult = struct {
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
     kitty_ms: f64 = 0.0,
+    /// Conjunction computed via canonical helper in `refreshPresentState` (`CZH-791`).
+    shared_surface_attachment_ready: bool = false,
 };
 
 pub const RefreshOutcomeState = struct {
@@ -217,16 +219,18 @@ fn presentResultFromOutcomeState(
     };
 }
 
+/// **Canonical outcome fold for refresh path (`CZH-791`):** uses conjunction computed in refresh cycle.
 fn presentResultFromRefreshOutcomeState(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
+    shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
     var result = presentResultFromOutcomeState(
         outcome_state.outcome,
         outcome_state.cache_state_advanced,
         outcome_state.host_surface_target_available,
         timing,
-        false,
+        shared_surface_attachment_ready,
     );
     result.followup.required = outcome_state.followup_required;
     result.followup.reason = outcome_state.followup_reason;
@@ -1032,7 +1036,12 @@ pub fn runRefreshedPresentablePresentation(
             note_present,
         );
     }
-    return result;
+    return .{
+        .bg_ms = result.bg_ms,
+        .glyph_ms = result.glyph_ms,
+        .kitty_ms = result.kitty_ms,
+        .shared_surface_attachment_ready = present_state.shared_surface_attachment_ready,
+    };
 }
 
 pub fn executeRefreshPresentFlow(
@@ -1095,7 +1104,7 @@ pub fn executeRefreshPresentFlow(
         .background_ms = refreshed.bg_ms,
         .glyph_ms = refreshed.glyph_ms,
         .kitty_ms = refreshed.kitty_ms,
-    });
+    }, refreshed.shared_surface_attachment_ready);
 }
 
 /// Present/reuse plan; generation alignment for reuse uses
