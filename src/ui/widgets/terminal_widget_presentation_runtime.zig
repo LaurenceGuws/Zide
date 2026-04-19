@@ -177,11 +177,13 @@ fn presentResultFromOutcomeState(
     cache_state_advanced: bool,
     host_surface_target_available: bool,
     timing: renderer_presentable_host.TerminalPresentTiming,
+    shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
     return .{
         .outcome = outcome,
         .cache_state_advanced = cache_state_advanced,
         .host_surface_target_available = host_surface_target_available,
+        .shared_surface_attachment_ready = shared_surface_attachment_ready,
         .timing = timing,
     };
 }
@@ -195,6 +197,7 @@ fn presentResultFromRefreshOutcomeState(
         outcome_state.cache_state_advanced,
         outcome_state.host_surface_target_available,
         timing,
+        false,
     );
     result.followup.required = outcome_state.followup_required;
     result.followup.reason = outcome_state.followup_reason;
@@ -210,6 +213,7 @@ fn presentResultFromReuseOutcomeState(
         outcome_state.cache_state_advanced,
         outcome_state.host_surface_target_available,
         timing,
+        outcome_state.shared_surface_attachment_ready,
     );
 }
 
@@ -1380,6 +1384,7 @@ pub fn runPresentation(
                 outcome_state.cache_state_advanced,
                 outcome_state.host_surface_target_available,
                 direct.timing,
+                false,
             );
         }
 
