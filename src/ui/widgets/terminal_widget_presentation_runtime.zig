@@ -269,8 +269,7 @@ fn presentResultFromRefreshOutcomeState(
         timing,
         shared_surface_attachment_ready,
     );
-    result.followup.required = outcome_state.followup_required;
-    result.followup.reason = outcome_state.followup_reason;
+    applyOutcomeSpecificFields(&result, outcome_state.followup_required, outcome_state.followup_reason);
     // Harden: verify followup propagates correctly through fold
     if (outcome_state.followup_required) {
         std.debug.assert(result.followup.required == true);
@@ -335,6 +334,18 @@ fn computeHostSurfaceAttachmentState(
         .host_surface_target_available = host_surface_target_available,
         .shared_surface_attachment_ready = shared_surface_attachment_ready,
     };
+}
+
+/// **Unified fold composition helper (`CZH-S30`):** applies outcome-type-specific field assignments
+/// to a base result. Consolidates the pattern used by `presentResultFromRefreshOutcomeState` and
+/// `presentResultFromReuseOutcomeState` to reduce duplication in fold path composition.
+fn applyOutcomeSpecificFields(
+    result: *TerminalPresentResult,
+    followup_required: bool,
+    followup_reason: TerminalPresentFollowupReason,
+) void {
+    result.followup.required = followup_required;
+    result.followup.reason = followup_reason;
 }
 
 fn advancePresentationCache(
