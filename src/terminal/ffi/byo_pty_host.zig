@@ -1,6 +1,6 @@
-//! Optional BYO-PTY host seam: session loop (`start`, `poll`, `resize`), encoded
-//! input, and host reports into `TerminalRuntimeShell`. VT core publication and
-//! query APIs are in `core_api.zig`.
+//! Optional BYO-PTY host seam (`byo_pty_host.zig`): session loop (`start`, `poll`,
+//! `resize`), encoded input, and host reports into `TerminalRuntimeShell`. VT core
+//! publication and query APIs are in `core_api.zig`.
 const std = @import("std");
 const host_queries = @import("../core/session/host_queries.zig");
 const session_input = @import("../core/session/input.zig");

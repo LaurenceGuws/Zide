@@ -1,6 +1,6 @@
 //! Shared ABI types and helpers for the terminal FFI bridge: opaque handle,
 //! version constants, status mapping, and utilities consumed by both VT core
-//! exports (`core_api.zig`) and the optional BYO-PTY host seam (`host_api.zig`).
+//! exports (`core_api.zig`) and the optional BYO-PTY host seam (`byo_pty_host.zig`).
 const std = @import("std");
 const publication_state = @import("../core/publication/publication_state.zig");
 const terminal_runtime = @import("../core/terminal_runtime.zig");

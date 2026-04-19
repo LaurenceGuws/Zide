@@ -1,6 +1,6 @@
 //! VT core FFI: publication and query surface for hosts — snapshots, diffs,
 //! redraw/generation, metadata, events, clipboard/selection strings, and handle
-//! lifecycle. Session/transport entrypoints live in `host_api.zig` (BYO-PTY seam).
+//! lifecycle. Session/transport entrypoints live in `byo_pty_host.zig` (BYO-PTY seam).
 const builtin = @import("builtin");
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
@@ -326,7 +326,7 @@ fn copyGranularSnapshotDiffExport(
 }
 
 /// Allocates a terminal handle and shell; wires external transport. Use
-/// `host_api.start` / `poll` for the BYO-PTY session loop when applicable.
+/// `byo_pty_host.start` / `poll` for the BYO-PTY session loop when applicable.
 pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTerminalHandle) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     out_handle.* = null;

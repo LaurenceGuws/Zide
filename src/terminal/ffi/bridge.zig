@@ -1,7 +1,7 @@
 //! Terminal FFI Zig facade: re-exports ABI types and forwards calls to
-//! `core_api.zig` (VT core) and `host_api.zig` (optional BYO-PTY host seam).
+//! `core_api.zig` (VT core) and `byo_pty_host.zig` (optional BYO-PTY host seam).
 const shared = @import("shared.zig");
-const host_api = @import("host_api.zig");
+const byo_pty_host = @import("byo_pty_host.zig");
 const core_api = @import("core_api.zig");
 
 pub const Status = shared.Status;
@@ -56,27 +56,27 @@ pub fn destroy(handle: ?*ZideTerminalHandle) void {
 }
 
 pub fn start(handle: ?*ZideTerminalHandle, shell: ?[*:0]const u8) Status {
-    return host_api.start(handle, shell);
+    return byo_pty_host.start(handle, shell);
 }
 
 pub fn poll(handle: ?*ZideTerminalHandle) Status {
-    return host_api.poll(handle);
+    return byo_pty_host.poll(handle);
 }
 
 pub fn resize(handle: ?*ZideTerminalHandle, cols: u16, rows: u16, cell_width: u16, cell_height: u16) Status {
-    return host_api.resize(handle, cols, rows, cell_width, cell_height);
+    return byo_pty_host.resize(handle, cols, rows, cell_width, cell_height);
 }
 
 pub fn updateCellSize(handle: ?*ZideTerminalHandle, cell_width: u16, cell_height: u16) Status {
-    return host_api.updateCellSize(handle, cell_width, cell_height);
+    return byo_pty_host.updateCellSize(handle, cell_width, cell_height);
 }
 
 pub fn sendBytes(handle: ?*ZideTerminalHandle, bytes: ?[*]const u8, len: usize) Status {
-    return host_api.sendBytes(handle, bytes, len);
+    return byo_pty_host.sendBytes(handle, bytes, len);
 }
 
 pub fn sendText(handle: ?*ZideTerminalHandle, bytes: ?[*]const u8, len: usize) Status {
-    return host_api.sendText(handle, bytes, len);
+    return byo_pty_host.sendText(handle, bytes, len);
 }
 
 pub fn feedOutput(handle: ?*ZideTerminalHandle, bytes: ?[*]const u8, len: usize) Status {
@@ -120,27 +120,27 @@ pub fn needsRedraw(handle: ?*ZideTerminalHandle) u8 {
 }
 
 pub fn sendKey(handle: ?*ZideTerminalHandle, event: ?*const KeyEvent) Status {
-    return host_api.sendKey(handle, event);
+    return byo_pty_host.sendKey(handle, event);
 }
 
 pub fn sendMouse(handle: ?*ZideTerminalHandle, event: ?*const MouseEvent) Status {
-    return host_api.sendMouse(handle, event);
+    return byo_pty_host.sendMouse(handle, event);
 }
 
 pub fn reportFocusChanged(handle: ?*ZideTerminalHandle, focused: u8, out_reported: *u8) Status {
-    return host_api.reportFocusChanged(handle, focused, out_reported);
+    return byo_pty_host.reportFocusChanged(handle, focused, out_reported);
 }
 
 pub fn reportColorSchemeChanged(handle: ?*ZideTerminalHandle, dark: u8, out_reported: *u8) Status {
-    return host_api.reportColorSchemeChanged(handle, dark, out_reported);
+    return byo_pty_host.reportColorSchemeChanged(handle, dark, out_reported);
 }
 
 pub fn setScrollbackOffset(handle: ?*ZideTerminalHandle, offset_rows: u32) Status {
-    return host_api.setScrollbackOffset(handle, offset_rows);
+    return byo_pty_host.setScrollbackOffset(handle, offset_rows);
 }
 
 pub fn followLiveBottom(handle: ?*ZideTerminalHandle) Status {
-    return host_api.followLiveBottom(handle);
+    return byo_pty_host.followLiveBottom(handle);
 }
 
 pub fn snapshotAcquire(handle: ?*ZideTerminalHandle, request: ?*const SnapshotRequest, out_snapshot: *Snapshot) Status {
@@ -192,7 +192,7 @@ pub fn eventsFree(events: *EventBuffer) void {
 }
 
 pub fn isAlive(handle: ?*ZideTerminalHandle) u8 {
-    return host_api.isAlive(handle);
+    return byo_pty_host.isAlive(handle);
 }
 
 pub fn selectionText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
@@ -216,11 +216,11 @@ pub fn stringFree(string: *StringBuffer) void {
 }
 
 pub fn childExitStatus(handle: ?*ZideTerminalHandle, out_code: *i32, out_has_status: *u8) Status {
-    return host_api.childExitStatus(handle, out_code, out_has_status);
+    return byo_pty_host.childExitStatus(handle, out_code, out_has_status);
 }
 
 pub fn reportChildExit(handle: ?*ZideTerminalHandle, code: i32, has_status: u8) Status {
-    return host_api.reportChildExit(handle, code, has_status);
+    return byo_pty_host.reportChildExit(handle, code, has_status);
 }
 
 pub fn snapshotAbiVersion() u32 {
