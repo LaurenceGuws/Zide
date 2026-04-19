@@ -122,3 +122,58 @@ test "Widget layer assertions validate outcome consistency" {
     const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     terminal_widget_presentation_runtime.assertReuseOutcomeConsistency(reuse);
 }
+
+test "Integration boundary: widget imports and uses terminal outcome types unchanged" {
+    // Verify that widget layer uses terminal types directly, not re-definitions
+    const widget_refresh = terminal_widget_presentation_runtime.RefreshOutcomeState{
+        .outcome = .updated_and_presented,
+        .cache_state_advanced = true,
+    };
+    const terminal_refresh = terminal_presentation_runtime.RefreshOutcomeState{
+        .outcome = .updated_and_presented,
+        .cache_state_advanced = true,
+    };
+    try std.testing.expect(@TypeOf(widget_refresh) == @TypeOf(terminal_refresh));
+}
+
+test "Integration boundary: widget geometry types match terminal types" {
+    const widget_geom = terminal_widget_presentation_runtime.PresentationGeometry{
+        .cell_w_i = 8,
+        .cell_h_i = 16,
+    };
+    const terminal_geom = terminal_presentation_runtime.PresentationGeometry{
+        .cell_w_i = 8,
+        .cell_h_i = 16,
+    };
+    try std.testing.expect(@TypeOf(widget_geom) == @TypeOf(terminal_geom));
+}
+
+test "Integration boundary: widget viewport state matches terminal" {
+    const widget_state = terminal_widget_presentation_runtime.ViewportShiftState{
+        .rows = 5,
+        .exposed_only = true,
+    };
+    const terminal_state = terminal_presentation_runtime.ViewportShiftState{
+        .rows = 5,
+        .exposed_only = true,
+    };
+    try std.testing.expect(@TypeOf(widget_state) == @TypeOf(terminal_state));
+}
+
+test "Integration boundary: outcome classification produces consistent results widget-side" {
+    const outcome_widget = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome_terminal = terminal_presentation_runtime.classifyRefreshOutcome(.refreshed);
+
+    try std.testing.expect(outcome_widget.outcome == outcome_terminal.outcome);
+    try std.testing.expect(outcome_widget.cache_state_advanced == outcome_terminal.cache_state_advanced);
+}
+
+test "Integration boundary: no outcome re-derivation in widget folding" {
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const timing = .{ .background_ms = 1.0, .glyph_ms = 2.0, .kitty_ms = 0.0 };
+    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, true);
+
+    // Verify that the result's outcome matches input outcome (no re-derivation)
+    try std.testing.expect(result.outcome == outcome.outcome);
+    try std.testing.expect(result.cache_state_advanced == outcome.cache_state_advanced);
+}
