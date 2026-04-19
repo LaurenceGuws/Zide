@@ -943,6 +943,44 @@ Execution source:
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-63` or a real hard blocker
 
+#### `CZH-621` BYO extraction touchpoint map (`CZH-S4`)
+
+**Goal path (terminal-owned, not FFI-owned):** `src/terminal/byo_pty_host.zig`
+(sibling to `ffi/`, alongside `core/`, `replay_harness.zig`, etc.).
+
+**Single file to relocate**
+
+- `src/terminal/ffi/byo_pty_host.zig` → `src/terminal/byo_pty_host.zig` (**no**
+  re-export shim left under `ffi/`).
+
+**Import rewrites inside the moved module** (same semantics, paths from
+`terminal/` root like `replay_harness.zig`):
+
+| Current (`ffi/`) | After move (`terminal/`) |
+| --- | --- |
+| `@import("../core/session/host_queries.zig")` | `@import("core/session/host_queries.zig")` |
+| `@import("../core/session/input.zig")` | `@import("core/session/input.zig")` |
+| `@import("../core/session/runtime.zig")` | `@import("core/session/runtime.zig")` |
+| `@import("../core/scrollback_view.zig")` | `@import("core/scrollback_view.zig")` |
+| `@import("../model/types.zig")` | `@import("model/types.zig")` |
+| `@import("shared.zig")` | `@import("ffi/shared.zig")` |
+
+**Bridge join point (only Zig consumer)**
+
+- `src/terminal/ffi/bridge.zig`: `@import("byo_pty_host.zig")` →
+  `@import("../byo_pty_host.zig")`; identifier stays `byo_pty_host`.
+
+**Doc / authority touchpoints (scheduled `CZH-624`)**
+
+- `core_api.zig`, `shared.zig` cross-reference strings; `TERMINAL_SUBSYSTEM_LAYERS.md`,
+  `VT_CORE_DESIGN.md`, queue inventory rows; `CZH-616` / `CZH-S3` history blocks
+  that still mention `ffi/byo_pty_host.zig`.
+
+**C ABI:** unchanged (`c_api` / exports only see `bridge`).
+
+**Atomic move:** land in **`CZH-622`** as one commit (move + import fixes +
+`bridge` import).
+
 #### `CZH-616` BYO-PTY packaging audit (touchpoint map)
 
 **Zig import graph (post-`CZH-617`)**
