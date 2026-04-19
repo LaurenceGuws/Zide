@@ -414,7 +414,7 @@ pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.Redra
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
     const acknowledged_generation = h.last_acknowledged_generation;
-    surface_contract.fillRedrawState(published_generation, acknowledged_generation, out_state);
+    surface_contract.ffiRedrawStateFill(published_generation, acknowledged_generation, out_state);
     return .ok;
 }
 
@@ -429,7 +429,7 @@ pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *sh
 pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaqueActive(handle) orelse return 0;
     const published_generation = currentPublishedGeneration(h);
-    return @intFromBool(surface_contract.needsRedrawFromPair(published_generation, h.last_acknowledged_generation));
+    return surface_contract.ffiNeedsRedrawU8(published_generation, h.last_acknowledged_generation);
 }
 
 /// Tears down the handle, shell, and pending FFI-owned buffers.
