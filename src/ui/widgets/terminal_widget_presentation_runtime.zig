@@ -2173,3 +2173,16 @@ test "CZH-S21: TerminalPresentResult exposes host-target and full-attachment car
     }
 }
 
+test "CZH-S21: reuse outcome aligns with present result attachment field names" {
+    comptime {
+        const r_fields = @typeInfo(ReusePresentOutcomeState).@"struct".fields;
+        var reuse_host: usize = 0;
+        var reuse_shared: usize = 0;
+        for (r_fields) |f| {
+            if (std.mem.eql(u8, f.name, "host_surface_target_available")) reuse_host += 1;
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) reuse_shared += 1;
+        }
+        std.debug.assert(reuse_host == 1 and reuse_shared == 1);
+    }
+}
+
