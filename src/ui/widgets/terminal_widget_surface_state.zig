@@ -292,6 +292,16 @@ test "CZH-S17: readSharedSurfaceAttachmentReady matches FromPair on presentation
     );
 }
 
+test "CZH-S18: terminalPresentablePipelineReady mirrors terminal_presentable_ready field" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    state.presentation.terminal_presentable_ready = false;
+    try std.testing.expect(!state.terminalPresentablePipelineReady());
+    state.presentation.terminal_presentable_ready = true;
+    try std.testing.expect(state.terminalPresentablePipelineReady());
+}
+
 test "CZH-S16: pipeline leg ready without host target splits pipeline getter vs attachment" {
     var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
     defer state.deinit(std.testing.allocator);
