@@ -1076,8 +1076,11 @@ fn buildTerminalPresentPlan(
         terminal_view.generation,
         self.surface.lastRenderGeneration(),
     );
-    const generation_matches_presented = !publication_gen_mismatch_surface and
-        terminal_view.clear_generation == self.surface.lastRenderClearGeneration();
+    const clear_gen_mismatch_surface = surface_contract.clearGenerationDiffersFromLastSurfaceRenderClear(
+        terminal_view.clear_generation,
+        self.surface.lastRenderClearGeneration(),
+    );
+    const generation_matches_presented = !publication_gen_mismatch_surface and !clear_gen_mismatch_surface;
     const explicit_invalidation_blocks_reuse = delta.invalidation_flags.geometry or
         delta.invalidation_flags.content or
         delta.invalidation_flags.overlay or
