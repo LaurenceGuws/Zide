@@ -204,29 +204,6 @@ test "clearGenerationDiffersFromLastSurfaceRenderClear aliases needsRedrawFromPa
     }
 }
 
-test "CZH-S11: presentationUpdateDelta generation limbs use publication and clear mismatch helpers" {
-    const pub_pairs = [_]struct { view: u64, last: u64 }{
-        .{ .view = 1, .last = 2 },
-        .{ .view = 5, .last = 5 },
-    };
-    for (pub_pairs) |p| {
-        try std.testing.expectEqual(
-            p.view != p.last,
-            publicationGenerationDiffersFromLastSurfaceRender(p.view, p.last),
-        );
-    }
-    const clear_pairs = [_]struct { view: u64, last: u64 }{
-        .{ .view = 0, .last = 1 },
-        .{ .view = 7, .last = 7 },
-    };
-    for (clear_pairs) |p| {
-        try std.testing.expectEqual(
-            p.view != p.last,
-            clearGenerationDiffersFromLastSurfaceRenderClear(p.view, p.last),
-        );
-    }
-}
-
 test "CZH-S12: publicationClearPairMismatchesFromLastSurfaceRender matches decomposed primitives" {
     const cases = [_]struct { pg: u64, cg: u64, lr: u64, lrc: u64 }{
         .{ .pg = 1, .cg = 2, .lr = 1, .lrc = 2 },
