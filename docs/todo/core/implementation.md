@@ -1094,6 +1094,50 @@ still visible after `CZH-B7`..`CZH-B9`, especially the stale `CZH-608` table
 rows that still claim missing module docs for `src/editor/ffi/bridge.zig` and
 `src/editor/ffi/c_api.zig`.
 
+#### `CZH-626` FFI/export doc drift audit (`CZH-S5`)
+
+**Stale history (fix in `CZH-629`):** the `CZH-608` module-doc table still lists
+`editor/ffi/bridge.zig` and `editor/ffi/c_api.zig` as missing `//!` — **false**
+as of current `main` (both carry module docs). The “Important function doc drift”
+rows that claim `core_api.destroy` has **no** `///` are also **false** (destroy
+has a `///` block; test-only timing is isolated under `builtin.is_test` per
+`CZH-611`).
+
+**Truthful state today**
+
+| File | Module `//!` | Notes |
+| --- | --- | --- |
+| `src/editor/ffi/bridge.zig` | **Yes** | Editor backend FFI facade (`CZH-S5` verified). |
+| `src/editor/ffi/c_api.zig` | **Yes** | Flat `zide_editor_*` forwarders. |
+| `src/terminal/ffi/bridge.zig` | **Yes** | VT core + BYO join; current. |
+| `src/terminal/ffi/core_api.zig` | **Yes** | VT core publication/query surface. |
+| `src/terminal_ffi_exports.zig` | **Yes** (thin) | Accurate but **minimal** — expand in `CZH-627`. |
+
+**`CZH-627` scope (module docs only, no logic):** strengthen `//!` on
+`src/terminal_ffi_exports.zig` so ownership (symbol root vs `c_api` behavior) is
+explicit. Editor + terminal facades above already carry `//!`; no packaging move.
+
+**`CZH-628` scope (`///` on important entrypoints, no spam):**
+
+- `src/editor/ffi/bridge.zig` — add concise `///` on **`create`** and **`destroy`**
+  (foreign-host handle lifecycle vs in-process `Editor`).
+- `src/terminal/ffi/core_api.zig` — extend existing **`destroy`** `///` with one
+  sentence that **test builds** may honor `destroy_debug_pause_ms_for_tests`
+  (see `CZH-606` queue; not a product sleep).
+- `src/terminal/ffi/core_api.zig` — add concise `///` on publication/query
+  exports that still lack any `///`: **`acknowledgedGeneration`**,
+  **`publishedGeneration`**, **`closeConfirmSignals`**, **`closeInput`**,
+  **`pendingInputAcquire`**, **`pendingInputRelease`**, **`scrollbackAcquire`** /
+  **`scrollbackRelease`**, **`metadataAcquire`** / **`metadataRelease`**,
+  **`activityAcquire`** / **`activityRelease`**, **`eventDrain`** /
+  **`eventsFree`**, **`selectionText`**, **`clipboardWrite`**,
+  **`scrollbackPlainText`**, **`scrollbackAnsiText`**, **`stringFree`** (string
+  buffers), **`rendererMetadata`**. **Out of scope for this sprint:** ABI
+  version getters (`*AbiVersion`) — thin constants, self-explanatory names.
+
+**`CZH-629`:** rewrite the `CZH-608` table + “Doc-alignment queue” bullets so
+they match this audit; drop completed “add `//!` to editor FFI” items.
+
 ## Response Contract
 
 Every batch update must include:
