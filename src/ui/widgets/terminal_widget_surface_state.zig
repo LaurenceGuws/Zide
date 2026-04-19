@@ -118,7 +118,7 @@ pub const TerminalWidgetSurfaceState = struct {
     /// Host **drawable target** leg for `surface_attachment_contract` (same field as
     /// `SharedSurfaceAttachmentPipelinePair.host_surface_target_available`).
     pub fn hostSurfaceTargetAvailable(self: *const TerminalWidgetSurfaceState) bool {
-        return self.presentation.target_available;
+        return self.presentation.host_surface_target_available;
     }
 
     /// Presentation invalidation delta vs last recorded surface draw; publication/clear
@@ -186,7 +186,7 @@ pub const TerminalWidgetSurfaceState = struct {
         composing_hash: u64,
     ) void {
         self.presentation.terminal_presentable_pipeline_ready = true;
-        self.presentation.target_available = true;
+        self.presentation.host_surface_target_available = true;
         self.presentation.clearInvalidationFlags();
         self.presentation.last_render_generation = terminal_view.generation;
         self.presentation.last_render_clear_generation = terminal_view.clear_generation;
@@ -206,10 +206,10 @@ pub const TerminalWidgetSurfaceState = struct {
 
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
-        self.presentation.target_available = available;
+        self.presentation.host_surface_target_available = available;
         return surface_attachment_contract.hostSharedSurfaceAttachmentReady(
             self.presentation.terminal_presentable_pipeline_ready,
-            self.presentation.target_available,
+            self.presentation.host_surface_target_available,
         );
     }
 
@@ -217,7 +217,7 @@ pub const TerminalWidgetSurfaceState = struct {
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
         return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
             .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_pipeline_ready,
-            .host_surface_target_available = self.presentation.target_available,
+            .host_surface_target_available = self.presentation.host_surface_target_available,
         });
     }
 
@@ -286,12 +286,12 @@ test "CZH-S17: readSharedSurfaceAttachmentReady matches FromPair on presentation
     defer state.deinit(std.testing.allocator);
 
     state.presentation.terminal_presentable_pipeline_ready = true;
-    state.presentation.target_available = false;
+    state.presentation.host_surface_target_available = false;
     try std.testing.expectEqual(
         state.readSharedSurfaceAttachmentReady(),
         surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
             .terminal_presentable_pipeline_ready = state.presentation.terminal_presentable_pipeline_ready,
-            .host_surface_target_available = state.presentation.target_available,
+            .host_surface_target_available = state.presentation.host_surface_target_available,
         }),
     );
 }
@@ -319,7 +319,7 @@ test "CZH-S19: readSharedSurfaceAttachmentReady matches pipeline and target gett
 
     for (cases) |c| {
         state.presentation.terminal_presentable_pipeline_ready = c.pipe;
-        state.presentation.target_available = c.tgt;
+        state.presentation.host_surface_target_available = c.tgt;
         try std.testing.expectEqual(
             state.readSharedSurfaceAttachmentReady(),
             state.terminalPresentablePipelineReady() and state.hostSurfaceTargetAvailable(),
@@ -332,7 +332,7 @@ test "CZH-S16: pipeline leg ready without host target splits pipeline getter vs 
     defer state.deinit(std.testing.allocator);
 
     state.presentation.terminal_presentable_pipeline_ready = true;
-    state.presentation.target_available = false;
+    state.presentation.host_surface_target_available = false;
     try std.testing.expect(state.terminalPresentablePipelineReady());
     try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
 }

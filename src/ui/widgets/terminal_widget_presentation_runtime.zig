@@ -94,7 +94,7 @@ pub fn computePresentationSurfaceGeometry(
 pub const PresentationPresentState = struct {
     updated: bool = false,
     presentable_refresh: TerminalPresentableRefresh = .unsupported,
-    target_available: bool = false,
+    host_surface_target_available: bool = false,
     ready: bool = false,
     visible: bool = false,
     present: bool = false,
@@ -147,7 +147,7 @@ pub const RefreshedPresentablePresentationResult = struct {
 pub const RefreshOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = false,
-    target_available: bool = false,
+    host_surface_target_available: bool = false,
     followup_required: bool = false,
     followup_reason: TerminalPresentFollowupReason = .none,
 };
@@ -155,26 +155,26 @@ pub const RefreshOutcomeState = struct {
 pub const DirectPresentOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = true,
-    target_available: bool = true,
+    host_surface_target_available: bool = true,
 };
 
 pub const ReusePresentOutcomeState = struct {
     reused: bool = false,
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,
-    target_available: bool = false,
+    host_surface_target_available: bool = false,
 };
 
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
-    target_available: bool,
+    host_surface_target_available: bool,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     return .{
         .outcome = outcome,
         .cache_state_advanced = cache_state_advanced,
-        .target_available = target_available,
+        .host_surface_target_available = host_surface_target_available,
         .timing = timing,
     };
 }
@@ -186,7 +186,7 @@ fn presentResultFromRefreshOutcomeState(
     var result = presentResultFromOutcomeState(
         outcome_state.outcome,
         outcome_state.cache_state_advanced,
-        outcome_state.target_available,
+        outcome_state.host_surface_target_available,
         timing,
     );
     result.followup.required = outcome_state.followup_required;
@@ -201,7 +201,7 @@ fn presentResultFromReuseOutcomeState(
     return presentResultFromOutcomeState(
         outcome_state.outcome,
         outcome_state.cache_state_advanced,
-        outcome_state.target_available,
+        outcome_state.host_surface_target_available,
         timing,
     );
 }
@@ -1188,7 +1188,7 @@ fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeSta
     return .{
         .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
         .cache_state_advanced = refresh == .refreshed,
-        .target_available = refresh != .unsupported and refresh != .target_unavailable,
+        .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
         .followup_required = refresh == .target_unavailable,
         .followup_reason = if (refresh == .target_unavailable) .target_unavailable else .none,
     };
@@ -1371,7 +1371,7 @@ pub fn runPresentation(
             return presentResultFromOutcomeState(
                 outcome_state.outcome,
                 outcome_state.cache_state_advanced,
-                outcome_state.target_available,
+                outcome_state.host_surface_target_available,
                 direct.timing,
             );
         }
@@ -1533,8 +1533,8 @@ pub fn refreshPresentState(
         );
     }
 
-    state.target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
-    state.ready = surface_state.notePresentableAvailability(state.target_available);
+    state.host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
+    state.ready = surface_state.notePresentableAvailability(state.host_surface_target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
 
@@ -1560,7 +1560,7 @@ pub fn logUnavailable(
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
         .{ .key = "renderer_presentable_refresh_tag", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
         .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.terminalPresentablePipelineReady() } },
-        .{ .key = "host_surface_target_available", .value = .{ .boolean = present_state.target_available } },
+        .{ .key = "host_surface_target_available", .value = .{ .boolean = present_state.host_surface_target_available } },
         .{ .key = "shared_surface_attachment_ready", .value = .{ .boolean = surface_state.readSharedSurfaceAttachmentReady() } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },
@@ -1663,7 +1663,7 @@ pub fn tryFastPresentExisting(
         (terminal_view.sync_updates_active or
             renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
         return .{
-            .target_available = shared_surface_attachment_ready,
+            .host_surface_target_available = shared_surface_attachment_ready,
         };
     }
 
@@ -1694,7 +1694,7 @@ pub fn tryFastPresentExisting(
         .reused = true,
         .outcome = .reused,
         .cache_state_advanced = true,
-        .target_available = true,
+        .host_surface_target_available = true,
     };
 }
 

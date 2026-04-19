@@ -136,7 +136,7 @@ pub const TerminalPresentFollowup = struct {
 pub const TerminalPresentResult = struct {
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,
-    target_available: bool = false,
+    host_surface_target_available: bool = false,
     timing: TerminalPresentTiming = .{},
     followup: TerminalPresentFollowup = .{},
 };
