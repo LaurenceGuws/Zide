@@ -1,31 +1,27 @@
 //! Terminal widget **surface** state: kitty + cached presentation draw metadata.
-//! **Vocabulary (`CZH-S18`, alias reduction `CZH-B25`):** generation pairing vs last draw uses
-//! `surface_contract`; pipeline leg (`terminal_presentable_pipeline_ready` / delta field); host
-//! target leg (`host_surface_target_available`); full attachment uses `surface_attachment_contract`
-//! via `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
 //!
-//! **Observability (`CZH-B24`):** operator logs should use the same identifiers as the getters
+//! **Vocabulary:** generation pairing vs last draw uses `surface_contract`; pipeline leg
+//! (`terminal_presentable_pipeline_ready`) and host target leg (`host_surface_target_available`)
+//! represent the two components of shared surface attachment readiness; full attachment uses
+//! `surface_attachment_contract` via `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
+//!
+//! **Operability:** operator logs use the same identifiers as the getters
 //! (`terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`, `readSharedSurfaceAttachmentReady`)
 //! when surfacing pipeline vs target vs full attachment — no paraphrased synonyms on those legs.
-//! **Present-result ownership (`CZH-B26`):** `readSharedSurfaceAttachmentReady` is the only
-//! single-bool “full attachment” predicate here; `hostSurfaceTargetAvailable` remains host-target
-//! leg only.
 //!
-//! **Conjunction propagation (`CZH-S22`, **canonical routes CZH-791**):** **compute** via
-//! `notePresentableAvailability` (writes host-target leg, returns conjunction via canonical helper);
-//! **store** is pipeline and host-target legs on `PresentationState` (no separate conjunction field);
-//! **report** is `readSharedSurfaceAttachmentReady` (reads conjunction from legs via canonical helper)
-//! and per-leg getters — no derived conjunction stored locally.
+//! **Ownership:** `readSharedSurfaceAttachmentReady` is the only single-bool “full attachment” predicate here;
+//! `hostSurfaceTargetAvailable` remains host-target leg only. `TerminalPresentResult` carries
+//! the parallel leg + conjunction result shape for host export, distinct from this widget storage.
 //!
-//! **Reporting-carrier (`CZH-S23`):** **`readSharedSurfaceAttachmentReady`** is the dominant
-//! widget-surface **report** for conjunction when no `PresentationPresentState` snapshot applies (e.g.
-//! diagnostics outside the refreshed-present path). It must not be described as the operator-log
-//! carrier — that role is `PresentationPresentState.shared_surface_attachment_ready` in
-//! `logUnavailable`.
+//! **Conjunction computation:** **compute** via `notePresentableAvailability` (writes host-target leg,
+//! returns conjunction via canonical helper); **store** legs on `PresentationState` (no separate
+//! conjunction field); **report** via `readSharedSurfaceAttachmentReady` (reads conjunction from
+//! legs via canonical helper) and per-leg getters — no derived conjunction stored locally.
 //!
-//! **Reporting/result cohesion (`CZH-S24`):** stored legs here **feed** conjunction reads and deltas;
-//! they are **not** `TerminalPresentResult` fields — host aggregation uses `presentable_contract`
-//! after runtime folds outcomes.
+//! **Reporting-carrier:** **`readSharedSurfaceAttachmentReady`** is the dominant widget-surface
+//! **report** for conjunction when no `PresentationPresentState` snapshot applies (e.g., diagnostics
+//! outside the refreshed-present path). It must not be described as the operator-log carrier — that
+//! role is `PresentationPresentState.shared_surface_attachment_ready` in `logUnavailable`.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
@@ -130,13 +126,13 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.last_render_clear_generation;
     }
 
-    /// **Leg read (`CZH-S24`):** pipeline only — not conjunction; pairs with `hostSurfaceTargetAvailable`
+    /// **Leg read:** pipeline only — not conjunction; pairs with `hostSurfaceTargetAvailable`
     /// for `readSharedSurfaceAttachmentReady`.
     pub fn terminalPresentablePipelineReady(self: *const TerminalWidgetSurfaceState) bool {
         return self.presentation.terminal_presentable_pipeline_ready;
     }
 
-    /// **Leg read (`CZH-S24`):** host drawable target only — not conjunction; pairs with
+    /// **Leg read:** host drawable target only — not conjunction; pairs with
     /// `terminalPresentablePipelineReady` for `readSharedSurfaceAttachmentReady`.
     ///
     /// Host **drawable target** leg for `surface_attachment_contract` (same field as
@@ -228,14 +224,14 @@ pub const TerminalWidgetSurfaceState = struct {
         self.presentation.last_composing_hash = composing_hash;
     }
 
-    /// **Canonical compute+store route for conjunction (CZH-S22, CZH-791, `CZH-S27`, `CZH-S29`):** writes the host-target
-    /// leg and returns the conjunction via `surface_attachment_contract.hostSharedSurfaceAttachmentReady`.
-    /// Invalidates presentation cache on unavailability. Must be called before `readSharedSurfaceAttachmentReady`
-    /// or operator-log recording uses the conjunction. **Only** call this to compute leg+conjunction; do not
-    /// re-derive conjunction outside this path. **Sync pair (`CZH-S29`):** pairs with `readSharedSurfaceAttachmentReady`
-    /// for storage/read consistency; both use same canonical helper.
-    /// **Initialization contract:** reads the pipeline leg (set by `notePresentationUpdated` when presentation occurs)
-    /// and writes the host-target leg; both legs have sensible defaults (false) on first initialization.
+    /// **Canonical compute+store route for conjunction:** writes the host-target leg and returns
+    /// the conjunction via `surface_attachment_contract.hostSharedSurfaceAttachmentReady`. Invalidates
+    /// presentation cache on unavailability. Must be called before `readSharedSurfaceAttachmentReady`
+    /// or operator-log recording uses the conjunction. **Only** call this to compute leg+conjunction;
+    /// do not re-derive conjunction outside this path.
+    /// **Initialization contract:** reads the pipeline leg (set by `notePresentationUpdated` when
+    /// presentation occurs) and writes the host-target leg; both legs have sensible defaults (false)
+    /// on first initialization. **Pairing:** maintains storage/read consistency with `readSharedSurfaceAttachmentReady`.
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
         self.presentation.host_surface_target_available = available;
@@ -245,12 +241,11 @@ pub const TerminalWidgetSurfaceState = struct {
         );
     }
 
-    /// **Canonical read-only route for conjunction (CZH-S23, CZH-791, `CZH-S27`, `CZH-S29`):** derives conjunction from
-    /// stored `PresentationState` legs via canonical helper `hostSharedSurfaceAttachmentReadyFromPair`.
-    /// Returns same predicate as `notePresentableAvailability`’s return after that call. Dominant
-    /// widget-surface **report** when `PresentationPresentState` is not in scope; not the operator-log
-    /// carrier (`logUnavailable` uses the present-state field, CZH-S24). **Only** read-only derive path.
-    /// **Sync pair (`CZH-S29`):** pairs with `notePresentableAvailability` for storage/read consistency.
+    /// **Canonical read-only route for conjunction:** derives conjunction from stored `PresentationState`
+    /// legs via canonical helper `hostSharedSurfaceAttachmentReadyFromPair`. Returns same predicate as
+    /// `notePresentableAvailability`’s return. Dominant widget-surface **report** when `PresentationPresentState`
+    /// is not in scope; not the operator-log carrier (which uses `PresentationPresentState.shared_surface_attachment_ready`
+    /// in `logUnavailable`). **Pairing:** maintains storage/read consistency with `notePresentableAvailability`.
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
         return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
             .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_pipeline_ready,
