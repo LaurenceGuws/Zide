@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const surface_contract = @import("../../terminal/surface_contract.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const shared_types = @import("../../types/mod.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
@@ -1071,7 +1072,11 @@ fn buildTerminalPresentPlan(
     const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
     const presentable_ready = self.surface.presentableReady();
-    const generation_matches_presented = terminal_view.generation == self.surface.lastRenderGeneration() and
+    const publication_gen_mismatch_surface = surface_contract.publicationGenerationDiffersFromLastSurfaceRender(
+        terminal_view.generation,
+        self.surface.lastRenderGeneration(),
+    );
+    const generation_matches_presented = !publication_gen_mismatch_surface and
         terminal_view.clear_generation == self.surface.lastRenderClearGeneration();
     const explicit_invalidation_blocks_reuse = delta.invalidation_flags.geometry or
         delta.invalidation_flags.content or
