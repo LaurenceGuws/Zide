@@ -88,3 +88,13 @@ test "CZH-S18: full attachment readiness is strict AND of vocabulary legs" {
     try std.testing.expect(hostSharedSurfaceAttachmentReady(false, true) == (false and true));
     try std.testing.expect(hostSharedSurfaceAttachmentReady(true, false) == (true and false));
 }
+
+test "CZH-791: pair struct carries both legs for explicit ownership" {
+    const pair = SharedSurfaceAttachmentPipelinePair{
+        .terminal_presentable_pipeline_ready = true,
+        .host_surface_target_available = false,
+    };
+    try std.testing.expect(pair.terminal_presentable_pipeline_ready);
+    try std.testing.expect(!pair.host_surface_target_available);
+    try std.testing.expect(!hostSharedSurfaceAttachmentReadyFromPair(pair));
+}
