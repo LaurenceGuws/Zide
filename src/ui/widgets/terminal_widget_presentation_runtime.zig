@@ -2569,3 +2569,42 @@ test "CZH-S28: integration hardening — fold paths harden outcome consistency" 
     try std.testing.expectEqual(refresh_result.followup.reason, .target_unavailable);
 }
 
+test "CZH-S29: integration follow-through — refresh classification validates followup coupling" {
+    // Verify that refresh outcome classification validates followup coupling invariants.
+    // When followup_required is true, followup_reason must be non-.none.
+
+    // Test: unavailable refresh sets both followup_required and followup_reason
+    const refresh_with_followup = classifyRefreshOutcome(.target_unavailable);
+    try std.testing.expect(refresh_with_followup.followup_required == true);
+    try std.testing.expect(refresh_with_followup.followup_reason != .none);
+
+    // Test: successful/presented refresh has both followup fields neutral
+    const refresh_success = classifyRefreshOutcome(.refreshed);
+    try std.testing.expect(refresh_success.followup_required == false);
+    try std.testing.expectEqual(refresh_success.followup_reason, .none);
+
+    const refresh_presented = classifyRefreshOutcome(.presented);
+    try std.testing.expect(refresh_presented.followup_required == false);
+    try std.testing.expectEqual(refresh_presented.followup_reason, .none);
+}
+
+test "CZH-S29: integration follow-through — direct outcome folds correctly through generic path" {
+    // Verify that direct present outcomes compose correctly through the generic fold.
+    // Direct draws have both legs true and conjunction false (not pre-verified).
+
+    const direct_updated = classifyDirectPresentOutcome(true);
+    const timing = renderer_presentable_host.TerminalPresentTiming{};
+    const result = presentResultFromOutcomeState(
+        direct_updated.outcome,
+        direct_updated.cache_state_advanced,
+        direct_updated.host_surface_target_available,
+        timing,
+        direct_updated.shared_surface_attachment_ready,
+    );
+
+    try std.testing.expectEqual(result.outcome, .updated_and_presented);
+    try std.testing.expect(result.cache_state_advanced == true);
+    try std.testing.expect(result.host_surface_target_available == true);
+    try std.testing.expect(result.shared_surface_attachment_ready == false);
+}
+
