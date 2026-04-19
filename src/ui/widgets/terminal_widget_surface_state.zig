@@ -234,28 +234,33 @@ pub const TerminalWidgetSurfaceState = struct {
     /// or operator-log recording uses the conjunction. **Only** call this to compute leg+conjunction; do not
     /// re-derive conjunction outside this path. **Sync pair (`CZH-S29`):** pairs with `readSharedSurfaceAttachmentReady`
     /// for storage/read consistency; both use same canonical helper.
+    /// **Consolidation helper (`CZH-S30`):** verifies leg field state before deriving conjunction.
+    /// Reduces duplication between `notePresentableAvailability` and `readSharedSurfaceAttachmentReady`.
+    fn assertLegsInitialized(self: *const TerminalWidgetSurfaceState) void {
+        std.debug.assert(self.presentation.terminal_presentable_pipeline_ready != undefined);
+        std.debug.assert(self.presentation.host_surface_target_available != undefined);
+    }
+
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
         self.presentation.host_surface_target_available = available;
-        // Harden: both legs should be initialized before deriving conjunction
-        std.debug.assert(self.presentation.terminal_presentable_pipeline_ready != undefined);
-        std.debug.assert(self.presentation.host_surface_target_available != undefined);
+        // Consolidation: use unified helper for leg state validation
+        self.assertLegsInitialized();
         return surface_attachment_contract.hostSharedSurfaceAttachmentReady(
             self.presentation.terminal_presentable_pipeline_ready,
             self.presentation.host_surface_target_available,
         );
     }
 
-    /// **Canonical read-only route for conjunction (CZH-S23, CZH-791, `CZH-S27`, `CZH-S29`):** derives conjunction from
+    /// **Canonical read-only route for conjunction (CZH-S23, CZH-791, `CZH-S27`, `CZH-S29`, `CZH-S30`):** derives conjunction from
     /// stored `PresentationState` legs via canonical helper `hostSharedSurfaceAttachmentReadyFromPair`.
     /// Returns same predicate as `notePresentableAvailability`’s return after that call. Dominant
     /// widget-surface **report** when `PresentationPresentState` is not in scope; not the operator-log
     /// carrier (`logUnavailable` uses the present-state field, CZH-S24). **Only** read-only derive path.
-    /// **Sync pair (`CZH-S29`):** pairs with `notePresentableAvailability` for storage/read consistency.
+    /// **Sync pair (`CZH-S29`, consolidated `CZH-S30`):** pairs with `notePresentableAvailability` for storage/read consistency.
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
-        // Harden: legs should be consistent and initialized before deriving conjunction
-        std.debug.assert(self.presentation.terminal_presentable_pipeline_ready != undefined);
-        std.debug.assert(self.presentation.host_surface_target_available != undefined);
+        // Consolidation: use unified helper for leg state validation
+        self.assertLegsInitialized();
         return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
             .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_pipeline_ready,
             .host_surface_target_available = self.presentation.host_surface_target_available,
