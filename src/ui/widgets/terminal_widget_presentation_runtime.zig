@@ -2489,3 +2489,26 @@ test "CZH-S27: integration lock — consolidated outcome states fold correctly" 
     try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
 }
 
+test "CZH-S28: integration hardening — fold paths harden outcome consistency" {
+    // Verify that fold functions validate outcome state consistency and propagate to result.
+
+    // Test: successful reuse outcome produces result with all fields true
+    const reuse_success = reuseSuccessOutcome();
+    const reuse_result = presentResultFromReuseOutcomeState(reuse_success, .{});
+    try std.testing.expectEqual(reuse_result.outcome, .reused);
+    try std.testing.expect(reuse_result.cache_state_advanced == true);
+    try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
+
+    // Test: refresh with target unavailable sets followup correctly
+    const refresh_unavailable = RefreshOutcomeState{
+        .outcome = .presented,
+        .cache_state_advanced = false,
+        .host_surface_target_available = false,
+        .followup_required = true,
+        .followup_reason = .target_unavailable,
+    };
+    const refresh_result = presentResultFromRefreshOutcomeState(refresh_unavailable, .{}, false);
+    try std.testing.expect(refresh_result.followup.required == true);
+    try std.testing.expectEqual(refresh_result.followup.reason, .target_unavailable);
+}
+
