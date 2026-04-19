@@ -14,6 +14,8 @@ stable, reviewable, and ready for the next expansion phase.
 - Current active macro batch: `CZH-B6` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_B6_TICKETS.md`
+- Queued next implementation sprint: `docs/todo/core/CZH_S2_TICKETS.md` (`CZH-S2`,
+  not started until Architect accepts `CZH-GATE-60`)
 
 ## Campaign Goals
 
@@ -780,6 +782,14 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
 1. Add `//!` headers to every file in the table with “No” above.
 2. Add brief `///` on exported `pub fn` entrypoints in `host_api` and `core_api`
    that hosts call (at minimum: create/destroy/start/poll/snapshot/diff/redraw).
+
+#### `CZH-609` first implementation sprint shaped (recorded)
+
+- **Next sprint tickets:** `docs/todo/core/CZH_S2_TICKETS.md` (`CZH-S2`:
+  `CZH-611`..`CZH-615`).
+- **Intent:** close the audited gaps (probe isolation, FFI module docs, export
+  docstrings, optional snapshot-diff rename hygiene) without reopening broad
+  cleanup.
 
 ## Response Contract
 

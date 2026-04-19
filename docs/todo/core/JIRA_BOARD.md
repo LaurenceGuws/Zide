@@ -25,6 +25,12 @@ This file is the canonical ticket board for active core execution.
 - Commit budget before checkpoint: `10`
 - Super-gate: `CZH-GATE-60`
 
+## Next Sprint (queued, do not start until `CZH-GATE-60` accepted)
+
+- Sprint ID: `CZH-S2`
+- Ticket file: `docs/todo/core/CZH_S2_TICKETS.md`
+- Super-gate (future): `CZH-GATE-61`
+
 ## Ticket Order (`CZH-S1`)
 
 1. `CZH-601`
@@ -40,8 +46,8 @@ This file is the canonical ticket board for active core execution.
 
 ## Current State
 
-- `in_progress`: `CZH-609`
-- `todo`: `CZH-610`
+- `in_progress`: `CZH-610`
+- `todo`: none
 - `blocked`: none
 - `review_gate`: none
-- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`
+- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`
