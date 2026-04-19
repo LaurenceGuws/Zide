@@ -228,10 +228,11 @@ pub const TerminalWidgetSurfaceState = struct {
         self.presentation.last_composing_hash = composing_hash;
     }
 
-    /// **Canonical compute+store route for conjunction (CZH-S22, CZH-791):** writes the host-target
+    /// **Canonical compute+store route for conjunction (CZH-S22, CZH-791, `CZH-S27`):** writes the host-target
     /// leg and returns the conjunction via `surface_attachment_contract.hostSharedSurfaceAttachmentReady`.
     /// Invalidates presentation cache on unavailability. Must be called before `readSharedSurfaceAttachmentReady`
-    /// or operator-log recording uses the conjunction.
+    /// or operator-log recording uses the conjunction. **Only** call this to compute leg+conjunction; do not
+    /// re-derive conjunction outside this path.
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
         self.presentation.host_surface_target_available = available;
@@ -241,11 +242,11 @@ pub const TerminalWidgetSurfaceState = struct {
         );
     }
 
-    /// **Canonical read-only route for conjunction (CZH-S23, CZH-791):** derives conjunction from
-    /// stored `PresentationState` legs via `surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair`.
+    /// **Canonical read-only route for conjunction (CZH-S23, CZH-791, `CZH-S27`):** derives conjunction from
+    /// stored `PresentationState` legs via canonical helper `hostSharedSurfaceAttachmentReadyFromPair`.
     /// Returns same predicate as `notePresentableAvailability`’s return after that call. Dominant
     /// widget-surface **report** when `PresentationPresentState` is not in scope; not the operator-log
-    /// carrier (`logUnavailable` uses the present-state field, CZH-S24).
+    /// carrier (`logUnavailable` uses the present-state field, CZH-S24). **Only** read-only derive path.
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
         return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
             .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_pipeline_ready,

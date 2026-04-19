@@ -174,6 +174,8 @@ pub const RefreshedPresentablePresentationResult = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
+/// **Refresh outcome snapshot (`CZH-791`, `CZH-S27`):** classifies refresh cycle result (updated or not).
+/// Does not carry conjunction — passed separately to fold function. Host-target leg only.
 pub const RefreshOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = false,
@@ -182,6 +184,8 @@ pub const RefreshOutcomeState = struct {
     followup_reason: TerminalPresentFollowupReason = .none,
 };
 
+/// **Direct present outcome snapshot (`CZH-S27`):** result when drawing directly bypasses reuse path.
+/// Host-target leg hardcoded to `true` (drawing implies renderer is available).
 pub const DirectPresentOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = true,
@@ -200,9 +204,9 @@ pub const ReusePresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
-/// Fold runtime outcome fields into host-facing **`TerminalPresentResult`** (`CZH-S24` naming):
-/// `host_surface_target_available` is the **leg** only; `shared_surface_attachment_ready` is the
-/// **conjunction** when supplied — same roles as the struct fields, not reporting snapshots.
+/// **Generic result fold (`CZH-791`, `CZH-S27`):** construct host-facing `TerminalPresentResult` from outcome
+/// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
+/// **conjunction** when supplied (not report snapshot). Canonical fold helper for all outcome paths.
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
@@ -1586,8 +1590,9 @@ pub fn refreshPresentState(
         );
     }
 
+    // **Canonical conjunction derivation (`CZH-791`, `CZH-S27`):** compute host-target leg from renderer,
+    // then pass to canonical helper `notePresentableAvailability` which returns full conjunction.
     state.host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
-    // Dominant conjunction snapshot for this tick: `logUnavailable` reads `state.shared_surface_attachment_ready` only.
     const shared_surface_attachment_ready = surface_state.notePresentableAvailability(state.host_surface_target_available);
     state.shared_surface_attachment_ready = shared_surface_attachment_ready;
     state.present = state.shared_surface_attachment_ready and state.visible;
@@ -1693,6 +1698,9 @@ pub fn presentDraw(
 /// **Canonical compute route for reuse path (`CZH-S22`, CZH-791):** computes conjunction via
 /// `notePresentableAvailability`; populates `ReusePresentOutcomeState` with conjunction result
 /// for folding into `TerminalPresentResult`.
+/// Reuse present path: attempt fast present of existing cached draw. **Canonical conjunction derivation
+/// (`CZH-791`, `CZH-S27`):** compute host-target leg from renderer, pass to `notePresentableAvailability`,
+/// and store outcome conjunction on result state.
 pub fn tryFastPresentExisting(
     surface_state: anytype,
     renderer: anytype,
