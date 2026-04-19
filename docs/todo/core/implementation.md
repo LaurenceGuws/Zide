@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B39` (architect_review_pending, super-gate `CZH-GATE-93`). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md`.
+- Current active macro batch: `CZH-B40` (in_progress, super-gate `CZH-GATE-94`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Completed sprint: `CZH-S34` (review_gate). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md`.
+- Completed sprint: `CZH-S34` (accepted). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
@@ -3498,7 +3498,7 @@ Owner docs:
 - Corrective passes removed historical ticket/sprint lineage from touched source comments and runtime seam tests.
 - Validation spot-check stayed green: Zig ladder pass, bounded Linux GUI startup smoke pass, Android compile guard pass.
 
-### `CZH-B39` Runtime Orchestration Ownership Completion (`in_progress`)
+### `CZH-B39` Runtime Orchestration Ownership Completion (`accepted`)
 
 Queue line (exact):
 
@@ -3517,6 +3517,34 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S34_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+`Verdict: accepted`
+
+- Architect review confirmed a real code extraction landed: terminal-owned `computeTerminalPresentPlanDecision` now owns present-plan decision logic, and widget runtime delegates.
+- Validation spot-check stayed green: Zig ladder pass, bounded Linux GUI startup smoke pass, Android debug/release compile guard pass.
+- Process correction: checkpoint text claimed Android gradle environment failure, but architect rerun passed; keep validation claims strict and current.
+
+### `CZH-B40` Callback-Based Orchestration Extraction (`in_progress`)
+
+Queue line (exact):
+
+- complete runtime orchestration extraction by introducing callback-based terminal-owned orchestrators so widget remains integration-only facade
+
+Acceptance:
+
+- refresh/reuse/direct orchestration helpers that remain in widget runtime are moved to terminal runtime with explicit callback interfaces
+- widget runtime keeps integration concerns only (renderer/shell/context wiring)
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- touched source comments remain present-tense architecture only
+- Linux and connected Android validation stay green through `CZH-GATE-94`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S35_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
