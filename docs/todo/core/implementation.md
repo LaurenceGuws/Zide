@@ -733,14 +733,14 @@ Scope: `src/terminal/ffi/**`, `src/editor/ffi/**`, plus `src/terminal_ffi_export
 | --- | --- | --- | --- |
 | `terminal/ffi/shared.zig` | `mapError`, `stringFromSlice`, `byteBufferFromSlice`, … `log.logf(.warning, …)` | Operator telemetry on allocation/backend failures | **No** — legitimate error-path logging |
 | `terminal/ffi/core_api.zig` | `app_logger` `.warning` in `snapshotAcquire`, `snapshotDiffAcquire`, etc. | Same — export failure diagnostics | **No** |
-| `terminal/ffi/core_api.zig` | `destroy_debug_pause_ms_for_tests` + sleep in `destroy` | Test timing injection on **product** destroy path | **Yes** — queue for implementation sprint: gate behind test-only build, test-only module, or harness-only API; remove unconditional sleep from product path per `AGENTS.md` debug policy |
+| `terminal/ffi/core_api.zig` | *(historical)* `destroy_debug_pause_ms_for_tests` + sleep in `destroy` | Removed from product (`CZH-S6` / `CZH-B11`); smoke test syncs on `Handle.destroying` in `tests/terminal_ffi_smoke_tests.zig` | **Resolved** — no product debug sleep |
 | `editor/ffi/bridge.zig` | `app_logger` `.warning` on alloc/create failures | Error-path telemetry | **No** |
 | `terminal_ffi_exports.zig` | (none) | N/A | **No** |
 
 **Explicit removal queue (later sprint, bounded)**
 
-1. `core_api.zig` — replace or strictly isolate `destroy_debug_pause_ms_for_tests`
-   so production `destroy` never sleeps for test hooks unless compiled for tests.
+1. *(done `CZH-S6`)* — product `destroy` no longer contains test sleep or
+   `destroy_debug_pause_ms_for_tests`.
 
 #### `CZH-607` hard-rule audit: compatibility / fallback residue (layer set)
 
@@ -781,7 +781,7 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
 
 | Symbol | Issue | Status (`CZH-S5`) |
 | --- | --- | --- |
-| `core_api.destroy` | Test-only pause (`destroy_debug_pause_ms_for_tests`) | `///` documents test-build behavior; not a product sleep (`CZH-628`). |
+| `core_api.destroy` | *(historical)* test pause global | Hook removed (`CZH-S6`); `///` is product-only teardown (`CZH-628` + `CZH-S6`). |
 | `byo_pty_host.start` / `poll` | — | Documented (`CZH-613`); unchanged. |
 | `bridge.create` / `destroy` (editor) | — | `///` added (`CZH-628`). |
 
@@ -827,7 +827,8 @@ Queue line (exact):
 
 Acceptance:
 
-- `destroy_debug_pause_ms_for_tests` no longer sleeps on product destroy paths
+- product `destroy` path carries **no** test sleep or debug pause global
+  (completed in `CZH-S6`; historical `CZH-B7` acceptance targeted isolation)
 - FFI/export files have module doc strings aligned to the four-layer split
 - key exported host entrypoints have concise `///` ownership docs
 - snapshot-diff fallback naming no longer reads like compatibility sludge
@@ -1210,9 +1211,8 @@ explicit. Editor + terminal facades above already carry `//!`; no packaging move
 
 - `src/editor/ffi/bridge.zig` — add concise `///` on **`create`** and **`destroy`**
   (foreign-host handle lifecycle vs in-process `Editor`).
-- `src/terminal/ffi/core_api.zig` — extend existing **`destroy`** `///` with one
-  sentence that **test builds** may honor `destroy_debug_pause_ms_for_tests`
-  (see `CZH-606` queue; not a product sleep).
+- **`destroy` test-hook `///` note (`CZH-628`):** superseded — hook removed in
+  `CZH-S6` (`CZH-B11`); `destroy` docs are product-only.
 - `src/terminal/ffi/core_api.zig` — add concise `///` on publication/query
   exports that still lack any `///`: **`acknowledgedGeneration`**,
   **`publishedGeneration`**, **`closeConfirmSignals`**, **`closeInput`**,
