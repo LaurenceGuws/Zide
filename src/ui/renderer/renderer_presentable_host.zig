@@ -70,7 +70,7 @@ pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) boo
 pub fn refreshTerminalPresentable(renderer: anytype, plan: TerminalPresentPlan, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) TerminalPresentableRefresh {
     const Local = struct {
         fn erasedBody(raw_ctx: ?*const anyopaque, renderer_local: @TypeOf(renderer)) void {
-            const typed_ctx: *@TypeOf(ctx) = @constCast(@alignCast(@ptrCast(raw_ctx.?)));
+            const typed_ctx: *@TypeOf(ctx) = @ptrCast(@alignCast(@constCast(raw_ctx.?)));
             body(typed_ctx.*, renderer_local);
         }
     };
@@ -94,17 +94,20 @@ pub fn runTerminalPresentableRefreshExecution(
     const ExecCtx = struct {
         inner: @TypeOf(ctx),
         plan: TerminalPresentPlan,
+        out: *TerminalPresentableRefreshExecutionResult,
     };
     const Local = struct {
         fn run(raw_ctx: ?*const anyopaque, renderer_local: @TypeOf(renderer)) void {
-            const typed_ctx: *ExecCtx = @constCast(@alignCast(@ptrCast(raw_ctx.?)));
-            typed_ctx.inner.result.timing = Hooks.executeUpdate(typed_ctx.inner, renderer_local, typed_ctx.plan);
-            typed_ctx.inner.result.completed = true;
+            const typed_ctx: *ExecCtx = @ptrCast(@alignCast(@constCast(raw_ctx.?)));
+            typed_ctx.out.timing = Hooks.executeUpdate(typed_ctx.inner, renderer_local, typed_ctx.plan);
+            typed_ctx.out.completed = true;
         }
     };
-    var exec_ctx = ctx;
-    exec_ctx.result = &result;
-    var call_ctx = ExecCtx{ .inner = exec_ctx, .plan = plan };
+    const call_ctx = ExecCtx{
+        .inner = ctx,
+        .plan = plan,
+        .out = &result,
+    };
     result.refresh = renderer.backend.refreshTerminalPresentable(
         renderer,
         plan,

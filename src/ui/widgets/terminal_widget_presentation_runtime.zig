@@ -739,7 +739,6 @@ pub fn runPresentableRefreshCycle(
         blink_time: f64,
         has_kitty: bool,
         surface_update_plan: PresentationUpdatePlan,
-        result: *TerminalPresentableRefreshExecutionResult = undefined,
     };
     const Local = struct {
         pub fn executeUpdate(
