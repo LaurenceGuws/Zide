@@ -227,7 +227,10 @@ pub const TerminalWidgetSurfaceState = struct {
         );
     }
 
-    /// Read-only: both attachment legs (same conjunction as `notePresentableAvailability` return).
+    /// **State/report bridge (`CZH-S23`):** read-only conjunction from stored `PresentationState`
+    /// legs — same predicate as `notePresentableAvailability`’s return after that call. Dominant
+    /// widget-surface **report** when `PresentationPresentState` is not in scope; not the operator-log
+    /// carrier (`logUnavailable` uses the present-state field).
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
         return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
             .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_pipeline_ready,
