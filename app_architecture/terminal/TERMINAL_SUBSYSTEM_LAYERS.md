@@ -66,7 +66,7 @@ flowchart LR
 
     subgraph HostRuntime
         Shell["TerminalRuntimeShell / host wrapper"]
-        Bridge["FFI bridge / host_api / core_api"]
+        Bridge["FFI: core_api (VT truth) + host_api (session/transport)"]
     end
 
     subgraph InputBoundary
@@ -335,17 +335,25 @@ For the current cleanup/restructure phase:
 ## Terminal FFI directory ownership (`CZH-B6` current-state map)
 
 This classifies `src/terminal/ffi/**` plus the repo-root export root for the
-freeze sprint. Labels match the architect split: **VT core FFI**, **optional
-bring-your-own-PTY host seam**, **bridge/facade glue**, and **smell /
-misalignment** (things to fix after the split hardens, not ad hoc cleanup now).
+freeze sprint. **Target split (normative):**
+
+- **VT core FFI** — publication / query / redraw / events / metadata truth
+  exported to hosts (what the terminal *is* and what changed), plus handle
+  lifecycle on that side of the contract.
+- **Optional BYO-PTY host seam** — session / runtime / input / transport
+  ownership path when the host drives a local PTY-backed or equivalent session
+  (how bytes move and how the session loop runs).
+
+Current-state files are listed honestly; **do not** merge those two concerns in
+authority wording just because some modules live in the same directory today.
 
 | Path | Primary bucket | Notes |
 | --- | --- | --- |
-| `src/terminal/ffi/shared.zig` | VT core FFI | ABI structs, version constants, opaque `ZideTerminalHandle`, status mapping, shared helpers used by both host and core sides of the bridge. |
+| `src/terminal/ffi/shared.zig` | VT core FFI (types + shared helpers) | ABI structs, version constants, opaque `ZideTerminalHandle`, status mapping — shared machinery **used by** both VT core exports and BYO-PTY entrypoints; the types are not themselves “the BYO seam.” |
 | `src/terminal/ffi/renderer_metadata.zig` | VT core FFI | `RendererMetadata` fill + glyph classification; the only supported fill path for FFI metadata. |
-| `src/terminal/ffi/core_api.zig` | VT core FFI | Handle lifecycle, snapshots/diffs, metadata/activity/redraw queries, publication-facing queries, output feed hooks — the engine/publication surface exported to hosts. |
-| `src/terminal/ffi/host_api.zig` | BYO-PTY host seam **and** VT core FFI | `start` / `poll` / `resize` / cell-size updates and encoded input (`sendBytes`, `sendText`, keys, mouse) sit on the session/runtime path hosts use when they drive a local PTY-backed or equivalent session. This is the optional “host owns transport/session loop” seam; it is still implemented inside the FFI tree today. |
-| `src/terminal/ffi/bridge.zig` | bridge/facade glue | Single Zig-facing barrel that re-exports ABI pieces and forwards to `core_api` / `host_api`. |
+| `src/terminal/ffi/core_api.zig` | VT core FFI | Snapshots/diffs, metadata/activity/redraw queries, event/publication-facing queries, present/generation bookkeeping, feed hooks that attach to engine truth — **publication and query surface** for hosts. |
+| `src/terminal/ffi/host_api.zig` | Optional BYO-PTY host seam | `start` / `poll` / `resize`, cell-size updates, encoded input (`sendBytes`, `sendText`, keys, mouse) — **session/runtime/transport** path. **Placement:** still physically under `src/terminal/ffi/`; that is **current packaging**, not the statement that this layer *is* VT core FFI. |
+| `src/terminal/ffi/bridge.zig` | bridge/facade glue | Zig-facing barrel that forwards to `core_api` (VT core) and `host_api` (BYO-PTY); keeps one import surface for hosts without collapsing the two contracts. |
 | `src/terminal/ffi/c_api.zig` | bridge/facade glue | C typedef aliases and thin wrappers for exported symbols; no extra semantics. |
 | `src/terminal_ffi_exports.zig` | bridge/facade glue | Root that re-exports `zide_terminal_*` C symbols; keeps export names out of individual modules. |
 
@@ -357,8 +365,8 @@ misalignment** (things to fix after the split hardens, not ad hoc cleanup now).
 
 **Smell / misalignment (documented; no behavior change in the freeze sprint):**
 
-- `core_api.zig` concentrates many publication and lifecycle concerns in one module; the freeze makes that concentration explicit so a later cut can separate “pure VT core query API” from session-adjacent helpers without guessing.
-- The boundary between “host drives optional PTY/session” (`host_api`) and “host reads/writes terminal truth through publication” (`core_api`) is architecturally clear but physically adjacent; peer hosts must treat both as part of the same **VT core FFI** story until a follow-on extraction moves optional transport out of the default build graph.
+- `core_api.zig` concentrates many publication and lifecycle concerns in one module; a later cut may narrow “pure VT core query” vs handle helpers — **without** folding `host_api` into that label.
+- **`host_api.zig` next to `core_api.zig` under `ffi/`** is easy to misread as one “terminal FFI blob.” It is **not** the target contract: BYO-PTY session/transport stays a **separate seam** from VT core publication/query truth, even while both remain in the same directory until an extraction moves optional transport packaging.
 
 ## FFI renderer metadata and visible viewport (shared core)
 
