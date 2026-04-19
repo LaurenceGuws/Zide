@@ -617,11 +617,19 @@ Objective:
 
 **Four target layers (name consistently everywhere):**
 
-1. VT core FFI
-2. optional bring-your-own-PTY host seam
+1. **VT core FFI** — publication / query / redraw / events / metadata truth
+   exported to hosts (terminal state and what changed). **Not** session,
+   runtime, or transport ownership.
+2. **optional bring-your-own-PTY host seam** — session / runtime / input /
+   transport path when the host drives a local PTY-backed or equivalent loop.
+   **Target:** distinct from VT core FFI even though `host_api.zig` still lives
+   next to `core_api.zig` under `src/terminal/ffi/` (packaging, not the
+   contract).
 3. editor backend FFI
-4. terminal surface contract (host passes shared GPU resource/surface; Zide
-   owns dirty tracking/update logic; host owns binding/presentation)
+4. terminal surface contract — host initializes/passes the **shared GPU
+   texture/resource attachment** the backend needs; Zide owns dirty tracking,
+   generation truth, and terminal **content** update logic; host owns binding
+   that resource into platform presentation (see `TERMINAL_SURFACE_CONTRACT.md`)
 
 Acceptance:
 
@@ -673,9 +681,10 @@ Architect note:
   **Terminal FFI directory ownership (`CZH-B6` current-state map)**.
 - **Scope:** `src/terminal/ffi/**` and `src/terminal_ffi_exports.zig`, plus the
   closely coupled session/runtime modules called from `host_api` / `core_api`.
-- **Outcome:** file-by-file classification into VT core FFI, optional
-  bring-your-own-PTY host seam, bridge/facade glue, and explicit smell notes for
-  post-freeze extraction.
+- **Outcome:** file-by-file classification into **VT core FFI** (publication /
+  query / events / metadata), **optional BYO-PTY host seam** (session/runtime /
+  transport — `host_api` + session modules), bridge/facade glue, and explicit
+  packaging notes (`host_api` under `ffi/` is not the target contract merger).
 
 #### `CZH-603` editor backend FFI authority (recorded)
 
@@ -688,9 +697,10 @@ Architect note:
 #### `CZH-604` terminal surface contract (recorded)
 
 - **Authority:** `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`.
-- **Outcome:** host-agnostic split: host passes native surface/GPU binding;
-  Zide owns dirty/generation/present-ack truth; host owns binding and
-  presentation; Android listed as one implementation only.
+- **Outcome:** host initializes/passes the **shared GPU texture/resource
+  attachment** the backend needs; Zide owns dirty tracking, generation truth, and
+  terminal content update logic; host owns binding/presentation; window/swapchain
+  specifics out of the frozen center; Android one proving host only.
 
 #### `CZH-605` cross-layer file inventory and non-goals
 
@@ -698,8 +708,8 @@ Architect note:
 
 | Layer | Canonical paths | Role |
 | --- | --- | --- |
-| VT core FFI | `src/terminal/ffi/shared.zig`, `core_api.zig`, `renderer_metadata.zig`, `host_api.zig` (input + session hooks), `bridge.zig`, `c_api.zig`, `src/terminal_ffi_exports.zig` | ABI + exports; publication/query + optional session driving |
-| Optional BYO-PTY host seam | `host_api.zig` (`start`, `poll`, `resize`, …); `src/terminal/core/session/runtime.zig`, `input.zig`, `lifecycle.zig` | Host-driven session loop and transport when not using external feed-only mode |
+| VT core FFI | `src/terminal/ffi/shared.zig` (types/helpers), `core_api.zig`, `renderer_metadata.zig`, `bridge.zig`, `c_api.zig`, `src/terminal_ffi_exports.zig` | Publication / query / redraw / events / metadata + shared ABI; **not** `host_api` |
+| Optional BYO-PTY host seam | `src/terminal/ffi/host_api.zig`; `src/terminal/core/session/runtime.zig`, `input.zig`, `lifecycle.zig` | Session/runtime/input/transport; **physically under `ffi/` today — packaging smell vs target split** |
 | Editor backend FFI | `src/editor/ffi/bridge.zig`, `src/editor/ffi/c_api.zig` | Foreign editor hosts; C ABI |
 | Terminal surface contract | `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`; `src/ui/widgets/terminal_widget*.zig` (presentation + publication coupling); `src/platform/android_shell_session.zig` (peer host example); GL/Metal backends under `src/ui/renderer/*_backend.zig` | Drawable surface + generations; host proves binding; Zide proves redraw truth |
 | Bridge / glue | `bridge.zig`, `c_api.zig`, `terminal_ffi_exports.zig`; `src/editor/ffi/c_api.zig` | Thin forwarders and symbol roots |
