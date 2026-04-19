@@ -131,7 +131,7 @@ getters for attachment visibility; **host export** uses `TerminalPresentResult` 
 outcomes — same field **names** where applicable, distinct **roles** (reporting snapshot vs aggregated
 result).
 
-## Presentation runtime ownership (`CZH-S33` + `CZH-S34` authority)
+## Presentation runtime ownership (authority)
 
 **Terminal-owned runtime orchestration layer:**
 The terminal layer owns the presentation runtime module (`src/terminal/presentation_runtime.zig`)
@@ -145,7 +145,7 @@ that manages all semantic presentation logic:
   - Fold outcome state + timing into host-facing result structs
   - Propagate conjunction state (attachment readiness) through folding
   
-- **Orchestration coordination** (`CZH-S34`, pure except for integration seams):
+- **Orchestration coordination** (pure except for integration seams):
   - **Refresh path:** `runPresentableRefreshCycle()`, `runRefreshedPresentablePresentation()`, `executeRefreshPresentFlow()`
     - Drive refresh cycle outcome classification and result folding
     - No renderer/shell calls; coordinates pure decision paths
