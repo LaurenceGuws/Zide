@@ -67,7 +67,9 @@ truth and last ack) uses the same module (`presentAckGenerationAdmissible`;
 generation reuse uses `publicationGenerationDiffersFromLastSurfaceRender` for the
 publication vs last surface-render generation limb (`CZH-S9`) and
 `clearGenerationDiffersFromLastSurfaceRenderClear` for the clear-generation vs
-last surface-render clear limb (`CZH-S10`).
+last surface-render clear limb (`CZH-S10`). `TerminalWidgetSurfaceState.presentationUpdateDelta`
+uses the same two helpers for `generation_changed` and `clear_generation_changed`
+(`CZH-S11`).
 
 ## Android mapping (example, not definition)
 

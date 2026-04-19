@@ -1659,6 +1659,13 @@ clear vs `last_render_clear_generation` inequality limbs. Plan: route both
 through existing `surface_contract` mismatch helpers (`CZH-657`..`CZH-658`); no
 new predicate surface beyond doc binding where needed.
 
+#### Landed (`CZH-657`..`CZH-659`)
+
+- `surface_contract` docs bind `presentationUpdateDelta` to the publication and
+  clear mismatch helpers
+- `presentationUpdateDelta` routes both `*_changed` fields through those helpers
+- unit test + `TERMINAL_SURFACE_CONTRACT.md` widget consumer line
+
 ## Response Contract
 
 Every batch update must include:
