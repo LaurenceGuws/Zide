@@ -98,3 +98,36 @@ test "CZH-791: pair struct carries both legs for explicit ownership" {
     try std.testing.expect(!pair.host_surface_target_available);
     try std.testing.expect(!hostSharedSurfaceAttachmentReadyFromPair(pair));
 }
+
+test "CZH-S26: canonical-vs-legacy equivalence (direct and)" {
+    const cases = [_]struct { pipe: bool, host: bool }{
+        .{ .pipe = true, .host = true },
+        .{ .pipe = true, .host = false },
+        .{ .pipe = false, .host = true },
+        .{ .pipe = false, .host = false },
+    };
+    for (cases) |c| {
+        const canonical = hostSharedSurfaceAttachmentReady(c.pipe, c.host);
+        const legacy_and = c.pipe and c.host;
+        try std.testing.expectEqual(canonical, legacy_and);
+    }
+}
+
+test "CZH-S26: canonical-vs-legacy equivalence (pair wrapper)" {
+    const pair1 = SharedSurfaceAttachmentPipelinePair{
+        .terminal_presentable_pipeline_ready = true,
+        .host_surface_target_available = true,
+    };
+    const pair2 = SharedSurfaceAttachmentPipelinePair{
+        .terminal_presentable_pipeline_ready = false,
+        .host_surface_target_available = true,
+    };
+    try std.testing.expectEqual(
+        hostSharedSurfaceAttachmentReadyFromPair(pair1),
+        pair1.terminal_presentable_pipeline_ready and pair1.host_surface_target_available,
+    );
+    try std.testing.expectEqual(
+        hostSharedSurfaceAttachmentReadyFromPair(pair2),
+        pair2.terminal_presentable_pipeline_ready and pair2.host_surface_target_available,
+    );
+}
