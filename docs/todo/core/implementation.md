@@ -2308,15 +2308,18 @@ Execution source:
 
 #### `CZH-721` vocabulary/state drift audit + cut plan (`CZH-S18`)
 
-- map selected drift in:
-  `terminal_widget_presentation_state.zig`,
-  `terminal_widget_surface_state.zig`,
-  `terminal_widget_presentation_runtime.zig`,
-  `terminal_widget_draw.zig`,
-  `surface_contract.zig`,
-  `surface_attachment_contract.zig`
-- classify each touched symbol/call-site as pipeline, attachment, or generation
-- record scoped hygiene targets for `CZH-729`
+**Three-way vocabulary (target lock for `CZH-S18`):**
+
+| Category | Authority / meaning | Drift / convergence |
+| --- | --- | --- |
+| **Generation (publication vs last surface draw)** | `surface_contract` primitives + composite pair | `planUpdate` locals `publication_gen_mismatch` / `clear_gen_mismatch` shorten helper names (`CZH-723`). `presentationUpdateDelta` local `gen_clear_mismatch` → align to `publicationClearPairMismatches*` vocabulary (`CZH-723`). |
+| **Pipeline leg** | `PresentationState.terminal_presentable_ready` / `presentableReady()` | Getter name `presentableReady()` is generic vs “pipeline”; converge to `terminalPresentablePipelineReady()` (`CZH-725`). |
+| **Host drawable target leg** | `PresentationState.target_available` | Getter `targetAvailable()` unused publicly; rename to `hostSurfaceTargetAvailable()` to match `SharedSurfaceAttachmentPipelinePair.host_surface_target_available` (`CZH-724`). |
+| **Full attachment conjunction** | `surface_attachment_contract.hostSharedSurfaceAttachmentReady` | `tryFastPresent` already uses `shared_surface_attachment_ready`; `logUnavailable` still uses `target_available` key (`CZH-726`). |
+| **surface_contract / surface_attachment_contract** | Module `//!` centers | Add explicit non-overlapping three-category block (`CZH-722`); cross-links (`CZH-722`/`729`). |
+| **terminal_widget_draw** | Consumer | Module `//!` still says `presentableReady` — sync after `CZH-725` (`CZH-722`/`725`). |
+
+**`CZH-729` hygiene scope:** `terminal_widget_presentation_state.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_runtime.zig`, `terminal_widget_draw.zig`, `terminal_widget.zig` (telemetry touched in `CZH-726`), `surface_contract.zig`, `surface_attachment_contract.zig`, `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` — probe sweep; no new investigation-only callers expected.
 
 ## Response Contract
 
