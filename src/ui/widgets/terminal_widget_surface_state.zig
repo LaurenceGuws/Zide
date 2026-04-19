@@ -306,6 +306,27 @@ test "CZH-S18: terminalPresentablePipelineReady mirrors terminal_presentable_rea
     try std.testing.expect(state.terminalPresentablePipelineReady());
 }
 
+test "CZH-S19: readSharedSurfaceAttachmentReady matches pipeline and target getters" {
+    const cases = [_]struct { pipe: bool, tgt: bool }{
+        .{ .pipe = false, .tgt = false },
+        .{ .pipe = false, .tgt = true },
+        .{ .pipe = true, .tgt = false },
+        .{ .pipe = true, .tgt = true },
+    };
+
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    for (cases) |c| {
+        state.presentation.terminal_presentable_ready = c.pipe;
+        state.presentation.target_available = c.tgt;
+        try std.testing.expectEqual(
+            state.readSharedSurfaceAttachmentReady(),
+            state.terminalPresentablePipelineReady() and state.hostSurfaceTargetAvailable(),
+        );
+    }
+}
+
 test "CZH-S16: pipeline leg ready without host target splits pipeline getter vs attachment" {
     var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
     defer state.deinit(std.testing.allocator);
