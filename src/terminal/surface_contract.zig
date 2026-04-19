@@ -43,6 +43,18 @@ pub fn publicationGenerationDiffersFromLastSurfaceRender(
     return needsRedrawFromPair(publication_generation, last_surface_render_generation);
 }
 
+/// Widget draw/presentation: publication **clear** generation differs from the
+/// last clear generation the shared presentable recorded for the terminal surface
+/// draw. Same predicate core as `needsRedrawFromPair`; pairs with
+/// `publicationGenerationDiffersFromLastSurfaceRender` for present-plan reuse
+/// eligibility (`TERMINAL_SURFACE_CONTRACT.md`).
+pub fn clearGenerationDiffersFromLastSurfaceRenderClear(
+    publication_clear_generation: u64,
+    last_surface_render_clear_generation: u64,
+) bool {
+    return needsRedrawFromPair(publication_clear_generation, last_surface_render_clear_generation);
+}
+
 /// Fills the VT FFI `RedrawState` from publication truth + last acknowledged generation.
 pub fn fillRedrawState(
     published_generation: u64,
