@@ -32,6 +32,17 @@ pub fn presentAckGenerationAdmissible(
     return generation <= published_generation and generation >= last_acknowledged_generation;
 }
 
+/// Widget draw/presentation: publication generation differs from the last generation
+/// the shared presentable recorded for the terminal surface draw (`terminal_widget*`
+/// presentation runtime). Same predicate core as `needsRedrawFromPair` — explicit
+/// naming for the draw/presentation consumer (`TERMINAL_SURFACE_CONTRACT.md`).
+pub fn publicationGenerationDiffersFromLastSurfaceRender(
+    publication_generation: u64,
+    last_surface_render_generation: u64,
+) bool {
+    return needsRedrawFromPair(publication_generation, last_surface_render_generation);
+}
+
 /// Fills the VT FFI `RedrawState` from publication truth + last acknowledged generation.
 pub fn fillRedrawState(
     published_generation: u64,
