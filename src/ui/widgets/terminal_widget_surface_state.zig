@@ -237,6 +237,9 @@ pub const TerminalWidgetSurfaceState = struct {
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
         self.presentation.host_surface_target_available = available;
+        // Harden: both legs should be initialized before deriving conjunction
+        std.debug.assert(self.presentation.terminal_presentable_pipeline_ready != undefined);
+        std.debug.assert(self.presentation.host_surface_target_available != undefined);
         return surface_attachment_contract.hostSharedSurfaceAttachmentReady(
             self.presentation.terminal_presentable_pipeline_ready,
             self.presentation.host_surface_target_available,
@@ -250,6 +253,9 @@ pub const TerminalWidgetSurfaceState = struct {
     /// carrier (`logUnavailable` uses the present-state field, CZH-S24). **Only** read-only derive path.
     /// **Sync pair (`CZH-S29`):** pairs with `notePresentableAvailability` for storage/read consistency.
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {
+        // Harden: legs should be consistent and initialized before deriving conjunction
+        std.debug.assert(self.presentation.terminal_presentable_pipeline_ready != undefined);
+        std.debug.assert(self.presentation.host_surface_target_available != undefined);
         return surface_attachment_contract.hostSharedSurfaceAttachmentReadyFromPair(.{
             .terminal_presentable_pipeline_ready = self.presentation.terminal_presentable_pipeline_ready,
             .host_surface_target_available = self.presentation.host_surface_target_available,
