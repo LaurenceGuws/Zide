@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B12` (`in_progress`).
+- Current active macro batch: `CZH-B12` (`architect_review_pending` at `CZH-GATE-66`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S7_TICKETS.md`
 
@@ -1277,7 +1277,7 @@ Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
 
 Checkpoint packet: `docs/todo/core/CZH_S6_CHECKPOINT.md`.
 
-### `CZH-B12` Terminal Surface Contract Wiring Seed (`in_progress`)
+### `CZH-B12` Terminal Surface Contract Wiring Seed (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1334,6 +1334,21 @@ FFI `present_ack` / `acknowledged_generation`.
 **Landed (`CZH-637`..`CZH-639`):** `surface_contract.zig` + `tests_main` import;
 `core_api.redrawState` / `needsRedraw` use `fillRedrawState` /
 `needsRedrawFromPair`; `TERMINAL_SURFACE_CONTRACT.md` references the Zig seam.
+
+#### `CZH-S7` engineer validation (`CZH-640`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-636`..`CZH-640` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S7_CHECKPOINT.md`.
 
 ## Response Contract
 

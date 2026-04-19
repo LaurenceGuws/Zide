@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B12` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-66`): `CZH-B12` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -14,6 +14,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S4_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S5_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S6_CHECKPOINT.md`
+- Pending Architect review: `docs/todo/core/CZH_S7_CHECKPOINT.md` (`CZH-GATE-66`)
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S7_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -39,12 +40,11 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B12`, engineer work in progress):
+Current batch intent (`CZH-B12`, engineer work at `CZH-GATE-66`):
 
-- establish explicit surface-ownership seam types/helpers in code that match
-  `TERMINAL_SURFACE_CONTRACT.md`
-- land one behavior-neutral wiring cut through that seam
-- keep host ABI and runtime behavior stable while making ownership explicit
+- `src/terminal/surface_contract.zig` names the logical surface frame; `core_api`
+  routes `redraw_state` / `needs_redraw` through it (`CZH-S7`)
+- **Architect** accepts or requests changes via **`CZH-GATE-66`**
 
 ## First Read Order
 

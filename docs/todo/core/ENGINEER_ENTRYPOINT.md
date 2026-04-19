@@ -20,9 +20,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B12` — **`in_progress`** (sprint `CZH-S7`): seed explicit terminal
-  surface-contract wiring in code with behavior-neutral seam cuts. Execute
-  tickets `CZH-636`..`CZH-640`; stop only at `CZH-GATE-66` or a real hard blocker.
+- `CZH-B12` — **`architect_review_pending`** at **`CZH-GATE-66`** (sprint `CZH-S7`):
+  `surface_contract` seam landed; packet `docs/todo/core/CZH_S7_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -38,7 +37,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S7` tickets `CZH-636`..`CZH-640` are the active execution set.
+- Sprint `CZH-S7` tickets `CZH-636`..`CZH-640` are complete at **`CZH-GATE-66`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
