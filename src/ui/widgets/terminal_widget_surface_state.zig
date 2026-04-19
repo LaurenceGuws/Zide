@@ -337,6 +337,27 @@ test "CZH-S16: pipeline leg ready without host target splits pipeline getter vs 
     try std.testing.expect(!state.readSharedSurfaceAttachmentReady());
 }
 
+test "CZH-S20: presentation delta pipeline field matches stored PresentationState leg naming" {
+    comptime {
+        const delta_fields = @typeInfo(TerminalWidgetSurfaceState.PresentationUpdateDelta).@"struct".fields;
+        const pres_fields = @typeInfo(PresentationState).@"struct".fields;
+        var delta_pipe: usize = 0;
+        var delta_host: usize = 0;
+        var pres_pipe: usize = 0;
+        var pres_host: usize = 0;
+        for (delta_fields) |f| {
+            if (std.mem.eql(u8, f.name, "terminal_presentable_pipeline_ready")) delta_pipe += 1;
+            if (std.mem.eql(u8, f.name, "host_surface_target_available")) delta_host += 1;
+        }
+        for (pres_fields) |f| {
+            if (std.mem.eql(u8, f.name, "terminal_presentable_pipeline_ready")) pres_pipe += 1;
+            if (std.mem.eql(u8, f.name, "host_surface_target_available")) pres_host += 1;
+        }
+        std.debug.assert(delta_pipe == 1 and pres_pipe == 1 and pres_host == 1);
+        std.debug.assert(delta_host == 0);
+    }
+}
+
 test "CZH-S14: composite pair mismatch matches per-leg inequality (widget seam shape)" {
     const mm = surface_contract.publicationClearPairMismatchesFromLastSurfaceRender(10, 20, 10, 30);
     try std.testing.expect(!mm.publication_mismatch);
