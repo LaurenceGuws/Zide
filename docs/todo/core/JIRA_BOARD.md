@@ -23,7 +23,8 @@ This file is the canonical ticket board for active core execution.
 - Sprint ID: `CZH-S1`
 - Objective: freeze the core host/core/editor/surface split before more cleanup
 - Commit budget before checkpoint: `10`
-- Super-gate: `CZH-GATE-60`
+- Super-gate: `CZH-GATE-60` — **resubmitted** after `CZH-B6-corrective` authority
+  alignment (doc-only; see `docs/todo/core/CZH_B6_CHECKPOINT.md`)
 
 ## Next Sprint (queued, do not start until `CZH-GATE-60` accepted)
 
@@ -49,5 +50,6 @@ This file is the canonical ticket board for active core execution.
 - `in_progress`: none
 - `todo`: none
 - `blocked`: none
-- `review_gate`: `CZH-GATE-60` (batch `CZH-B6` closure — see `docs/todo/core/CZH_B6_CHECKPOINT.md`)
+- `review_gate`: `CZH-GATE-60` (batch `CZH-B6` closure — `CZH-B6-corrective` resubmit;
+  see `docs/todo/core/CZH_B6_CHECKPOINT.md`)
 - `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`

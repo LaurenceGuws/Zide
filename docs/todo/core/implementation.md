@@ -13,6 +13,10 @@ stable, reviewable, and ready for the next expansion phase.
 - Core lane is now primary.
 - Current active macro batch: `CZH-B6` (`architect_review_pending` at
   `CZH-GATE-60`).
+- `CZH-B6-corrective` (2026-04-19): authority-only pass — separated **VT core
+  FFI** vs **BYO-PTY host seam** wording, updated **terminal surface contract**
+  (shared GPU resource center); **`CZH-GATE-60` resubmitted**; no product code
+  changes.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_B6_TICKETS.md`
 - Queued next implementation sprint: `docs/todo/core/CZH_S2_TICKETS.md` (`CZH-S2`,

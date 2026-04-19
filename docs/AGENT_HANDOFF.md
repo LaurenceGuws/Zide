@@ -9,6 +9,7 @@ Session entrypoint only. Keep this file short and current.
 - Active macro batch (`architect_review_pending` at `CZH-GATE-60`): `CZH-B6` in
   `docs/todo/core/implementation.md`
 - Engineer checkpoint packet: `docs/todo/core/CZH_B6_CHECKPOINT.md`
+  (`CZH-GATE-60` **resubmitted** after `CZH-B6-corrective` doc alignment — no code)
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_B6_TICKETS.md`
 - Android lane status: **paused by product direction** except critical

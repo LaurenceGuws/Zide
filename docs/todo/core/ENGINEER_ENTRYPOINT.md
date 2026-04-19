@@ -21,9 +21,11 @@ Read in this exact order:
 ## Current Active Batch
 
 - `CZH-B6` — **architect_review_pending** at **`CZH-GATE-60`** (layer freeze:
-  **VT core FFI**; **optional bring-your-own-PTY host seam**; **editor backend
-  FFI**; **terminal surface contract**). Engineer checkpoint:
-  `docs/todo/core/CZH_B6_CHECKPOINT.md`.
+  **VT core FFI** = publication/query/redraw/events/metadata; **BYO-PTY host seam**
+  = session/runtime/input/transport — distinct targets even when colocated under
+  `ffi/`; **editor backend FFI**; **terminal surface** = shared GPU resource +
+  Zide dirty/generation truth). Checkpoint (includes **`CZH-B6-corrective`**
+  resubmit): `docs/todo/core/CZH_B6_CHECKPOINT.md`.
 
 ## Hard Rules
 
