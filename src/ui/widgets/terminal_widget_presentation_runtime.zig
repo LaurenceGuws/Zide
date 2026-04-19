@@ -254,6 +254,23 @@ fn presentResultFromReuseOutcomeState(
     );
 }
 
+/// **Consolidated attachment state computation (`CZH-791`, `CZH-S27`):** derives host-target leg from
+/// renderer, calls canonical helper `notePresentableAvailability`, returns both for outcome state threading.
+fn computeHostSurfaceAttachmentState(
+    renderer: anytype,
+    surface_state: anytype,
+) struct {
+    host_surface_target_available: bool,
+    shared_surface_attachment_ready: bool,
+} {
+    const host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
+    const shared_surface_attachment_ready = surface_state.notePresentableAvailability(host_surface_target_available);
+    return .{
+        .host_surface_target_available = host_surface_target_available,
+        .shared_surface_attachment_ready = shared_surface_attachment_ready,
+    };
+}
+
 fn advancePresentationCache(
     surface_state: anytype,
     terminal_view: view_state.TerminalViewModel,
@@ -1590,11 +1607,10 @@ pub fn refreshPresentState(
         );
     }
 
-    // **Canonical conjunction derivation (`CZH-791`, `CZH-S27`):** compute host-target leg from renderer,
-    // then pass to canonical helper `notePresentableAvailability` which returns full conjunction.
-    state.host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
-    const shared_surface_attachment_ready = surface_state.notePresentableAvailability(state.host_surface_target_available);
-    state.shared_surface_attachment_ready = shared_surface_attachment_ready;
+    // **Canonical conjunction derivation (`CZH-791`, `CZH-S27`):** consolidated via helper.
+    const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
+    state.host_surface_target_available = attachment_state.host_surface_target_available;
+    state.shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
     state.present = state.shared_surface_attachment_ready and state.visible;
     state.log_unavailable = !state.shared_surface_attachment_ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
 
@@ -1723,10 +1739,9 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) ReusePresentOutcomeState {
     if (plan.present_intent != .reuse) return .{};
-    const host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
-    const shared_surface_attachment_ready = surface_state.notePresentableAvailability(
-        host_surface_target_available,
-    );
+    const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
+    const host_surface_target_available = attachment_state.host_surface_target_available;
+    const shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
     if (!(view_cells_len > 0 and shared_surface_attachment_ready and
         (terminal_view.sync_updates_active or
             renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
