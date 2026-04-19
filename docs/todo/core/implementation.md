@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B25` (`architect_review_pending`, super-gate `CZH-GATE-79`).
+- Current active macro batch: `CZH-B26` (`in_progress`, super-gate `CZH-GATE-80`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S20_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S21_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2450,7 +2450,7 @@ Checkpoint packet: `docs/todo/core/CZH_S19_CHECKPOINT.md`.
   locked pipeline/attachment/generation state model in touched paths with no
   behavior or ABI drift.
 
-### `CZH-B25` Long-Loop Surface Contract Alias Reduction (`architect_review_pending`)
+### `CZH-B25` Long-Loop Surface Contract Alias Reduction (`accepted`)
 
 Queue line (exact):
 
@@ -2537,7 +2537,59 @@ Checkpoint packet: `docs/todo/core/CZH_S20_CHECKPOINT.md`.
 #### Architect gate result
 
 - `Review chunk: CZH-B25`
-- `Verdict: pending` — submitted for Architect review (`CZH-GATE-79`).
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `589897c0`, `998a11a1`, `11f196b9`, `1fa7276e`,
+  `62455ff3`, `9e856b85`, `f51f19b5`, `20d03bf5`, `8de6fa12`, `bd171ce3`
+- `Architect corrective commit:` `63a2f2be` (reuse-return path now
+  preserves host-target leg semantics instead of writing full attachment into
+  `host_surface_target_available`).
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` dominant alias terms are landed and locked with no ABI
+  drift; one semantic naming mismatch in reuse-return bookkeeping was corrected
+  in-place and does not change draw/present control flow.
+
+### `CZH-B26` Long-Loop Present Result Ownership Lock (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to lock ownership
+  boundaries between host-target leg and full-attachment readiness in selected
+  present/runtime/state result paths, with test/doc lock and no ABI changes
+
+Acceptance:
+
+- selected touched present/runtime/state paths keep host-target leg and
+  full-attachment readiness distinct and explicitly named
+- no host ABI/C export changes
+- selected tests/docs assert ownership boundaries (host-target leg vs full attachment)
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-80`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S21_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-751`..`CZH-760` in order from
+  `docs/todo/core/CZH_S21_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-80` or a real hard blocker
+
+#### `CZH-751` present result ownership audit + cut plan (`CZH-S21`)
+
+- map host-target leg vs full-attachment values across:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_state.zig`,
+  `presentable_contract.zig`,
+  `surface_attachment_contract.zig`
+- classify which structs should carry host-target only vs full-attachment only
+- record scoped hygiene targets for `CZH-759`
 
 ## Response Contract
 
