@@ -79,12 +79,14 @@ pipeline leg (`CZH-S16`); full readiness uses `readSharedSurfaceAttachmentReady`
 ## Operator observability (structured logs)
 
 Zide operator logs on the widget presentation path mirror the same split as the
-seams above (`CZH-B24`):
+seams above (`CZH-B24`). **Reporting-carrier consolidation (`CZH-S23`):** the conjunction
+value in **`renderer.terminal_present`** is reported from **`PresentationPresentState.shared_surface_attachment_ready`**
+for that tick (not from `readSharedSurfaceAttachmentReady()` at the log callsite).
 
 - **`renderer.terminal_present` (`logUnavailable`):** `publication_generation`;
   `terminal_presentable_pipeline_ready` (pipeline leg); `host_surface_target_available`
   (host drawable target leg); `shared_surface_attachment_ready` (full attachment,
-  same predicate as `readSharedSurfaceAttachmentReady`); `renderer_presentable_refresh_tag`
+  same predicate as `readSharedSurfaceAttachmentReady`, **carrier:** present-state field); `renderer_presentable_refresh_tag`
   (renderer refresh cycle enum, distinct from the pipeline-ready bool); view/update
   and geometry fields as emitted.
 - **`terminal.generation_handoff`:** explicit `publication_*` / `capture_*` / `last_surface_render_generation`

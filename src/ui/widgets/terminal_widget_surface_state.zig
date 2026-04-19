@@ -15,6 +15,12 @@
 //! host-target leg, returns conjunction from stored legs); **store** is the pipeline and host-target
 //! fields on `PresentationState`; **report** is `readSharedSurfaceAttachmentReady` and the per-leg
 //! getters — not a separate hidden conjunction field.
+//!
+//! **Reporting-carrier (`CZH-S23`):** **`readSharedSurfaceAttachmentReady`** is the dominant
+//! widget-surface **report** for conjunction when no `PresentationPresentState` snapshot applies (e.g.
+//! diagnostics outside the refreshed-present path). It must not be described as the operator-log
+//! carrier — that role is `PresentationPresentState.shared_surface_attachment_ready` in
+//! `logUnavailable`.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");

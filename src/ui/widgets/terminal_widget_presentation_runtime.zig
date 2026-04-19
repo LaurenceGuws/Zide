@@ -22,6 +22,12 @@
 //! on `PresentationPresentState`, `ReusePresentOutcomeState`, and `TerminalPresentResult` fields;
 //! **report** through `logUnavailable`, `readSharedSurfaceAttachmentReady`, and consumers of present
 //! results — do not re-label a single leg as the conjunction on those paths.
+//!
+//! **Reporting-carrier boundaries (`CZH-S23`):** for operator JSON on present failure, the **dominant**
+//! conjunction carrier is **`PresentationPresentState.shared_surface_attachment_ready`** (see
+//! `logUnavailable`). For ad-hoc reads without a present-state snapshot, the **dominant** carrier is
+//! **`readSharedSurfaceAttachmentReady`** on `TerminalWidgetSurfaceState` — do not log the
+//! conjunction from the getter when a `PresentationPresentState` is already in scope for that tick.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");

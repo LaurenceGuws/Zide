@@ -4,6 +4,10 @@
 //! **Conjunction propagation (`CZH-S22`):** `TerminalPresentResult` **stores** per-outcome fields
 //! supplied by callers; it does not **compute** `shared_surface_attachment_ready` — runtime/widget
 //! paths compute conjunction and **report** through the same field names downstream.
+//!
+//! **Reporting-carrier (`CZH-S23`):** on this struct, **`shared_surface_attachment_ready`** is the
+//! dominant conjunction field for **present-result aggregation** to hosts/consumers; **`host_surface_target_available`**
+//! reports the host-target **leg only** — never treat it as the conjunction carrier.
 
 pub const PresentableDraw = struct {
     x: f32,
