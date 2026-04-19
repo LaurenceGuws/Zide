@@ -31,6 +31,10 @@
 //! **Observability (`CZH-B24`):** operator logs that carry generation counters should name
 //! publication vs last-surface-render generations consistently with the helpers above; pipeline
 //! and attachment legs are not generation predicates — see `surface_attachment_contract`.
+//!
+//! **Alias vocabulary (`CZH-B25`):** dominant widget **storage** names for the non-generation
+//! legs are `terminal_presentable_pipeline_ready` (pipeline) and `host_surface_target_available`
+//! (host drawable target), matching `surface_attachment_contract` / `presentationUpdateDelta`.
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 

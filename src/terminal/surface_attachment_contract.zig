@@ -18,6 +18,10 @@
 //! **Observability (`CZH-B24`):** structured logs surface the pipeline leg and host-target leg
 //! with distinct keys; their logical **and** is the full shared-surface attachment predicate
 //! (`hostSharedSurfaceAttachmentReady` / widget `readSharedSurfaceAttachmentReady`).
+//!
+//! **Alias vocabulary (`CZH-B25`):** the same two legs are stored on widget presentation state
+//! under the dominant names `terminal_presentable_pipeline_ready` and `host_surface_target_available`
+//! (parallel to `SharedSurfaceAttachmentPipelinePair`).
 
 const std = @import("std");
 

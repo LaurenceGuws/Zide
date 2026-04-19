@@ -1,8 +1,8 @@
 //! Terminal widget **surface** state: kitty + cached presentation draw metadata.
-//! **Vocabulary (`CZH-S18`):** generation pairing vs last draw uses `surface_contract`;
-//! pipeline leg (`terminal_presentable_ready` / delta field); host target leg
-//! (`target_available`); full attachment uses `surface_attachment_contract` via
-//! `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
+//! **Vocabulary (`CZH-S18`, alias reduction `CZH-B25`):** generation pairing vs last draw uses
+//! `surface_contract`; pipeline leg (`terminal_presentable_pipeline_ready` / delta field); host
+//! target leg (`host_surface_target_available`); full attachment uses `surface_attachment_contract`
+//! via `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
 //!
 //! **Observability (`CZH-B24`):** operator logs should use the same identifiers as the getters
 //! (`terminalPresentablePipelineReady`, `hostSurfaceTargetAvailable`, `readSharedSurfaceAttachmentReady`)
