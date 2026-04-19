@@ -2134,14 +2134,20 @@ Execution source:
 
 #### `CZH-701` seam ownership audit + cut plan (`CZH-S16`)
 
-- map selected generation-vs-attachment call sites and naming drift in:
-  `terminal_widget_presentation_runtime.zig`,
-  `terminal_widget_surface_state.zig`,
-  `terminal_widget_draw.zig`,
-  `surface_contract.zig`,
-  `surface_attachment_contract.zig`
-- classify each touched site as generation-owned or attachment-owned
-- record scoped hygiene targets for `CZH-709`
+**Classified touchpoints (generation vs attachment):**
+
+| Site | Owner seam | Notes |
+| --- | --- | --- |
+| `surface_contract.zig` | **Generation** | Primitives (`needsRedrawFromPair`, per-leg helpers), composite pair, `fillRedrawState` / `ffi*` wrappers — no attachment state. |
+| `surface_attachment_contract.zig` | **Attachment** | `hostSharedSurfaceAttachmentReady` / `FromPair` — pipeline ∧ host target; no publication generations. |
+| `terminal_widget_surface_state.presentationUpdateDelta` | **Mixed (explicit)** | Publication/clear vs last draw via `publicationClearPairMismatchesFromLastSurfaceRender`; `presentable_ready` field is the **terminal presentable pipeline** leg only (not full attachment). |
+| `terminal_widget_surface_state.notePresentableAvailability` / `readSharedSurfaceAttachmentReady` | **Attachment** | Routes through `surface_attachment_contract`. |
+| `terminal_widget_presentation_runtime.buildTerminalPresentPlan` | **Mixed** | Reuse generation alignment: `publicationClearPairMatchesLastSurfaceRender`; `presentableReady()` is **pipeline-only** for `reuse_allowed` (documented; not the full attachment conjunction). |
+| `terminal_widget_presentation_runtime.planUpdate` | **Mixed (drift)** | `choosePresentationUpdatePlan` / `planViewportPresentShift` consume `presentation_delta` fields; converge selected args to explicit `surface_contract` primitives + pipeline getter (`CZH-703`..`CZH-705`). |
+| `terminal_widget_presentation_runtime.refreshPresentState`, `tryFastPresentExisting` | **Attachment** | `notePresentableAvailability` drives readiness / fast reuse gate. |
+| `terminal_widget_draw.drawPrepared` | **Consumer** | Invokes `presentation_runtime.updateAndPresent`; draw tests already anchor `surface_attachment_contract` vocabulary (`CZH-S15`); extend module doc (`CZH-706`). |
+
+**`CZH-709` scoped hygiene targets:** `surface_contract.zig`, `surface_attachment_contract.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_presentation_runtime.zig`, `terminal_widget_draw.zig`, `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` — expect **no** investigation-only probe callers; keep operator/error-path logging as-is unless stale.
 
 ## Response Contract
 
