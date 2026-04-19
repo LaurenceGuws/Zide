@@ -1,3 +1,9 @@
+//! Terminal widget presentation runtime: draw/present into the host-owned shared
+//! surface. Publication/clear generations use `surface_contract`; host **attachment**
+//! readiness (presentable pipeline ∧ host drawable target) is named in
+//! `surface_attachment_contract` and wired through `TerminalWidgetSurfaceState`
+//! (`CZH-S15`). `buildTerminalPresentPlan` reuse gating uses `presentableReady()`
+//! (pipeline leg only), not the full attachment conjunction — intentional.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");

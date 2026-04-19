@@ -16,6 +16,7 @@
 //!   needs-redraw byte, and present-ack gate (`core_api`).
 //! - **Bundle fill:** `fillRedrawState` implements `RedrawState`; `ffiRedrawStateFill`
 //!   delegates here (`CZH-S13`, `CZH-S14`).
+//! - **Host attachment (pipeline ∧ target):** `surface_attachment_contract` (`CZH-S15`).
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 
