@@ -11,7 +11,8 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B7` (`in_progress`).
+- Current active macro batch: `CZH-B7` (`architect_review_pending` at
+  `CZH-GATE-61`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S2_TICKETS.md`
 
@@ -814,7 +815,7 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
   seam, and the terminal surface contract is centered on the shared GPU
   resource/update boundary rather than generic host window ownership.
 
-### `CZH-B7` First Post-Freeze Implementation Sprint (`in_progress`)
+### `CZH-B7` First Post-Freeze Implementation Sprint (`architect_review_pending` — `CZH-GATE-61`)
 
 Queue line (exact):
 
@@ -829,6 +830,21 @@ Acceptance:
 - key exported host entrypoints have concise `///` ownership docs
 - snapshot-diff fallback naming no longer reads like compatibility sludge
 - full stress ladder remains green through `CZH-GATE-61`
+
+#### `CZH-S2` engineer validation (`CZH-615`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-611`..`CZH-615` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused; no Android seam touched)
+
+Checkpoint packet: `docs/todo/core/CZH_S2_CHECKPOINT.md`.
 
 Owner docs:
 

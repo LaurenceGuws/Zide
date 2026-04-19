@@ -20,9 +20,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B7` — **in_progress** via sprint `CZH-S2` at **`CZH-GATE-61`**:
-  implement the first post-freeze cuts from the accepted authority in
-  `docs/todo/core/CZH_S2_TICKETS.md`.
+- `CZH-B7` — **architect_review_pending** at **`CZH-GATE-61`** (sprint `CZH-S2`;
+  checkpoint `docs/todo/core/CZH_S2_CHECKPOINT.md`).
 
 ## Hard Rules
 
