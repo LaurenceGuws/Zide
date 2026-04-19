@@ -1,4 +1,8 @@
-//! Exported `zide_terminal_*` C symbols; delegates to `terminal/ffi/c_api.zig`.
+//! Repo-root **`zide_terminal_*` export surface** (linkage + stable names only).
+//! Implements no terminal logic: wrappers forward to `terminal/ffi/c_api.zig`,
+//! which aliases types from `bridge.zig` (VT core FFI + optional BYO seam via
+//! the same facade). Keep this file free of behavior so ownership stays split
+//! across `core_api`, `../byo_pty_host.zig`, and bridge glue.
 const c_api = @import("terminal/ffi/c_api.zig");
 
 pub export fn zide_terminal_create(config: ?*const c_api.ZideTerminalCreateConfig, out_handle: *?*c_api.ZideTerminalHandle) c_int {
