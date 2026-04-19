@@ -31,7 +31,7 @@ pub const PresentationState = struct {
     partial_draw_cols_end: std.ArrayList(u16),
     /// Terminal presentable **pipeline** is ready to accept draws (one leg of
     /// `hostSharedSurfaceAttachmentReady`; not implied alone).
-    terminal_presentable_ready: bool = false,
+    terminal_presentable_pipeline_ready: bool = false,
     /// Host reports a drawable **target** for the shared attachment (other leg).
     target_available: bool = false,
     /// Last **publication generation** applied to the terminal surface draw cache.
@@ -81,7 +81,7 @@ pub const PresentationState = struct {
 
     pub fn invalidatePresentationCache(self: *PresentationState, flags: InvalidationFlags) void {
         if (flags.geometry or flags.content or flags.overlay) {
-            self.terminal_presentable_ready = false;
+            self.terminal_presentable_pipeline_ready = false;
         }
         if (flags.availability) {
             self.target_available = false;
@@ -137,12 +137,12 @@ test "availability invalidation does not discard cached presentation content" {
     var state = PresentationState.init();
     defer state.deinit(std.testing.allocator);
 
-    state.terminal_presentable_ready = true;
+    state.terminal_presentable_pipeline_ready = true;
     state.target_available = true;
 
     state.invalidatePresentationCache(.{ .availability = true });
 
-    try std.testing.expect(state.terminal_presentable_ready);
+    try std.testing.expect(state.terminal_presentable_pipeline_ready);
     try std.testing.expect(!state.target_available);
     try std.testing.expect(state.invalidation_flags.availability);
 }
@@ -152,12 +152,12 @@ test "geometry content and overlay invalidation discard cached presentation cont
         var state = PresentationState.init();
         defer state.deinit(std.testing.allocator);
 
-        state.terminal_presentable_ready = true;
+        state.terminal_presentable_pipeline_ready = true;
         state.target_available = true;
 
         state.invalidatePresentationCache(flags);
 
-        try std.testing.expect(!state.terminal_presentable_ready);
+        try std.testing.expect(!state.terminal_presentable_pipeline_ready);
         try std.testing.expect(state.target_available);
     }
 }

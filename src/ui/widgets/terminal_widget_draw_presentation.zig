@@ -229,7 +229,7 @@ pub fn planViewportPresentShift(
     viewport_shift_exposed_only: bool,
     scroll_offset: usize,
     needs_full: bool,
-    terminal_presentable_ready: bool,
+    terminal_presentable_pipeline_ready: bool,
     rows: usize,
 ) ViewportPresentShiftPlan {
     const shift_abs_i: i32 = if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows;
@@ -238,7 +238,7 @@ pub fn planViewportPresentShift(
         viewport_shift_rows != 0 and
         (scroll_offset == 0 or viewport_shift_exposed_only) and
         !needs_full and
-        terminal_presentable_ready and
+        terminal_presentable_pipeline_ready and
         shift_abs_i > 0 and
         shift_abs_i < @as(i32, @intCast(rows)))
     {
@@ -261,7 +261,7 @@ pub fn choosePresentationUpdatePlan(
     cell_metrics_changed: bool,
     render_scale_changed: bool,
     blink_requires_partial: bool,
-    terminal_presentable_ready: bool,
+    terminal_presentable_pipeline_ready: bool,
 ) PresentationUpdatePlan {
     var needs_full = recreated or
         clear_generation_changed or
@@ -269,7 +269,7 @@ pub fn choosePresentationUpdatePlan(
         render_scale_changed or
         cache_dirty == .full;
     var needs_partial = (cache_dirty == .partial or blink_requires_partial) and !needs_full;
-    if (!terminal_presentable_ready) {
+    if (!terminal_presentable_pipeline_ready) {
         needs_full = true;
         needs_partial = false;
     }
