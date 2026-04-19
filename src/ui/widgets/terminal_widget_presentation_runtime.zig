@@ -79,11 +79,11 @@ const TerminalPresentFollowupReason = @import("../renderer/presentable_contract.
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
 
-// Types and functions moved to terminal layer
+// Terminal-layer types re-exported for callers
 pub const PresentationGeometry = terminal_presentation_runtime.PresentationGeometry;
 pub const PresentationPresentState = terminal_presentation_runtime.PresentationPresentState;
 
-// Computation delegated to terminal layer
+// Terminal-layer geometry computation
 const computePresentationSurfaceGeometry = terminal_presentation_runtime.computePresentationSurfaceGeometry;
 
 pub const SurfaceUpdateMode = enum {
@@ -98,7 +98,7 @@ pub const PresentationUpdatePlan = struct {
     partial_plan: ?PresentationPartialDrawPlan = null,
 };
 
-// Viewport shift state moved to terminal layer
+// Terminal-layer type re-exported for callers
 pub const ViewportShiftState = terminal_presentation_runtime.ViewportShiftState;
 
 pub const DirectPresentResult = struct {
@@ -127,12 +127,12 @@ pub const RefreshedPresentablePresentationResult = terminal_presentation_runtime
 /// Does not carry conjunction — passed separately to fold function. Host-target leg only.
 /// *Invariants:* `followup_required` and `followup_reason` are coupled — must both indicate unavailability
 /// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
-// Outcome structs moved to terminal layer
+// Terminal-layer outcome structs re-exported for callers
 pub const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
 pub const DirectPresentOutcomeState = terminal_presentation_runtime.DirectPresentOutcomeState;
 pub const ReusePresentOutcomeState = terminal_presentation_runtime.ReusePresentOutcomeState;
 
-// Fold and classification helpers moved to terminal layer
+// Terminal-layer fold and classification helpers
 const presentResultFromOutcomeState = terminal_presentation_runtime.presentResultFromOutcomeState;
 const presentResultFromRefreshOutcomeState = terminal_presentation_runtime.presentResultFromRefreshOutcomeState;
 const presentResultFromReuseOutcomeState = terminal_presentation_runtime.presentResultFromReuseOutcomeState;
