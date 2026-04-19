@@ -1757,6 +1757,15 @@ Hygiene sweep scope for `CZH-668`: `surface_contract.zig`,
 `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`
 only.
 
+#### `CZH-668` probe/debug sweep (`CZH-S12`)
+
+- **Reviewed:** `surface_contract.zig`, `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`.
+- **Removed:** nothing (no stale investigation-only probe callers in these paths).
+- **Kept:** `terminal_widget_presentation_runtime` operator `app_logger` warning for
+  surface-unavailable present; existing `debug` sample sinks unchanged (product
+  instrumentation, not sprint probes).
+
 ## Response Contract
 
 Every batch update must include:
