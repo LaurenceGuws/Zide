@@ -6,9 +6,10 @@
 //! This module orchestrates draw and delegates presentation to
 //! `terminal_widget_presentation_runtime` (`CZH-S16`, vocabulary lock `CZH-S18`).
 //!
-//! **Observability (`CZH-B24`):** glyph-prep adopt warnings label raster/publication-stage
-//! generation; keep that distinct from attachment legs (`terminalPresentablePipelineReady`, host
-//! target availability) in operator-facing strings.
+//! **Observability (`CZH-B24`, alias lock `CZH-B25`):** glyph-prep adopt warnings label
+//! raster/publication-stage generation; attachment legs on widget state use dominant field names
+//! `terminal_presentable_pipeline_ready` and `host_surface_target_available` — keep those distinct
+//! in operator-facing strings.
 const std = @import("std");
 const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const app_shell = @import("../../app_shell.zig");

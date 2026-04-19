@@ -222,6 +222,8 @@ pub fn buildBasePartialPlan(
     }
 }
 
+/// Parameters `terminal_presentable_pipeline_ready` / plan inputs mirror `PresentationState` and
+/// `presentationUpdateDelta` dominant names (`CZH-B25`).
 pub fn planViewportPresentShift(
     texture_shift_enabled: bool,
     gen_changed: bool,

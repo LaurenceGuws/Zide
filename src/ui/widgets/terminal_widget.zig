@@ -1,7 +1,7 @@
 //! Terminal UI widget: publication capture feeds draw. `terminal.generation_handoff` logs pair
-//! publication generation state with the terminal presentable **pipeline** leg; they are not
-//! full attachment logs — host target and conjunction vocabulary live on
-//! `TerminalWidgetSurfaceState` / `logUnavailable` (`CZH-B24`).
+//! publication generation state with the terminal presentable **pipeline** leg (`terminalPresentablePipelineReady`);
+//! they are not full attachment logs — host target and conjunction vocabulary live on
+//! `TerminalWidgetSurfaceState` / `logUnavailable` (`CZH-B24`, alias lock `CZH-B25`).
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
