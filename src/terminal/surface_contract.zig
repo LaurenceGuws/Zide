@@ -37,6 +37,16 @@ pub fn presentAckGenerationAdmissible(
     return generation <= published_generation and generation >= last_acknowledged_generation;
 }
 
+/// VT core FFI `present_ack`: admissibility gate before updating last
+/// acknowledged generation (`core_api.presentAck`).
+pub fn ffiPresentAckGenerationAdmissible(
+    generation: u64,
+    published_generation: u64,
+    last_acknowledged_generation: u64,
+) bool {
+    return presentAckGenerationAdmissible(generation, published_generation, last_acknowledged_generation);
+}
+
 /// Widget draw: one leg of publication/clear vs last surface draw; same core as
 /// `needsRedrawFromPair`. Used by `publicationClearPairMismatchesFromLastSurfaceRender`
 /// (`TERMINAL_SURFACE_CONTRACT.md`, `CZH-S12`).
