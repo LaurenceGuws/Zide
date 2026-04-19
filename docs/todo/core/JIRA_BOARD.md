@@ -36,8 +36,8 @@ This file is the canonical ticket board for active core execution.
 
 ## Current State
 
-- `in_progress`: `CZH-651`
-- `todo`: `CZH-652`, `CZH-653`, `CZH-654`, `CZH-655`
+- `in_progress`: none
+- `todo`: none
 - `blocked`: none
-- `review_gate`: none
-- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-B10` (accepted), `CZH-B11` (accepted), `CZH-B12` (accepted), `CZH-B13` (accepted), `CZH-B14` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`, `CZH-626`, `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`, `CZH-631`, `CZH-632`, `CZH-633`, `CZH-634`, `CZH-635`, `CZH-636`, `CZH-637`, `CZH-638`, `CZH-639`, `CZH-640`, `CZH-641`, `CZH-642`, `CZH-643`, `CZH-644`, `CZH-645`, `CZH-646`, `CZH-647`, `CZH-648`, `CZH-649`, `CZH-650`
+- `review_gate`: `CZH-655` (super-gate `CZH-GATE-69`; sprint `CZH-S10` pending Architect acceptance)
+- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-B10` (accepted), `CZH-B11` (accepted), `CZH-B12` (accepted), `CZH-B13` (accepted), `CZH-B14` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`, `CZH-626`, `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`, `CZH-631`, `CZH-632`, `CZH-633`, `CZH-634`, `CZH-635`, `CZH-636`, `CZH-637`, `CZH-638`, `CZH-639`, `CZH-640`, `CZH-641`, `CZH-642`, `CZH-643`, `CZH-644`, `CZH-645`, `CZH-646`, `CZH-647`, `CZH-648`, `CZH-649`, `CZH-650` (sprint `CZH-S10` tickets `CZH-651`..`CZH-654` remain pending Architect acceptance with `CZH-GATE-69`)

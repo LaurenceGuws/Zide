@@ -20,10 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B15` — **`in_progress`** (sprint `CZH-S10`): clear-generation
-  present-plan limb routes through `surface_contract` in one bounded
-  behavior-neutral seam cut. Ticket source:
-  `docs/todo/core/CZH_S10_TICKETS.md`.
+- `CZH-B15` — **`architect_review_pending`** at **`CZH-GATE-69`** (sprint `CZH-S10`):
+  clear-generation present-plan limb uses `surface_contract`. Packet:
+  `docs/todo/core/CZH_S10_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -39,8 +38,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S10` tickets `CZH-651`..`CZH-655` are active in order; stop at
-  **`CZH-GATE-69`** or a real hard blocker.
+- Sprint `CZH-S10` tickets `CZH-651`..`CZH-655` are complete at **`CZH-GATE-69`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
