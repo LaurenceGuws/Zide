@@ -9,7 +9,8 @@
 //! **Observability (`CZH-B24`, alias lock `CZH-B25`):** glyph-prep adopt warnings label
 //! raster/publication-stage generation; attachment legs on widget state use dominant field names
 //! `terminal_presentable_pipeline_ready` and `host_surface_target_available` — keep those distinct
-//! in operator-facing strings.
+//! in operator-facing strings. **Present-result ownership (`CZH-B26`):** do not treat host-target
+//! availability alone as full attachment when reading `TerminalPresentResult` / reuse outcomes.
 const std = @import("std");
 const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const app_shell = @import("../../app_shell.zig");
