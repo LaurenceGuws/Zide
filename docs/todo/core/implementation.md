@@ -2404,13 +2404,24 @@ Execution source:
 
 | Site | Signals | Owner seam / note |
 | --- | --- | --- |
-| `terminal_widget_presentation_runtime.logUnavailable` (`renderer.terminal_present`) | `generation`; `sync_updates`; `updated`; `presentable_refresh`; `terminal_presentable_pipeline_ready`; `host_surface_target_available`; `visible_w` / `visible_h` | **Generation:** `generation` is `terminal_view.generation` (publication generation on the view model). **Pipeline leg:** `terminal_presentable_pipeline_ready`. **Host target leg:** `host_surface_target_available`. **Renderer refresh cycle:** `presentable_refresh` (`TerminalPresentableRefresh` enum tag — not the pipeline-ready bool). **Geometry:** visible size. **Gap:** no explicit `shared_surface_attachment_ready` JSON field yet (conjunction of the two legs; `CZH-734`). |
-| `terminal.generation_handoff` (`terminal_widget.draw`) | `last_render`, `captured`, `cur`, `pub`, `presented`, `terminal_presentable_pipeline_ready`, `cache_dirty` | **Generation:** last surface draw vs capture vs publication triple (`cur`/`pub`/`presented`). **Pipeline leg:** `terminal_presentable_pipeline_ready` token. Short token names (`cur`, `pub`) are drift vs explicit `pending`/`published`/`presented` vocabulary (`CZH-736`). |
-| `terminal.generation_handoff` (`terminal_frame_pacing_runtime`) | `gen` triple (`presented`/`published`/`pending` order in format) | **Generation** snapshot for frame pacing; compact `gen=a/b/c` is drift vs structured field names used elsewhere (`CZH-736` scope if aligned). |
-| `terminal_glyph_prep_adopt_target_missing` (`terminal_widget_draw`) | `generation=` in format string | **Generation** (glyph prep / raster generation); label is ambiguous vs “publication generation” vocabulary (`CZH-733`/`736`). |
+| `terminal_widget_presentation_runtime.logUnavailable` (`renderer.terminal_present`) | `publication_generation`; `sync_updates`; `updated`; `renderer_presentable_refresh_tag`; `terminal_presentable_pipeline_ready`; `host_surface_target_available`; `shared_surface_attachment_ready`; `visible_w` / `visible_h` | **Generation:** `publication_generation` is `terminal_view.generation`. **Pipeline leg:** `terminal_presentable_pipeline_ready`. **Host target leg:** `host_surface_target_available`. **Full attachment:** `shared_surface_attachment_ready` (`readSharedSurfaceAttachmentReady`). **Renderer refresh cycle:** `renderer_presentable_refresh_tag` (`TerminalPresentableRefresh` enum — not the pipeline-ready bool). **Geometry:** visible size. |
+| `terminal.generation_handoff` (`terminal_widget.draw`) | `last_surface_render_generation`, `capture_presented_generation`, `publication_pending_generation`, `publication_published_generation`, `publication_presented_generation`, `terminal_presentable_pipeline_ready`, `cache_dirty` | **Generation:** last surface draw vs capture vs publication triple uses explicit `publication_*` / `capture_*` tokens. **Pipeline leg:** `terminal_presentable_pipeline_ready`. |
+| `terminal.generation_handoff` (`terminal_frame_pacing_runtime`) | `presented_generation`, `published_generation`, `pending_generation` | **Generation** snapshot for frame pacing with explicit field names. |
+| `terminal_glyph_prep_adopt_target_missing` (`terminal_widget_draw`) | `publication_generation=` in format string | **Generation** (glyph prep / raster generation) aligned with `publication_generation` vocabulary (`CZH-736`). |
 | `surface_contract.zig` / `surface_attachment_contract.zig` | no operator JSON logs | **Authority only:** generation pairing vs attachment conjunction naming for downstream docs/logs. |
 
 **`CZH-739` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget.zig`, `terminal_widget_draw.zig`, `terminal_widget_surface_state.zig`, `surface_contract.zig`, `surface_attachment_contract.zig`, and `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` if structured log keys shift; expect no investigation-only probe callers; keep operator-facing warnings (`logUnavailable`, glyph prep, resize) unless proven stale.
+
+#### `CZH-739` scoped probe/doc hygiene + authority sync (`CZH-S19`)
+
+- **Reviewed:** `terminal_widget_presentation_runtime.zig`, `terminal_widget.zig`,
+  `terminal_widget_draw.zig`, `terminal_widget_surface_state.zig`, `surface_contract.zig`,
+  `surface_attachment_contract.zig`.
+- **Removed:** nothing (no investigation-only probe callers in these paths).
+- **Kept:** operator `logUnavailable` / `terminal.generation_handoff` / glyph-prep warnings;
+  `terminal.ui.redraw` and other existing operator logs outside this sprint scope unchanged.
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — operator observability vocabulary subsection (`CZH-739`);
+  audit table above refreshed to landed keys (`CZH-731`).
 
 ## Response Contract
 

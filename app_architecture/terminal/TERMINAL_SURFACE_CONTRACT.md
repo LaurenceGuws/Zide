@@ -76,6 +76,21 @@ by design (`CZH-S15`). `presentationUpdateDelta.terminal_presentable_pipeline_re
 pipeline leg (`CZH-S16`); full readiness uses `readSharedSurfaceAttachmentReady` /
 `hostSharedSurfaceAttachmentReady`.
 
+## Operator observability (structured logs)
+
+Zide operator logs on the widget presentation path mirror the same split as the
+seams above (`CZH-B24`):
+
+- **`renderer.terminal_present` (`logUnavailable`):** `publication_generation`;
+  `terminal_presentable_pipeline_ready` (pipeline leg); `host_surface_target_available`
+  (host drawable target leg); `shared_surface_attachment_ready` (full attachment,
+  same predicate as `readSharedSurfaceAttachmentReady`); `renderer_presentable_refresh_tag`
+  (renderer refresh cycle enum, distinct from the pipeline-ready bool); view/update
+  and geometry fields as emitted.
+- **`terminal.generation_handoff`:** explicit `publication_*` / `capture_*` / `last_surface_render_generation`
+  tokens in the widget draw path; `presented_generation` / `published_generation` /
+  `pending_generation` in frame pacing — generation triples, not attachment conjunction logs.
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
