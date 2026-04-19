@@ -192,3 +192,54 @@ pub fn scrollTerminalPresentable(renderer: anytype, dx: i32, dy: i32) bool {
 pub fn terminalPresentableInfo(renderer: anytype) @TypeOf(renderer.backend.presentableInfo(renderer)) {
     return renderer.backend.presentableInfo(renderer);
 }
+
+test "refresh execution does not require ctx.result field" {
+    const std = @import("std");
+
+    const FakeBackend = struct {
+        pub fn refreshTerminalPresentable(
+            _: @This(),
+            renderer: anytype,
+            _: TerminalPresentPlan,
+            raw_ctx: ?*const anyopaque,
+            body: fn (?*const anyopaque, @TypeOf(renderer)) void,
+        ) TerminalPresentableRefresh {
+            body(raw_ctx, renderer);
+            return .refreshed;
+        }
+    };
+
+    const FakeRenderer = struct {
+        backend: FakeBackend = .{},
+    };
+
+    const Hooks = struct {
+        pub fn executeUpdate(_: anytype, _: FakeRenderer, _: TerminalPresentPlan) TerminalPresentTiming {
+            return .{ .background_ms = 1.0, .glyph_ms = 2.0, .kitty_ms = 3.0 };
+        }
+    };
+
+    const ctx = struct { x: u8 }{ .x = 7 };
+    const renderer = FakeRenderer{};
+
+    const plan = TerminalPresentPlan{
+        .update_intent = .full,
+        .surface_geometry = .{
+            .logical_width = 1,
+            .logical_height = 1,
+            .visible_width = 1,
+            .visible_height = 1,
+            .dest_x = 0,
+            .dest_y = 0,
+            .dest_width = 1,
+            .dest_height = 1,
+        },
+    };
+
+    const result = runTerminalPresentableRefreshExecution(renderer, plan, ctx, Hooks);
+    try std.testing.expect(result.completed);
+    try std.testing.expectEqual(@as(f64, 1.0), result.timing.background_ms);
+    try std.testing.expectEqual(@as(f64, 2.0), result.timing.glyph_ms);
+    try std.testing.expectEqual(@as(f64, 3.0), result.timing.kitty_ms);
+    try std.testing.expectEqual(TerminalPresentableRefresh.refreshed, result.refresh);
+}
