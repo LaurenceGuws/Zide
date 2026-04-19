@@ -1855,6 +1855,12 @@ Execution source:
 **`CZH-680`:** validation ladder + checkpoint packet + board/queue/handoff sync
 to `CZH-GATE-72`.
 
+**Engineer (CZH-671):** Confirmed plan: add explicit `ffi*` wrappers in
+`surface_contract.zig` for VT core `redraw_state`, `needs_redraw`, and
+`present_ack` admissibility; route `core_api` through those wrappers only
+(`CZH-672`..`CZH-675`). Hygiene scope for `CZH-679`: `core_api.zig`,
+`surface_contract.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
+
 ## Response Contract
 
 Every batch update must include:
