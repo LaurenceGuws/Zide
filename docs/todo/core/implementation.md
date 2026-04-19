@@ -11,10 +11,11 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B42` (in_progress, super-gate `CZH-GATE-96`). Sprint `CZH-S37` in progress.
+- Current active macro batch: `CZH-B43` (in_progress, super-gate `CZH-GATE-97`). Sprint `CZH-S38` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
-- Active sprint: `CZH-S37`. Ticket source: `docs/todo/core/CZH_S37_TICKETS.md`.
+- Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
+- Active sprint: `CZH-S38`. Ticket source: `docs/todo/core/CZH_S38_TICKETS.md`.
 - Accepted sprint: `CZH-S35` (`CZH-B40`, `CZH-GATE-94`). Checkpoint: `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
 - Completed sprint: `CZH-S34` (accepted, with CZH-B39-corrective extraction). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md` and `docs/todo/core/CZH_B39_CORRECTIVE_CHECKPOINT.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
@@ -3585,7 +3586,7 @@ Owner docs:
 - Test/invariant coverage increased and remained green.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B42` Callback Surface Reduction and Runtime Boundary Hardening (`in_progress`)
+### `CZH-B42` Callback Surface Reduction and Runtime Boundary Hardening (`accepted`)
 
 Queue line (exact):
 
@@ -3619,6 +3620,34 @@ Owner docs:
   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
   - `python3 ops/android_terminal_host.py deploy`
   - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+`Verdict: accepted`
+
+- Architect review confirmed callback surface reductions remained behavior-neutral and preserved widget-facade boundaries.
+- Added invariants and integration tests locked reduced boundary contracts.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B43` Outcome Carrier Simplification and Boundary De-duplication (`in_progress`)
+
+Queue line (exact):
+
+- simplify outcome carrier flow and remove boundary de-duplication leftovers while preserving terminal-owned decision/fold semantics
+
+Acceptance:
+
+- terminal-owned orchestration keeps single authoritative outcome carrier path
+- widget/runtime boundary does not duplicate outcome carrier derivation or transport
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-97`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S38_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 ## Response Contract
 
