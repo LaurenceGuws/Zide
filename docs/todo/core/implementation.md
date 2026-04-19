@@ -689,6 +689,31 @@ Architect note:
   Zide owns dirty/generation/present-ack truth; host owns binding and
   presentation; Android listed as one implementation only.
 
+#### `CZH-605` cross-layer file inventory and non-goals
+
+**Layer → primary paths (keep map for the first implementation sprint)**
+
+| Layer | Canonical paths | Role |
+| --- | --- | --- |
+| VT core FFI | `src/terminal/ffi/shared.zig`, `core_api.zig`, `renderer_metadata.zig`, `host_api.zig` (input + session hooks), `bridge.zig`, `c_api.zig`, `src/terminal_ffi_exports.zig` | ABI + exports; publication/query + optional session driving |
+| Optional BYO-PTY host seam | `host_api.zig` (`start`, `poll`, `resize`, …); `src/terminal/core/session/runtime.zig`, `input.zig`, `lifecycle.zig` | Host-driven session loop and transport when not using external feed-only mode |
+| Editor backend FFI | `src/editor/ffi/bridge.zig`, `src/editor/ffi/c_api.zig` | Foreign editor hosts; C ABI |
+| Terminal surface contract | `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`; `src/ui/widgets/terminal_widget*.zig` (presentation + publication coupling); `src/platform/android_shell_session.zig` (peer host example); GL/Metal backends under `src/ui/renderer/*_backend.zig` | Drawable surface + generations; host proves binding; Zide proves redraw truth |
+| Bridge / glue | `bridge.zig`, `c_api.zig`, `terminal_ffi_exports.zig`; `src/editor/ffi/c_api.zig` | Thin forwarders and symbol roots |
+
+**Explicit non-goals (this sprint / freeze batch)**
+
+- No Vulkan or Android GLES **adoption-gate** work — see
+  `RENDER_BACKEND_CONTRACT.md` readiness.
+- No JNI / Java / Kotlin source edits (Android lane paused).
+- No terminal **semantic** or FFI **ABI version** behavior changes — doc and map
+  only unless a later ticket scopes a change with replay evidence.
+- No broad refactor of `terminal_widget_*` beyond what a future ticket lists —
+  inventory only here.
+- No deletion of the snapshot-diff **full refresh** paths in `core_api.zig`
+  (they are contract, not cruft) — any rename/collapse waits on an
+  implementation sprint tied to `CZH-607` review notes.
+
 ## Response Contract
 
 Every batch update must include:
