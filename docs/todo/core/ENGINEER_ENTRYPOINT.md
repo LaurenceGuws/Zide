@@ -8,8 +8,9 @@ Read in this exact order:
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
-7. `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
-8. `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
+7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
+8. `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+9. `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 
 ## Active Batch Rule
 

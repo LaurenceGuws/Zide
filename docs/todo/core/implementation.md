@@ -682,6 +682,13 @@ Architect note:
   hosts; native app remains direct-to-core; platform routing and future JNI-style
   glue stay host-owned and trace this doc.
 
+#### `CZH-604` terminal surface contract (recorded)
+
+- **Authority:** `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`.
+- **Outcome:** host-agnostic split: host passes native surface/GPU binding;
+  Zide owns dirty/generation/present-ack truth; host owns binding and
+  presentation; Android listed as one implementation only.
+
 ## Response Contract
 
 Every batch update must include:
