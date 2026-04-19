@@ -6,10 +6,11 @@
 //! `buildTerminalPresentPlan` reuse gating uses `terminalPresentablePipelineReady()`
 //! (pipeline leg only), not the full attachment conjunction — intentional separation.
 //!
-//! **Delegation:** Outcome classification, folding, and geometry computation are owned by
-//! terminal layer (`src/terminal/presentation_runtime.zig`). Widget layer delegates to
-//! terminal-layer helpers and re-exports their types. Pure computation ownership explicit;
-//! widget owns presentation orchestration and renderer/shell integration (drawing, timing).
+//! **Delegation:** Orchestration decisions, outcome classification, folding, eligibility
+//! checks, and geometry computation are owned by terminal layer
+//! (`src/terminal/presentation_runtime.zig`). Widget layer is an integration facade:
+//! it delegates all decision and fold calls to terminal, and owns only execution
+//! (GPU drawing, state mutation, renderer integration).
 //!
 //! **Invariants:** Two attachment state legs maintained separately:
 //! - `host_surface_target_available`: host drawable-target leg (from renderer)

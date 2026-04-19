@@ -1,18 +1,31 @@
-//! Terminal **presentation runtime:** canonical outcome classification and fold routes
+//! Terminal **presentation runtime:** orchestration, classification, fold, and geometry
 //! for terminal presentation (refresh cycle, reuse path, direct draw). Owned by terminal layer.
 //!
-//! This seam consolidates outcome semantics and fold logic so widget layer does not re-derive
-//! presentation results. Widget runtime delegates to this module and interprets outcomes only.
+//! **Ownership boundary:** Terminal layer owns all decision logic and stateless computation.
+//! Widget layer owns execution (GPU drawing, state mutation, renderer integration).
+//! Widget delegates decisions and folding to this module; never re-derives outcomes.
+//!
+//! **Orchestration:**
+//! - `executeRefreshPresentFlow(rows, cols, ctx, Hooks)` — refresh sequence (cycle → classify → present → fold)
+//! - `checkReuseEligibility(...)` — reuse path eligibility decision
+//! - `checkDirectPresentEligibility(...)` — direct draw eligibility decision
+//!
+//! **State computation:**
+//! - `refreshPresentState(...)` — present-state snapshot for a refresh tick
+//! - `presentDraw(...)` — present acknowledgement via renderer hooks
+//! - `computeHostSurfaceAttachmentState(...)` — attachment leg + conjunction
+//! - `computePresentationSurfaceGeometry(...)` — viewport and cell geometry
+//! - `computeTerminalPresentPlanDecision(...)` — present plan decision (refresh/reuse/direct)
 //!
 //! **Canonical outcome paths:**
-//! - `classifyRefreshOutcome(refresh) -> RefreshOutcomeState`: semantic classification of refresh result
-//! - `classifyDirectPresentOutcome(updated) -> DirectPresentOutcomeState`: outcome from direct draw
-//! - `reuseSuccessOutcome() -> ReusePresentOutcomeState`: outcome when reuse path succeeds
+//! - `classifyRefreshOutcome(refresh) -> RefreshOutcomeState`
+//! - `classifyDirectPresentOutcome(updated) -> DirectPresentOutcomeState`
+//! - `reuseSuccessOutcome() -> ReusePresentOutcomeState`
 //!
 //! **Canonical fold routes:**
-//! - `presentResultFromRefreshOutcomeState(outcome, timing) -> TerminalPresentResult`: fold refresh outcomes
-//! - `presentResultFromReuseOutcomeState(outcome, timing) -> TerminalPresentResult`: fold reuse outcomes
-//! - `presentResultFromOutcomeState()`: generic fold used by both paths
+//! - `presentResultFromRefreshOutcomeState(outcome, timing) -> TerminalPresentResult`
+//! - `presentResultFromReuseOutcomeState(outcome, timing) -> TerminalPresentResult`
+//! - `presentResultFromOutcomeState()` — generic fold used by all paths
 
 const std = @import("std");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
