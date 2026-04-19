@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S5_TICKETS.md`
+3. `docs/todo/core/CZH_S6_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B10` — **`architect_review_pending`** at **`CZH-GATE-64`** (sprint `CZH-S5`):
-  FFI/export doc drift closed in tree; **stop** for Architect gate. Packet:
-  `docs/todo/core/CZH_S5_CHECKPOINT.md`.
+- `CZH-B11` — **`in_progress`** (sprint `CZH-S6`): remove the residual
+  `destroy_debug_pause_ms_for_tests` debug hook from product FFI code and keep
+  equivalent test coverage through test-owned seams. Execute `CZH-631`..`CZH-635`
+  in order; stop only at `CZH-GATE-65` or a real hard blocker.
 
 ## Hard Rules
 
@@ -38,8 +39,7 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S5` tickets `CZH-626`..`CZH-630` are complete at **`CZH-GATE-64`**
-  unless Architect reopens scope.
+- Sprint `CZH-S6` tickets `CZH-631`..`CZH-635` are the active execution set.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

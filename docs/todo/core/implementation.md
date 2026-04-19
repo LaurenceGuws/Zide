@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B10` (`architect_review_pending` at `CZH-GATE-64`).
+- Current active macro batch: `CZH-B11` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S5_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S6_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1059,7 +1059,7 @@ Checkpoint packet: `docs/todo/core/CZH_S4_CHECKPOINT.md`.
   finally aligned with the accepted split. Bridge behavior and exported C
   symbols remained stable through the move.
 
-### `CZH-B10` FFI/Export Doc-Alignment Closure (`architect_review_pending`)
+### `CZH-B10` FFI/Export Doc-Alignment Closure (`accepted`)
 
 Queue line (exact):
 
@@ -1096,6 +1096,64 @@ or move files again. It closes the remaining doc/audit truthfulness gap that is
 still visible after `CZH-B7`..`CZH-B9`, especially the stale `CZH-608` table
 rows that still claim missing module docs for `src/editor/ffi/bridge.zig` and
 `src/editor/ffi/c_api.zig`.
+
+#### `CZH-S5` engineer validation (`CZH-630`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-626`..`CZH-630` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B10`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `850561fb`, `b63d3c90`, `d632c93d`, `605d081e`,
+  `76df6d2f`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` FFI/export doc alignment is now coherent: queue audits,
+  `CZH-608` table state, and the touched source files describe the same
+  ownership and contract shape.
+
+### `CZH-B11` Remove Residual FFI Debug Test Hook (`in_progress`)
+
+Queue line (exact):
+
+- eliminate the remaining debug hook surface from product FFI code by removing
+  `destroy_debug_pause_ms_for_tests` from `core_api.zig` and relocating test
+  behavior to test-owned seams only
+
+Acceptance:
+
+- `src/terminal/ffi/core_api.zig` no longer contains
+  `destroy_debug_pause_ms_for_tests`
+- FFI destroy semantics remain unchanged for production behavior
+- FFI smoke tests keep equivalent coverage without product debug globals
+- queue/handoff/entrypoint and authority docs reflect the post-removal truth
+- full stress ladder remains green through `CZH-GATE-65`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S6_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-631`..`CZH-635` in order from
+  `docs/todo/core/CZH_S6_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-65` or a real hard blocker
 
 #### `CZH-626` FFI/export doc drift audit (`CZH-S5`)
 

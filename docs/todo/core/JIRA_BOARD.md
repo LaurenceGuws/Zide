@@ -20,26 +20,24 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S5`
-- Objective: close the remaining FFI/export doc-alignment drift so queue
-  audits, authority docs, and code all describe the same ownership reality
+- Sprint ID: `CZH-S6`
+- Objective: remove the remaining debug test hook from product FFI code while
+  preserving production destroy behavior
 - Commit budget before checkpoint: `5`
-- Super-gate: `CZH-GATE-64`
+- Super-gate: `CZH-GATE-65`
 
-## Ticket Order (`CZH-S5`)
+## Ticket Order (`CZH-S6`)
 
-1. `CZH-626`
-2. `CZH-627`
-3. `CZH-628`
-4. `CZH-629`
-5. `CZH-630`
+1. `CZH-631`
+2. `CZH-632`
+3. `CZH-633`
+4. `CZH-634`
+5. `CZH-635`
 
 ## Current State
 
-- `in_progress`: none
-- `todo`: none
+- `in_progress`: `CZH-631`
+- `todo`: `CZH-632`, `CZH-633`, `CZH-634`, `CZH-635`
 - `blocked`: none
-- `review_gate`: `CZH-GATE-64` — `CZH-S5` / `CZH-B10`; tickets `CZH-626`..`CZH-630`
-  submitted (`docs/todo/core/CZH_S5_CHECKPOINT.md`); **Architect** moves to `done`
-  on acceptance
-- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`
+- `review_gate`: none
+- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-B10` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`, `CZH-626`, `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`
