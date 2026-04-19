@@ -1471,6 +1471,24 @@ Execution source:
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-68` or a real hard blocker
 
+#### `CZH-646` draw/presentation seam consumer audit (`CZH-S9`)
+
+**Selected path:** `src/ui/widgets/terminal_widget_presentation_runtime.zig` —
+`buildTerminalPresentPlan` computes `generation_matches_presented` from
+`terminal_view.generation` vs `self.surface.lastRenderGeneration()` (plus
+`clear_generation` vs last clear gen). The **publication vs last surface-render
+generation** limb is the same inequality predicate as FFI `needs_redraw` /
+`redraw_state` (`surface_contract.needsRedrawFromPair`), but was implicit (`==`
+on both limbs).
+
+**Plan (`CZH-647`..`CZH-648`):** add a named helper on
+`src/terminal/surface_contract.zig` for the publication-vs-last-surface-render
+mismatch; **`buildTerminalPresentPlan`** uses it for the generation limb only
+(clear-generation limb unchanged). **No** draw policy / present-plan branching
+changes.
+
+**`CZH-649`:** predicate test + `TERMINAL_SURFACE_CONTRACT.md` consumer note.
+
 ## Response Contract
 
 Every batch update must include:
