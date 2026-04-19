@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B24` (`architect_review_pending`, super-gate `CZH-GATE-78`).
+- Current active macro batch: `CZH-B25` (`in_progress`, super-gate `CZH-GATE-79`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S19_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S20_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2356,7 +2356,7 @@ Checkpoint packet: `docs/todo/core/CZH_S18_CHECKPOINT.md`.
   full attachment, and generation terms is coherent across touched paths with
   no behavior or ABI drift.
 
-### `CZH-B24` Long-Loop Surface Observability Vocabulary Lock (`architect_review_pending`)
+### `CZH-B24` Long-Loop Surface Observability Vocabulary Lock (`accepted`)
 
 Queue line (exact):
 
@@ -2441,7 +2441,57 @@ Checkpoint packet: `docs/todo/core/CZH_S19_CHECKPOINT.md`.
 #### Architect gate result
 
 - `Review chunk: CZH-B24`
-- `Verdict: pending` — submitted for Architect review (`CZH-GATE-78`).
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `9fc9948c`, `a696f882`, `8994f553`, `c919c6e2`,
+  `652c05a4`, `af05178a`, `2013240e`, `7d977c95`, `6fbb1519`, `81cf9f11`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` observability/log vocabulary is aligned with the
+  locked pipeline/attachment/generation state model in touched paths with no
+  behavior or ABI drift.
+
+### `CZH-B25` Long-Loop Surface Contract Alias Reduction (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to reduce remaining
+  terminology aliases in selected widget/runtime/state seams so each state
+  concept has one dominant term, with test/doc lock and no behavior/ABI changes
+
+Acceptance:
+
+- selected touched paths reduce duplicate aliases for the same state concept
+  (pipeline leg, host target leg, full attachment, generation)
+- no behavior changes and no host ABI/C export changes
+- selected tests/docs assert the alias-reduction vocabulary lock
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-79`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S20_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-741`..`CZH-750` in order from
+  `docs/todo/core/CZH_S20_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-79` or a real hard blocker
+
+#### `CZH-741` alias inventory audit + cut plan (`CZH-S20`)
+
+- map selected alias pairs and preferred canonical terms in:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_draw.zig`,
+  `terminal_widget.zig`,
+  `surface_contract.zig`,
+  `surface_attachment_contract.zig`
+- classify alias retention/removal targets by seam ownership
+- record scoped hygiene targets for `CZH-749`
 
 ## Response Contract
 
