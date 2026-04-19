@@ -422,3 +422,19 @@ test "CZH-S14: composite pair mismatch matches per-leg inequality (widget seam s
     try std.testing.expectEqual(mm2.publication_mismatch, 1 != 0);
     try std.testing.expectEqual(mm2.clear_mismatch, 2 != 2);
 }
+
+test "CZH-787: cached PresentationState omits conjunction field present on TerminalPresentResult" {
+    const presentable_contract = @import("../renderer/presentable_contract.zig");
+    comptime {
+        for (@typeInfo(PresentationState).@"struct".fields) |f| {
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) {
+                @compileError("CZH-787: conjunction is not stored on PresentationState");
+            }
+        }
+        var conj: usize = 0;
+        for (@typeInfo(presentable_contract.TerminalPresentResult).@"struct".fields) |f| {
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) conj += 1;
+        }
+        std.debug.assert(conj == 1);
+    }
+}
