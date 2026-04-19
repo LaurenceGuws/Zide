@@ -2400,6 +2400,18 @@ Execution source:
   full-attachment, or generation-owned
 - record scoped hygiene targets for `CZH-739`
 
+**Classified observability touchpoints (pipeline vs host-target vs full attachment vs generation):**
+
+| Site | Signals | Owner seam / note |
+| --- | --- | --- |
+| `terminal_widget_presentation_runtime.logUnavailable` (`renderer.terminal_present`) | `generation`; `sync_updates`; `updated`; `presentable_refresh`; `terminal_presentable_pipeline_ready`; `host_surface_target_available`; `visible_w` / `visible_h` | **Generation:** `generation` is `terminal_view.generation` (publication generation on the view model). **Pipeline leg:** `terminal_presentable_pipeline_ready`. **Host target leg:** `host_surface_target_available`. **Renderer refresh cycle:** `presentable_refresh` (`TerminalPresentableRefresh` enum tag — not the pipeline-ready bool). **Geometry:** visible size. **Gap:** no explicit `shared_surface_attachment_ready` JSON field yet (conjunction of the two legs; `CZH-734`). |
+| `terminal.generation_handoff` (`terminal_widget.draw`) | `last_render`, `captured`, `cur`, `pub`, `presented`, `terminal_presentable_pipeline_ready`, `cache_dirty` | **Generation:** last surface draw vs capture vs publication triple (`cur`/`pub`/`presented`). **Pipeline leg:** `terminal_presentable_pipeline_ready` token. Short token names (`cur`, `pub`) are drift vs explicit `pending`/`published`/`presented` vocabulary (`CZH-736`). |
+| `terminal.generation_handoff` (`terminal_frame_pacing_runtime`) | `gen` triple (`presented`/`published`/`pending` order in format) | **Generation** snapshot for frame pacing; compact `gen=a/b/c` is drift vs structured field names used elsewhere (`CZH-736` scope if aligned). |
+| `terminal_glyph_prep_adopt_target_missing` (`terminal_widget_draw`) | `generation=` in format string | **Generation** (glyph prep / raster generation); label is ambiguous vs “publication generation” vocabulary (`CZH-733`/`736`). |
+| `surface_contract.zig` / `surface_attachment_contract.zig` | no operator JSON logs | **Authority only:** generation pairing vs attachment conjunction naming for downstream docs/logs. |
+
+**`CZH-739` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget.zig`, `terminal_widget_draw.zig`, `terminal_widget_surface_state.zig`, `surface_contract.zig`, `surface_attachment_contract.zig`, and `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` if structured log keys shift; expect no investigation-only probe callers; keep operator-facing warnings (`logUnavailable`, glyph prep, resize) unless proven stale.
+
 ## Response Contract
 
 Every batch update must include:
