@@ -11,9 +11,10 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B39` (in_progress, super-gate `CZH-GATE-93`).
+- Current active macro batch: `CZH-B39` (architect_review_pending, super-gate `CZH-GATE-93`). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md`.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Completed sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
+- Completed sprint: `CZH-S34` (review_gate). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md`.
+- Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
 - Active validation platforms: Linux desktop and the connected Android device
   (`RF8M74JDWEK`). Windows and macOS are follow-up validation platforms for now;
   they must not block core correction work unless a change intentionally touches
