@@ -52,3 +52,40 @@ pub fn readSharedSurfaceAttachmentReady(
         .host_surface_target_available = target_available,
     });
 }
+
+const std = @import("std");
+
+test "CZH-864: notePresentableAvailability compute route matches readSharedSurfaceAttachmentReady" {
+    // Verify compute and read routes return same value for matching inputs
+    const pipeline_ready = true;
+    const host_available = true;
+
+    const computed = notePresentableAvailability(pipeline_ready, host_available, null);
+    const read_result = readSharedSurfaceAttachmentReady(pipeline_ready, host_available);
+
+    try std.testing.expectEqual(computed, read_result);
+}
+
+test "CZH-864: conjunction is AND of pipeline and host legs" {
+    const cases = [_]struct { pipe: bool, host: bool, expected: bool }{
+        .{ .pipe = false, .host = false, .expected = false },
+        .{ .pipe = false, .host = true, .expected = false },
+        .{ .pipe = true, .host = false, .expected = false },
+        .{ .pipe = true, .host = true, .expected = true },
+    };
+
+    for (cases) |c| {
+        const result = readSharedSurfaceAttachmentReady(c.pipe, c.host);
+        try std.testing.expectEqual(c.expected, result);
+    }
+}
+
+test "CZH-864: notePresentableAvailability returns false when host unavailable" {
+    const result = notePresentableAvailability(true, false, null);
+    try std.testing.expect(!result);
+}
+
+test "CZH-864: notePresentableAvailability returns false when pipeline not ready" {
+    const result = notePresentableAvailability(false, true, null);
+    try std.testing.expect(!result);
+}
