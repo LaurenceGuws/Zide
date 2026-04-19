@@ -91,6 +91,15 @@ seams above (`CZH-B24`):
   tokens in the widget draw path; `presented_generation` / `published_generation` /
   `pending_generation` in frame pacing — generation triples, not attachment conjunction logs.
 
+## Widget presentation storage (dominant field names, `CZH-B25`)
+
+`PresentationState` (`src/ui/widgets/terminal_widget_presentation_state.zig`) stores the two
+attachment legs as **`terminal_presentable_pipeline_ready`** (pipeline only) and
+**`host_surface_target_available`** (host drawable target). That matches
+`presentationUpdateDelta.terminal_presentable_pipeline_ready` for the pipeline leg and the
+`SharedSurfaceAttachmentPipelinePair` field names; full attachment remains the conjunction via
+`readSharedSurfaceAttachmentReady` / `hostSharedSurfaceAttachmentReady`.
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES

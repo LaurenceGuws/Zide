@@ -555,7 +555,7 @@ Scope:
 Findings:
 
 - `invalidatePresentationCache()` is currently a single-bit reset:
-  `terminal_presentable_ready = false`
+  `terminal_presentable_pipeline_ready = false`
 - Android bridge paths already call that broad invalidation directly:
   - `applyPinchZoom(...)`
   - `ensureProductFitTerminalGrid(...)` after resize
@@ -609,7 +609,7 @@ What is allowed here:
 
 What is forbidden here:
 
-- using one `terminal_presentable_ready` bit as the only cache/invalidation
+- using one `terminal_presentable_pipeline_ready` bit as the only cache/invalidation
   authority for unrelated presentation causes
 - mixing overlay invalidation, geometry invalidation, availability invalidation,
   and execution selection in one live path because upstream state is too weak
@@ -639,7 +639,7 @@ Current progress:
 - first cause-aware invalidation cut landed:
   - shared terminal widget presentation state now records explicit invalidation
     families instead of relying only on one broad
-    `terminal_presentable_ready = false` reset
+    `terminal_presentable_pipeline_ready = false` reset
   - current explicit families are:
     geometry, content, overlay, and target availability
   - Android zoom/grid-fit callers now request geometry invalidation explicitly

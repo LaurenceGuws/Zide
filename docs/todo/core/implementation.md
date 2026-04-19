@@ -2506,6 +2506,19 @@ Execution source:
 
 **`CZH-749` scoped hygiene targets:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`, `terminal_widget_draw.zig`, `terminal_widget.zig`, `surface_contract.zig`, `surface_attachment_contract.zig`, `terminal_widget_presentation_state.zig`, `terminal_widget_draw_presentation.zig`, `presentable_contract.zig`, and `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md` if field renames land; expect no investigation-only probe callers; keep operator logs and debug samples unless proven stale.
 
+#### `CZH-749` scoped probe/doc hygiene + authority sync (`CZH-S20`)
+
+- **Reviewed:** `terminal_widget_presentation_runtime.zig`, `terminal_widget_surface_state.zig`,
+  `terminal_widget_draw.zig`, `terminal_widget_draw_grid.zig`, `terminal_widget.zig`,
+  `surface_contract.zig`, `surface_attachment_contract.zig`,
+  `terminal_widget_presentation_state.zig`, `terminal_widget_draw_presentation.zig`,
+  `presentable_contract.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
+- **Removed:** nothing (no investigation-only probe callers in these paths).
+- **Kept:** operator `logUnavailable` / `terminal.generation_handoff` / glyph-prep warnings;
+  debug presentation/metal fallback samples; `terminal.ui.redraw` resize warnings.
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` — widget storage + observability subsections (`CZH-749`);
+  alias audit table (`CZH-741`) describes pre-fold pairs; dominant names landed in `CZH-743`..`CZH-746`.
+
 ## Response Contract
 
 Every batch update must include:
