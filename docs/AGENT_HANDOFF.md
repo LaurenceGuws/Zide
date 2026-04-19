@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`architect_review_pending` at `CZH-GATE-68`): `CZH-B14` in
+- Active macro batch (`in_progress`): `CZH-B15` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -16,9 +16,9 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S7_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S8_CHECKPOINT.md`
-- Pending sprint checkpoint (Architect): `docs/todo/core/CZH_S9_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S9_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S9_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S10_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Active queue authority: `docs/todo/core/implementation.md`
@@ -42,17 +42,17 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B14`, submitted at `CZH-GATE-68`):
+Current batch intent (`CZH-B15`, active):
 
-- widget present-plan generation limb routes through `surface_contract`
-- seam cut is behavior-neutral; Architect review pending on checkpoint packet
+- clear-generation present-plan limb routes through `surface_contract`
+- seam cut is behavior-neutral; no host ABI drift
 
 ## First Read Order
 
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 2. `docs/todo/core/implementation.md`
 3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/CZH_S9_TICKETS.md`
+4. `docs/todo/core/CZH_S10_TICKETS.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`

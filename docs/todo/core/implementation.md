@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B14` (`architect_review_pending` at `CZH-GATE-68`).
+- Current active macro batch: `CZH-B15` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S9_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S10_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1442,7 +1442,7 @@ Checkpoint packet: `docs/todo/core/CZH_S8_CHECKPOINT.md`.
 - `Acceptance judgment:` `present_ack` admissibility now routes through the
   explicit surface-contract seam with no behavior or ABI drift.
 
-### `CZH-B14` Surface Contract Consumer Expansion (`architect_review_pending`)
+### `CZH-B14` Surface Contract Consumer Expansion (`accepted`)
 
 Queue line (exact):
 
@@ -1507,6 +1507,64 @@ paragraph.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S9_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B14`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `a501dcd8`, `6aa45e5c`, `2f3ce267`, `6c672952`,
+  `6ab36079`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` widget present-plan generation match now consumes the
+  explicit surface-contract seam in a behavior-neutral cut; host ABI unchanged.
+
+### `CZH-B15` Surface Contract Consumer Expansion II (`in_progress`)
+
+Queue line (exact):
+
+- expand surface-contract seam consumption to one additional bounded
+  draw/presentation-facing path while preserving behavior and host ABI
+
+Acceptance:
+
+- one additional bounded consumer path is selected via audit
+- minimal seam helpers/types for that path are added behavior-neutrally
+- selected path adopts the seam helpers/types with equivalent runtime behavior
+- queue/handoff/entrypoint and authority docs remain aligned
+- full stress ladder remains green through `CZH-GATE-69`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S10_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-651`..`CZH-655` in order from
+  `docs/todo/core/CZH_S10_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-69` or a real hard blocker
+
+#### `CZH-651` draw/presentation seam consumer audit (`CZH-S10`)
+
+**Selected path target:** clear-generation limb in
+`src/ui/widgets/terminal_widget_presentation_runtime.zig`
+(`terminal_view.clear_generation` vs
+`self.surface.lastRenderClearGeneration()`) that still uses an implicit
+equality predicate.
+
+**Plan (`CZH-652`..`CZH-653`):** add a named helper on
+`src/terminal/surface_contract.zig` for clear-generation-vs-last-surface-clear
+mismatch; route `buildTerminalPresentPlan` clear-generation limb through that
+helper only. **No** draw policy / present-plan branching changes.
+
+**`CZH-654`:** predicate test + `TERMINAL_SURFACE_CONTRACT.md` consumer note.
+
+**`CZH-655`:** validation ladder + checkpoint packet + board/queue/handoff sync
+to `CZH-GATE-69`.
 
 ## Response Contract
 

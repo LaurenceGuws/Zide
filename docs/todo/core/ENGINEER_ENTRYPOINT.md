@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S9_TICKETS.md`
+3. `docs/todo/core/CZH_S10_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B14` — **`architect_review_pending`** at **`CZH-GATE-68`** (sprint `CZH-S9`):
-  widget present-plan generation limb uses `surface_contract`. Packet:
-  `docs/todo/core/CZH_S9_CHECKPOINT.md`.
+- `CZH-B15` — **`in_progress`** (sprint `CZH-S10`): clear-generation
+  present-plan limb routes through `surface_contract` in one bounded
+  behavior-neutral seam cut. Ticket source:
+  `docs/todo/core/CZH_S10_TICKETS.md`.
 
 ## Hard Rules
 
@@ -38,8 +39,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S9` tickets `CZH-646`..`CZH-650` are complete at **`CZH-GATE-68`**
-  unless Architect reopens scope.
+- Sprint `CZH-S10` tickets `CZH-651`..`CZH-655` are active in order; stop at
+  **`CZH-GATE-69`** or a real hard blocker.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
