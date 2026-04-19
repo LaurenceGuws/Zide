@@ -68,6 +68,12 @@ composite pair helpers (`publicationClearPairMismatchesFromLastSurfaceRender`,
 `publicationClearPairMatchesLastSurfaceRender`); primitives are decomposition
 inside `surface_contract`, not alternate call-site shapes (`CZH-S12`, `CZH-S14`).
 
+**Host attachment seam:** `src/terminal/surface_attachment_contract.zig` names
+pipeline-ready ∧ host-target-available for the shared drawable attachment.
+`TerminalWidgetSurfaceState.notePresentableAvailability` routes through that seam;
+present-plan reuse eligibility still uses `presentableReady()` (pipeline leg only)
+by design (`CZH-S15`).
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES

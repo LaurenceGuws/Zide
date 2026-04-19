@@ -2059,6 +2059,19 @@ Cross-link from `surface_contract.zig` / widget docs. Hygiene `CZH-699`:
 `terminal_widget_presentation_runtime.zig`, `terminal_widget_draw.zig`,
 `TERMINAL_SURFACE_CONTRACT.md`.
 
+#### `CZH-699` probe/doc hygiene (`CZH-S15`)
+
+- **Reviewed:** `surface_attachment_contract.zig`, `terminal_widget_surface_state.zig`,
+  `terminal_widget_presentation_runtime.zig`, `terminal_widget_draw.zig`.
+- **Removed:** nothing (no stale investigation-only probe callers).
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` host attachment seam (`CZH-S15`).
+
+#### Landed (`CZH-691`..`CZH-699`)
+
+- `surface_attachment_contract.zig` primitive/composite; `notePresentableAvailability` wiring
+- Docs in `surface_contract`, presentation runtime; draw test + widget integration test
+- Authority + sweep note above
+
 ## Response Contract
 
 Every batch update must include:
