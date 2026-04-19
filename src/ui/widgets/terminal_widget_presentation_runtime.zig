@@ -1982,6 +1982,8 @@ pub fn planUpdate(
         surface_state.lastRenderClearGeneration(),
     );
 
+    const terminal_presentable_pipeline_ready = surface_state.presentableReady();
+
     var update_plan = draw_presentation.choosePresentationUpdatePlan(
         cache.dirty,
         recreated,
@@ -1989,7 +1991,7 @@ pub fn planUpdate(
         presentation_delta.cell_metrics_changed,
         presentation_delta.render_scale_changed,
         blink_requires_partial,
-        presentation_delta.presentable_ready,
+        terminal_presentable_pipeline_ready,
     );
     update_plan = draw_presentation.forceFullPresentationUpdatePlanEveryFrame(update_plan, recent_input_window_active);
 
@@ -2011,7 +2013,7 @@ pub fn planUpdate(
         viewport_shift.exposed_only,
         scroll_offset,
         needs_full,
-        presentation_delta.presentable_ready,
+        terminal_presentable_pipeline_ready,
         rows,
     )) {
         .attempt => |shift_rows| {
