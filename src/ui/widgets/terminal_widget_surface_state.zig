@@ -129,10 +129,15 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.last_render_clear_generation;
     }
 
+    /// **Leg read (`CZH-S24`):** pipeline only — not conjunction; pairs with `hostSurfaceTargetAvailable`
+    /// for `readSharedSurfaceAttachmentReady`.
     pub fn terminalPresentablePipelineReady(self: *const TerminalWidgetSurfaceState) bool {
         return self.presentation.terminal_presentable_pipeline_ready;
     }
 
+    /// **Leg read (`CZH-S24`):** host drawable target only — not conjunction; pairs with
+    /// `terminalPresentablePipelineReady` for `readSharedSurfaceAttachmentReady`.
+    ///
     /// Host **drawable target** leg for `surface_attachment_contract` (same field as
     /// `SharedSurfaceAttachmentPipelinePair.host_surface_target_available`).
     pub fn hostSurfaceTargetAvailable(self: *const TerminalWidgetSurfaceState) bool {
