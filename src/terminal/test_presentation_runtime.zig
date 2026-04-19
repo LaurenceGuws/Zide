@@ -1,4 +1,4 @@
-//! CZH-877: Helper-level invariant tests for terminal presentation runtime ownership (`CZH-S33`).
+//! Helper-level invariant tests for terminal presentation runtime ownership.
 //! Validates that:
 //! - Outcome classification is pure (no widget dependencies)
 //! - Geometry computation is pure
@@ -9,7 +9,7 @@ const std = @import("std");
 const presentation_runtime = @import("./presentation_runtime.zig");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
 
-test "CZH-877: Outcome classification from refresh cycle is pure" {
+test "outcome classification from refresh cycle is pure" {
     const outcome_refreshed = presentation_runtime.classifyRefreshOutcome(.refreshed);
     try std.testing.expect(outcome_refreshed.outcome == .updated_and_presented);
     try std.testing.expect(outcome_refreshed.cache_state_advanced == true);
@@ -22,7 +22,7 @@ test "CZH-877: Outcome classification from refresh cycle is pure" {
     try std.testing.expect(outcome_unsupported.host_surface_target_available == false);
 }
 
-test "CZH-877: Direct present outcome classification is pure" {
+test "Direct present outcome classification is pure" {
     const outcome_updated = presentation_runtime.classifyDirectPresentOutcome(true);
     try std.testing.expect(outcome_updated.outcome == .updated_and_presented);
     try std.testing.expect(outcome_updated.cache_state_advanced == true);
@@ -33,7 +33,7 @@ test "CZH-877: Direct present outcome classification is pure" {
     try std.testing.expect(outcome_not_updated.cache_state_advanced == true);
 }
 
-test "CZH-877: Reuse success outcome invariants hold" {
+test "Reuse success outcome invariants hold" {
     const outcome = presentation_runtime.reuseSuccessOutcome();
     try std.testing.expect(outcome.reused == true);
     try std.testing.expect(outcome.outcome == .reused);
@@ -42,7 +42,7 @@ test "CZH-877: Reuse success outcome invariants hold" {
     try std.testing.expect(outcome.shared_surface_attachment_ready == true);
 }
 
-test "CZH-877: Outcome folding produces consistent results" {
+test "Outcome folding produces consistent results" {
     const outcome = presentation_runtime.classifyRefreshOutcome(.refreshed);
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 1.0,
@@ -57,7 +57,7 @@ test "CZH-877: Outcome folding produces consistent results" {
     try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
-test "CZH-877: Reuse outcome folding preserves attachment state" {
+test "Reuse outcome folding preserves attachment state" {
     const outcome = presentation_runtime.reuseSuccessOutcome();
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 0.5,
@@ -71,7 +71,7 @@ test "CZH-877: Reuse outcome folding preserves attachment state" {
     try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
-test "CZH-877: Geometry struct is defined and initializable" {
+test "Geometry struct is defined and initializable" {
     var geometry = presentation_runtime.PresentationGeometry{};
     try std.testing.expect(geometry.render_scale == 1.0);
     try std.testing.expect(geometry.cell_w_i == 0);
@@ -79,7 +79,7 @@ test "CZH-877: Geometry struct is defined and initializable" {
     try std.testing.expect(geometry.cell_w_i == 8);
 }
 
-test "CZH-877: RefreshedPresentablePresentationResult is defined in terminal layer" {
+test "RefreshedPresentablePresentationResult is defined in terminal layer" {
     const result = presentation_runtime.RefreshedPresentablePresentationResult{
         .bg_ms = 1.5,
         .glyph_ms = 2.5,
@@ -90,21 +90,21 @@ test "CZH-877: RefreshedPresentablePresentationResult is defined in terminal lay
     try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
-test "CZH-877: RefreshOutcomeState validates followup coupling" {
-    var state_with_followup = presentation_runtime.RefreshOutcomeState{
+test "RefreshOutcomeState validates followup coupling" {
+    const state_with_followup = presentation_runtime.RefreshOutcomeState{
         .followup_required = true,
         .followup_reason = .target_unavailable,
     };
     presentation_runtime.assertRefreshOutcomeConsistency(state_with_followup);
 
-    var state_without_followup = presentation_runtime.RefreshOutcomeState{
+    const state_without_followup = presentation_runtime.RefreshOutcomeState{
         .followup_required = false,
         .followup_reason = .none,
     };
     presentation_runtime.assertRefreshOutcomeConsistency(state_without_followup);
 }
 
-test "CZH-877: DirectPresentOutcomeState validates invariant fields" {
+test "DirectPresentOutcomeState validates invariant fields" {
     const outcome = presentation_runtime.classifyDirectPresentOutcome(true);
     presentation_runtime.assertDirectPresentOutcomeConsistency(outcome);
     try std.testing.expect(outcome.cache_state_advanced == true);
@@ -112,7 +112,7 @@ test "CZH-877: DirectPresentOutcomeState validates invariant fields" {
     try std.testing.expect(outcome.shared_surface_attachment_ready == false);
 }
 
-test "CZH-877: ReusePresentOutcomeState validates success coupling" {
+test "ReusePresentOutcomeState validates success coupling" {
     const outcome = presentation_runtime.reuseSuccessOutcome();
     presentation_runtime.assertReuseOutcomeConsistency(outcome);
 }

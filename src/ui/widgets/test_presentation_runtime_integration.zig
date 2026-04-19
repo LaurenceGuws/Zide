@@ -1,4 +1,4 @@
-//! CZH-878: Integration invariant tests for presentation runtime ownership boundary (`CZH-S33`).
+//! Integration invariant tests for presentation runtime ownership boundary.
 //! Validates that:
 //! - Widget layer correctly imports and re-exports terminal types
 //! - Widget layer delegates to terminal-layer classification functions
@@ -9,7 +9,7 @@ const std = @import("std");
 const terminal_presentation_runtime = @import("../../terminal/presentation_runtime.zig");
 const terminal_widget_presentation_runtime = @import("./terminal_widget_presentation_runtime.zig");
 
-test "CZH-878: Widget layer re-exports terminal presentation types" {
+test "Widget layer re-exports terminal presentation types" {
     // RefreshedPresentablePresentationResult should be from terminal
     const widget_result = terminal_widget_presentation_runtime.RefreshedPresentablePresentationResult{
         .bg_ms = 1.0,
@@ -28,34 +28,34 @@ test "CZH-878: Widget layer re-exports terminal presentation types" {
     try std.testing.expect(widget_result.shared_surface_attachment_ready == terminal_result.shared_surface_attachment_ready);
 }
 
-test "CZH-878: Widget layer uses terminal outcome classification" {
+test "Widget layer uses terminal outcome classification" {
     // Widget should be using terminal-layer classifyRefreshOutcome
     const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
     try std.testing.expect(outcome.outcome == .updated_and_presented);
     try std.testing.expect(outcome.cache_state_advanced == true);
 }
 
-test "CZH-878: Widget layer uses terminal geometry computation" {
+test "Widget layer uses terminal geometry computation" {
     // Widget should import PresentationGeometry from terminal
-    var geometry = terminal_widget_presentation_runtime.computePresentationSurfaceGeometry(undefined, undefined, undefined);
+    const geometry = terminal_widget_presentation_runtime.computePresentationSurfaceGeometry(undefined, undefined, undefined);
     // Zero-dimension result expected (inputs undefined, but type is correct)
     try std.testing.expect(@TypeOf(geometry) == terminal_presentation_runtime.PresentationGeometry);
 }
 
-test "CZH-878: Widget layer outcome validation uses terminal assertions" {
+test "Widget layer outcome validation uses terminal assertions" {
     const outcome = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     terminal_widget_presentation_runtime.assertReuseOutcomeConsistency(outcome);
     try std.testing.expect(outcome.reused == true);
 }
 
-test "CZH-878: Widget layer outcome folding uses terminal helpers" {
+test "Widget layer outcome folding uses terminal helpers" {
     const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented);
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
     const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, false);
     try std.testing.expect(result.outcome == .presented);
 }
 
-test "CZH-878: ViewportShiftState is accessible in widget layer" {
+test "ViewportShiftState is accessible in widget layer" {
     const viewport_state = terminal_widget_presentation_runtime.ViewportShiftState{
         .rows = 5,
         .exposed_only = true,
@@ -63,8 +63,8 @@ test "CZH-878: ViewportShiftState is accessible in widget layer" {
     try std.testing.expect(viewport_state.rows == 5);
 }
 
-test "CZH-878: PresentationGeometry is accessible in widget layer" {
-    var geom = terminal_widget_presentation_runtime.PresentationGeometry{
+test "PresentationGeometry is accessible in widget layer" {
+    const geom = terminal_widget_presentation_runtime.PresentationGeometry{
         .cell_w_i = 8,
         .cell_h_i = 16,
     };
@@ -72,7 +72,7 @@ test "CZH-878: PresentationGeometry is accessible in widget layer" {
     try std.testing.expect(geom.cell_h_i == 16);
 }
 
-test "CZH-878: All outcome classification paths work in widget context" {
+test "All outcome classification paths work in widget context" {
     // Refresh outcomes
     const refreshed = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
     const presented = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented);
