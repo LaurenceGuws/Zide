@@ -1548,7 +1548,7 @@ pub fn logUnavailable(
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
         .{ .key = "presentable_refresh", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
         .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.terminalPresentablePipelineReady() } },
-        .{ .key = "target_available", .value = .{ .boolean = present_state.target_available } },
+        .{ .key = "host_surface_target_available", .value = .{ .boolean = present_state.target_available } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },
     });
