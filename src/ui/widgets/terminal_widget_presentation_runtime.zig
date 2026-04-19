@@ -2132,3 +2132,15 @@ pub fn planUpdate(
 
     return plan;
 }
+
+test "CZH-S19: presentation delta pipeline field matches observability vocabulary" {
+    const TerminalWidgetSurfaceState = @import("terminal_widget_surface_state.zig").TerminalWidgetSurfaceState;
+    comptime {
+        const fields = @typeInfo(TerminalWidgetSurfaceState.PresentationUpdateDelta).@"struct".fields;
+        var found: usize = 0;
+        for (fields) |f| {
+            if (std.mem.eql(u8, f.name, "terminal_presentable_pipeline_ready")) found += 1;
+        }
+        std.debug.assert(found == 1);
+    }
+}
