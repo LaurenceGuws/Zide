@@ -2395,3 +2395,46 @@ test "CZH-S26: integration lock — direct present outcome has correct leg/conju
     try std.testing.expect(outcome.host_surface_target_available);
 }
 
+test "CZH-S27: integration lock — consolidated outcome states fold correctly" {
+    // Verify that all three outcome state types produce consistent results when folded.
+
+    // RefreshOutcomeState: conjunction passed separately
+    const refresh_outcome = RefreshOutcomeState{
+        .outcome = .updated_and_presented,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+    };
+    const refresh_result = presentResultFromRefreshOutcomeState(refresh_outcome, .{}, true);
+    try std.testing.expectEqual(refresh_result.outcome, TerminalPresentOutcome.updated_and_presented);
+    try std.testing.expect(refresh_result.shared_surface_attachment_ready == true);
+
+    // ReusePresentOutcomeState: conjunction as field
+    const reuse_outcome = ReusePresentOutcomeState{
+        .reused = true,
+        .outcome = .reused,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = true,
+    };
+    const reuse_result = presentResultFromReuseOutcomeState(reuse_outcome, .{});
+    try std.testing.expectEqual(reuse_result.outcome, TerminalPresentOutcome.reused);
+    try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
+
+    // DirectPresentOutcomeState: both legs and conjunction as fields (CZH-816 consolidation)
+    const direct_outcome = DirectPresentOutcomeState{
+        .outcome = .presented,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
+    const direct_result = presentResultFromOutcomeState(
+        direct_outcome.outcome,
+        direct_outcome.cache_state_advanced,
+        direct_outcome.host_surface_target_available,
+        .{},
+        direct_outcome.shared_surface_attachment_ready,
+    );
+    try std.testing.expectEqual(direct_result.outcome, TerminalPresentOutcome.presented);
+    try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
+}
+
