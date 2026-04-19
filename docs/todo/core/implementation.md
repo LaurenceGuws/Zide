@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B19` (`architect_review_pending` at `CZH-GATE-73`).
+- Current active macro batch: `CZH-B20` (`in_progress`, super-gate `CZH-GATE-74`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S14_TICKETS.md`
 
@@ -1904,7 +1904,7 @@ Checkpoint packet: `docs/todo/core/CZH_S13_CHECKPOINT.md`.
   consume named `surface_contract` ffi wrappers with behavior/ABI preserved;
   scoped probe/doc hygiene is aligned.
 
-### `CZH-B19` Long-Loop Surface/FFI Convergence Pack (`architect_review_pending`)
+### `CZH-B19` Long-Loop Surface/FFI Convergence Pack (`accepted`)
 
 Queue line (exact):
 
@@ -1995,6 +1995,60 @@ decomposition. Hygiene scope `CZH-689`: `surface_contract.zig`,
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S14_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B19`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `477c4402`, `9fe1d11b`, `dcc4cea1`, `cc302880`,
+  `b946c611`, `fc7d5c9f`, `838b4306`, `0d8d75af`, `3bfde86e`, `64d6d974`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` layered primitive/composite/ffi ownership is now
+  explicit and consistent in touched widget + FFI seam consumers; convergence
+  tests are stronger and behavior-neutral.
+
+### `CZH-B20` Long-Loop Surface Attachment Contract Shaping (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to shape the next
+  terminal surface layer as a host-owned shared-surface attachment contract in
+  Zig authority/tests, without ABI churn or behavior drift
+
+Acceptance:
+
+- one explicit Zig seam names host-owned shared-surface attachment state and
+  invariants used by widget presentation consumers
+- touched widget/runtime seam consumers use the new seam helpers consistently
+- docs/tests reflect the layered model (primitive/composite/ffi + surface
+  attachment) without contradictory ownership text
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-74`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S15_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-691`..`CZH-700` in order from
+  `docs/todo/core/CZH_S15_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-74` or a real hard blocker
+
+#### `CZH-691` surface attachment seam audit + cut plan (`CZH-S15`)
+
+- map current host-surface attachment touchpoints in:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_draw.zig`,
+  `surface_contract.zig`
+- classify what belongs to shared contract helpers vs call-site local wiring
+- record scoped probe/doc hygiene targets for `CZH-699`
 
 ## Response Contract
 
