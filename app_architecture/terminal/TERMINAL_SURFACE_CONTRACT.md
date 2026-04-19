@@ -56,6 +56,11 @@ Hosts observe redraw and generation pairing through **VT core FFI** symbols (e.g
 state. Raw GPU handles do not need to cross that boundary for the contract to
 hold.
 
+**Zig seam (logical bundle):** `src/terminal/surface_contract.zig` names the same
+published vs acknowledged pairing and fills the extern `RedrawState` bundle;
+`src/terminal/ffi/core_api.zig` routes `redraw_state` / `needs_redraw` through
+that helper (`CZH-S7`).
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES

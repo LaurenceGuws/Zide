@@ -1331,6 +1331,10 @@ FFI `present_ack` / `acknowledged_generation`.
 - **`CZH-639`:** point `TERMINAL_SURFACE_CONTRACT.md` / queue at the landed module +
   wiring path.
 
+**Landed (`CZH-637`..`CZH-639`):** `surface_contract.zig` + `tests_main` import;
+`core_api.redrawState` / `needsRedraw` use `fillRedrawState` /
+`needsRedrawFromPair`; `TERMINAL_SURFACE_CONTRACT.md` references the Zig seam.
+
 ## Response Contract
 
 Every batch update must include:
