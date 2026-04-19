@@ -18,8 +18,8 @@
 //!   delegates here (`CZH-S13`, `CZH-S14`).
 //! - **Host attachment (pipeline ∧ target):** `surface_attachment_contract` (`CZH-S15`).
 //!
-//! **`CZH-S16` / `CZH-S17`:** `presentationUpdateDelta`'s pipeline-ready field (sourced from
-//! `presentableReady()`) is the attachment **pipeline leg** only; composite
+//! **`CZH-S16` / `CZH-S17`:** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
+//! (from `presentableReady()`) is the attachment **pipeline leg** only; composite
 //! publication/clear fields remain generation-owned via `publicationClearPair*` above.
 const std = @import("std");
 const shared = @import("ffi/shared.zig");

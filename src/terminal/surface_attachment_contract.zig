@@ -4,12 +4,11 @@
 //! Generation/clear pairing remains in `surface_contract.zig`; this module names
 //! attachment-only predicates (`CZH-S15`).
 //!
-//! **Naming (`CZH-S16` / `CZH-S17`):** `presentationUpdateDelta` exposes the **terminal
-//! presentable pipeline** leg (`presentableReady()`), not the full
+//! **Naming (`CZH-S16` / `CZH-S17`):** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
+//! is the **terminal presentable pipeline** leg (`presentableReady()`), not the full
 //! `hostSharedSurfaceAttachmentReady` conjunction. Present-plan reuse eligibility still
 //! uses that pipeline leg alone by design; full attachment readiness uses
-//! `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`. The delta field
-//! name is converged in `CZH-715` for explicit vocabulary.
+//! `notePresentableAvailability` / `readSharedSurfaceAttachmentReady`.
 
 const std = @import("std");
 

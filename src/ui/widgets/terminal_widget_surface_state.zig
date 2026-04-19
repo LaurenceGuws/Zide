@@ -23,9 +23,8 @@ pub const TerminalWidgetSurfaceState = struct {
         /// for `(clear_generation, last_surface_render_clear_generation)`.
         clear_generation_changed: bool,
         /// Terminal presentable **pipeline** ready (same bool as `presentableReady()`); not
-        /// full `surface_attachment_contract.hostSharedSurfaceAttachmentReady`. Field
-        /// renamed to `terminal_presentable_pipeline_ready` in `CZH-715`.
-        presentable_ready: bool,
+        /// full `surface_attachment_contract.hostSharedSurfaceAttachmentReady`.
+        terminal_presentable_pipeline_ready: bool,
         cursor_changed: bool,
         invalidation_flags: InvalidationFlags,
     };
@@ -133,7 +132,7 @@ pub const TerminalWidgetSurfaceState = struct {
             .render_scale_changed = surface_geometry.render_scale != self.presentation.last_render_scale,
             .generation_changed = gen_clear_mismatch.publication_mismatch,
             .clear_generation_changed = gen_clear_mismatch.clear_mismatch,
-            .presentable_ready = self.presentableReady(),
+            .terminal_presentable_pipeline_ready = self.presentableReady(),
             .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
             .invalidation_flags = self.presentation.invalidation_flags,
         };
