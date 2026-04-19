@@ -246,3 +246,43 @@ test "publicationClearPairMatchesLastSurfaceRender is conjunction of primitive n
     try std.testing.expect(!publicationClearPairMatchesLastSurfaceRender(5, 5, 5, 6));
     try std.testing.expect(!publicationClearPairMatchesLastSurfaceRender(5, 6, 5, 5));
 }
+
+test "CZH-S13: ffiRedrawStateFill matches fillRedrawState" {
+    var via_ffi: shared.RedrawState = undefined;
+    var direct: shared.RedrawState = undefined;
+    ffiRedrawStateFill(10, 7, &via_ffi);
+    fillRedrawState(10, 7, &direct);
+    try std.testing.expectEqual(direct.abi_version, via_ffi.abi_version);
+    try std.testing.expectEqual(direct.struct_size, via_ffi.struct_size);
+    try std.testing.expectEqual(direct.published_generation, via_ffi.published_generation);
+    try std.testing.expectEqual(direct.acknowledged_generation, via_ffi.acknowledged_generation);
+    try std.testing.expectEqual(direct.needs_redraw, via_ffi.needs_redraw);
+}
+
+test "CZH-S13: ffiNeedsRedrawU8 matches needsRedrawFromPair" {
+    const pairs = [_]struct { a: u64, b: u64 }{
+        .{ .a = 0, .b = 1 },
+        .{ .a = 9, .b = 9 },
+    };
+    for (pairs) |p| {
+        try std.testing.expectEqual(
+            @as(u8, @intFromBool(needsRedrawFromPair(p.a, p.b))),
+            ffiNeedsRedrawU8(p.a, p.b),
+        );
+    }
+}
+
+test "CZH-S13: ffiPresentAckGenerationAdmissible matches presentAckGenerationAdmissible" {
+    try std.testing.expectEqual(
+        presentAckGenerationAdmissible(5, 10, 3),
+        ffiPresentAckGenerationAdmissible(5, 10, 3),
+    );
+    try std.testing.expectEqual(
+        presentAckGenerationAdmissible(10, 10, 10),
+        ffiPresentAckGenerationAdmissible(10, 10, 10),
+    );
+    try std.testing.expectEqual(
+        presentAckGenerationAdmissible(11, 10, 3),
+        ffiPresentAckGenerationAdmissible(11, 10, 3),
+    );
+}
