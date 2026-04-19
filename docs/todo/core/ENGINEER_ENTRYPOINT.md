@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B25` — **`in_progress`** at **`CZH-GATE-79`** (sprint `CZH-S20`):
+- `CZH-B25` — **`architect_review_pending`** at **`CZH-GATE-79`** (sprint `CZH-S20`):
   long-loop alias reduction across selected surface/widget/runtime seams
-  (`docs/todo/core/CZH_S20_TICKETS.md`).
+  (`docs/todo/core/CZH_S20_TICKETS.md`, checkpoint `docs/todo/core/CZH_S20_CHECKPOINT.md`).
 
 ## Hard Rules
 
