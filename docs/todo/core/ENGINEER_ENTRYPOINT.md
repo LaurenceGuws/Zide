@@ -20,10 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B14` — **`in_progress`** (sprint `CZH-S9`): expand surface-contract seam
-  consumption into one additional bounded draw/presentation-facing path with
-  behavior-neutral wiring. Execute tickets `CZH-646`..`CZH-650`; stop only at
-  `CZH-GATE-68` or a real hard blocker.
+- `CZH-B14` — **`architect_review_pending`** at **`CZH-GATE-68`** (sprint `CZH-S9`):
+  widget present-plan generation limb uses `surface_contract`. Packet:
+  `docs/todo/core/CZH_S9_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -39,7 +38,8 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S9` tickets `CZH-646`..`CZH-650` are the active execution set.
+- Sprint `CZH-S9` tickets `CZH-646`..`CZH-650` are complete at **`CZH-GATE-68`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

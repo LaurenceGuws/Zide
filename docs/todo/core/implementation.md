@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B14` (`in_progress`).
+- Current active macro batch: `CZH-B14` (`architect_review_pending` at `CZH-GATE-68`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S9_TICKETS.md`
 
@@ -1442,7 +1442,7 @@ Checkpoint packet: `docs/todo/core/CZH_S8_CHECKPOINT.md`.
 - `Acceptance judgment:` `present_ack` admissibility now routes through the
   explicit surface-contract seam with no behavior or ABI drift.
 
-### `CZH-B14` Surface Contract Consumer Expansion (`in_progress`)
+### `CZH-B14` Surface Contract Consumer Expansion (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1492,6 +1492,21 @@ changes.
 **Landed (`CZH-647`..`CZH-649`):** `publicationGenerationDiffersFromLastSurfaceRender`;
 `buildTerminalPresentPlan` uses it; tests + `TERMINAL_SURFACE_CONTRACT.md` widget
 paragraph.
+
+#### `CZH-S9` engineer validation (`CZH-650`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-646`..`CZH-650` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S9_CHECKPOINT.md`.
 
 ## Response Contract
 

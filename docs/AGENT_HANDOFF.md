@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B14` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-68`): `CZH-B14` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -16,6 +16,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S7_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S8_CHECKPOINT.md`
+- Pending sprint checkpoint (Architect): `docs/todo/core/CZH_S9_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S9_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -41,11 +42,10 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B14`, engineer work in progress):
+Current batch intent (`CZH-B14`, submitted at `CZH-GATE-68`):
 
-- expand surface-contract seam consumption beyond VT core helper sites
-- land one additional bounded draw/presentation-facing seam cut
-- keep behavior and ABI stable while tightening live ownership wiring
+- widget present-plan generation limb routes through `surface_contract`
+- seam cut is behavior-neutral; Architect review pending on checkpoint packet
 
 ## First Read Order
 
