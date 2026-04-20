@@ -46,35 +46,11 @@ pub const RefreshOutcomeState = struct {
     followup: presentable_contract.TerminalPresentFollowup = .{},
 };
 
-/// **Direct boundary outcome snapshot:** result when direct boundary execution bypasses reuse path.
-/// Host-target leg is fixed to `true` (direct boundary draw implies renderer availability).
-/// Conjunction is fixed to `false` (direct boundary path does not pre-verify full attachment before returning).
-/// *Invariants:* `cache_state_advanced` remains true (draw implies advancement); boundary legs remain fixed.
-/// Hardening assertions validate direct boundary invariants in `classifyDirectPresentOutcome()`.
+/// **Direct boundary outcome snapshot:** transport when direct boundary execution completes.
+/// Invariants enforced by transport initialization (cache advanced, renderer available, no conjunction).
 pub const DirectPresentOutcomeState = struct {
-    transport: FoldTransportFields = .{
-        .host_surface_target_available = true,
-    },
-    outcome: TerminalPresentOutcome = .presented,
-    cache_state_advanced: bool = true,
-    host_surface_target_available: bool = true,
-    shared_surface_attachment_ready: bool = false,
+    transport: FoldTransportFields,
 };
-
-comptime {
-    const fields = @typeInfo(DirectPresentOutcomeState).@"struct".fields;
-    var outcome_count: usize = 0;
-    var cache_count: usize = 0;
-    var host_count: usize = 0;
-    var attachment_count: usize = 0;
-    for (fields) |f| {
-        if (std.mem.eql(u8, f.name, "outcome")) outcome_count += 1;
-        if (std.mem.eql(u8, f.name, "cache_state_advanced")) cache_count += 1;
-        if (std.mem.eql(u8, f.name, "host_surface_target_available")) host_count += 1;
-        if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) attachment_count += 1;
-    }
-    std.debug.assert(outcome_count == 1 and cache_count == 1 and host_count == 1 and attachment_count == 1);
-}
 
 /// **Outcome snapshot from reuse path:** carries transport result.
 /// Transport routes all outcome fields.
@@ -124,14 +100,11 @@ fn refreshTransportFromResult(
 }
 
 /// **Classify direct boundary outcome:** derive outcome from direct boundary draw completion.
-/// Invariant: both legs and conjunction remain fixed to the direct boundary contract values.
+/// Invariant: transport carries all fields with invariant values fixed.
 pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
-    const transport = directTransportFromUpdated(updated);
-    const outcome_state: DirectPresentOutcomeState = .{
-        .transport = transport,
-        .outcome = transport.outcome,
+    return .{
+        .transport = directTransportFromUpdated(updated),
     };
-    return outcome_state;
 }
 
 /// **Outcome for successful reuse:** when reuse path completes successfully,
@@ -253,13 +226,11 @@ pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
 }
 
 /// **Validate direct boundary outcome invariants:**
-/// Verifies direct boundary invariants hold (cache advanced, renderer available, no pre-verified conjunction);
-/// transport route-lock verified at construction.
+/// Verifies transport carries fixed direct boundary invariants.
 pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void {
-    // Direct boundary invariants: cache always advanced, renderer always available, conjunction always false
-    std.debug.assert(state.cache_state_advanced == true);
-    std.debug.assert(state.host_surface_target_available == true);
-    std.debug.assert(state.shared_surface_attachment_ready == false);
+    std.debug.assert(state.transport.cache_state_advanced == true);
+    std.debug.assert(state.transport.host_surface_target_available == true);
+    std.debug.assert(state.transport.shared_surface_attachment_ready == false);
 }
 
 /// **Validate refresh outcome followup consistency:**
