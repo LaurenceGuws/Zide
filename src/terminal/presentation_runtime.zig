@@ -56,6 +56,9 @@ pub const RefreshOutcomeState = struct {
 /// *Invariants:* `cache_state_advanced` remains true (draw implies advancement); boundary legs remain fixed.
 /// Hardening assertions validate direct boundary invariants in `classifyDirectPresentOutcome()`.
 pub const DirectPresentOutcomeState = struct {
+    transport: FoldTransportFields = .{
+        .host_surface_target_available = true,
+    },
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = true,
     host_surface_target_available: bool = true,
@@ -132,6 +135,12 @@ pub fn classifyRefreshOutcome(
 /// *Hardening:* validates direct boundary invariant fields to catch invalid state early.
 pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     const outcome_state: DirectPresentOutcomeState = .{
+        .transport = .{
+            .outcome = if (updated) .updated_and_presented else .presented,
+            .cache_state_advanced = true,
+            .host_surface_target_available = true,
+            .shared_surface_attachment_ready = false,
+        },
         .outcome = if (updated) .updated_and_presented else .presented,
     };
     assertDirectPresentOutcomeConsistency(outcome_state);
