@@ -124,7 +124,7 @@ pub const PresentationExecutionResult = struct {
 pub const RefreshedPresentablePresentationResult = terminal_presentation_runtime.RefreshedPresentablePresentationResult;
 
 /// **Refresh outcome snapshot:** classifies refresh cycle result (updated or not).
-/// Does not carry conjunction — passed separately to fold function. Host-target leg only.
+/// Carries conjunction inline via `shared_surface_attachment_ready`; fold reads the field directly.
 /// *Invariants:* `followup_required` and `followup_reason` are coupled — must both indicate unavailability
 /// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
 // Terminal-layer outcome structs re-exported for callers
@@ -135,7 +135,6 @@ pub const ReuseEligibilityInput = terminal_presentation_runtime.ReuseEligibility
 pub const DirectPresentEligibilityInput = terminal_presentation_runtime.DirectPresentEligibilityInput;
 
 // Terminal-layer fold and classification helpers
-const presentResultFromOutcomeState = terminal_presentation_runtime.presentResultFromOutcomeState;
 const presentResultFromRefreshOutcomeState = terminal_presentation_runtime.presentResultFromRefreshOutcomeState;
 const presentResultFromReuseOutcomeState = terminal_presentation_runtime.presentResultFromReuseOutcomeState;
 const classifyRefreshOutcome = terminal_presentation_runtime.classifyRefreshOutcome;
@@ -2213,19 +2212,16 @@ test "integration lock consolidated outcome states fold correctly" {
     try std.testing.expectEqual(reuse_result.outcome, TerminalPresentOutcome.reused);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
-    // DirectPresentOutcomeState: both legs and conjunction as fields.
+    // DirectPresentOutcomeState: canonical direct fold helper threads direct-path invariants.
     const direct_outcome = DirectPresentOutcomeState{
         .outcome = .presented,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = false,
     };
-    const direct_result = presentResultFromOutcomeState(
-        direct_outcome.outcome,
-        direct_outcome.cache_state_advanced,
-        direct_outcome.host_surface_target_available,
+    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+        direct_outcome,
         .{},
-        direct_outcome.shared_surface_attachment_ready,
     );
     try std.testing.expectEqual(direct_result.outcome, TerminalPresentOutcome.presented);
     try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
@@ -2275,7 +2271,7 @@ test "integration follow-through refresh classification validates followup coupl
 }
 
 test "integration follow-through direct outcome folds correctly through generic path" {
-    // Verify that direct present outcomes compose correctly through the generic fold.
+    // Verify that direct present outcomes compose correctly through the canonical direct fold helper.
     // Direct draws have both legs true and conjunction false (not pre-verified).
 
     const direct_updated = classifyDirectPresentOutcome(true);
@@ -2363,7 +2359,7 @@ test "integration consolidation all fold paths route through canonical generic f
     try std.testing.expect(reuse_result.cache_state_advanced == true);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
-    // Direct path: uses generic fold directly without wrapper
+    // Direct path: uses canonical direct fold helper
     const direct_outcome = classifyDirectPresentOutcome(false);
     const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
         direct_outcome,
