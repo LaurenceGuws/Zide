@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B73` (in_progress, super-gate `CZH-GATE-127`). Sprint `CZH-S68` in progress.
+- Current active macro batch: `CZH-B74` (in_progress, super-gate `CZH-GATE-128`). Sprint `CZH-S69` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -31,6 +31,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S66` (`CZH-B71`, `CZH-GATE-125`). Checkpoint: `docs/todo/core/CZH_S66_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S67` (`CZH-B72`, `CZH-GATE-126`). Checkpoint: `docs/todo/core/CZH_S67_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S68` (`CZH-B73`, `CZH-GATE-127`). Checkpoint: `docs/todo/core/CZH_S68_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
@@ -4833,7 +4834,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B73` Enforcement Matrix Determinism Hardening (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B73` Enforcement Matrix Determinism Hardening (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4854,5 +4855,30 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S68_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+### `CZH-B74` Enforcement Matrix Drift-Guard Tightening (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- tighten matrix drift-guards so claim-to-lock mappings remain stable and regression-resistant under ongoing edits
+
+Acceptance:
+
+- drift-guard coverage is explicit across refresh/reuse/direct/shared paths
+- identified drift vectors are closed without weakening existing determinism guarantees
+- regression + integration verification confirms ongoing drift resistance
+- docs align with drift-guard vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-128`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S69_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`

@@ -23,26 +23,26 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S68` (review_gate at `CZH-GATE-127`)
-- Previous Sprint: `CZH-S67` (accepted)
-- Super-gate: `CZH-GATE-127` (CZH-B73, in_progress)
+- Sprint ID: `CZH-S69` (in_progress)
+- Previous Sprint: `CZH-S68` (accepted)
+- Super-gate: `CZH-GATE-128` (CZH-B74, in_progress)
 
-## Ticket Order (`CZH-S68`)
+## Ticket Order (`CZH-S69`)
 
-1. `CZH-1189`
-2. `CZH-1190`
-3. `CZH-1191`
-4. `CZH-1192`
-5. `CZH-1193`
-6. `CZH-1194`
-7. `CZH-1195`
-8. `CZH-1196`
+1. `CZH-1197`
+2. `CZH-1198`
+3. `CZH-1199`
+4. `CZH-1200`
+5. `CZH-1201`
+6. `CZH-1202`
+7. `CZH-1203`
+8. `CZH-1204`
 
 ## Current State
 
-- `in_progress`: none
-- `todo`: none
-- `review_gate`: `CZH-S68` (CZH-1189..1196) at `CZH-GATE-127`
+- `in_progress`: `CZH-1197`
+- `todo`: `CZH-1198`, `CZH-1199`, `CZH-1200`, `CZH-1201`, `CZH-1202`, `CZH-1203`, `CZH-1204`
+- `review_gate`: none
 - `blocked`: none
 - `changes_required`: `CZH-B35` at `CZH-GATE-89`
 

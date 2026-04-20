@@ -6,10 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-127`): `CZH-B73` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-128`): `CZH-B74` in
   `docs/todo/core/implementation.md`
-- Active sprint (review_gate, awaiting architect decision): `CZH-S68` (CZH-1189..1196)
-  - Checkpoint: `docs/todo/core/CZH_S68_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S68_CHECKPOINT.md`
   - Focus: Enforcement matrix determinism hardening (6 criteria applied to 14 claims)
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S67_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`
@@ -79,7 +78,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S68_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S69_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Connected Android device for this checkpoint: `RF8M74JDWEK`.
@@ -106,11 +105,11 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch status (`CZH-B73`, in progress toward `CZH-GATE-127`):
+Current batch status (`CZH-B74`, in progress toward `CZH-GATE-128`):
 
-- target: harden enforcement matrix determinism for stable claim-to-lock mappings
+- target: tighten enforcement matrix drift-guards for regression-resistant claim-to-lock mappings
 - preserve sealed canonical surface and no-bypass guarantees
-- preserve behavior and host ABI while reducing reviewer drift from ordering ambiguity
+- preserve behavior and host ABI while preventing ongoing matrix drift under maintenance
 
 ## First Read Order
 
