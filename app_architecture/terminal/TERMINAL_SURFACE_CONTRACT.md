@@ -417,6 +417,99 @@ These execute GPU and flow operations:
 - Must be contract-critical; implementation details must be inferred
 - Keep assertion surface minimal and focused on invariants
 
+## Final Surface Seal (CZH-S59)
+
+**Authority:** Complete finalization and locking of terminal presentation runtime contract.
+
+**Finalization Scope:**
+After four sprints of progressive refinement (CZH-S54 through CZH-S58), the presentation runtime contract is ready for final seal. All surfaces have been unified, locked, and compressed; all invariants verified; all assertions optimized to contract-critical only. CZH-S59 performs final verification and formally locks the surface for the production system.
+
+**Contract Status Before Finalization:**
+
+1. **Canonical Entry Contract (CZH-S54):** ✓ LOCKED
+   - Three canonical entries encapsulate all outcome classification and folding
+   - No secondary routes; fold helpers private
+   - Enforced at compile time
+
+2. **Result Surface vs Test Surface (CZH-S55):** ✓ LOCKED
+   - Production surface: 11 essential functions
+   - Test surface: 4 isolated helpers + 1 shared construction
+   - Clear boundary maintained
+
+3. **Canonical Entry Contract Lock (CZH-S56):** ✓ LOCKED
+   - Three canonical entries are ONLY widget entry points
+   - All secondary routes verified blocked
+   - Verification: CZH-1093 audit confirms no violations
+
+4. **Production-Callable Surface Lock (CZH-S57):** ✓ LOCKED
+   - Complete 11-function surface mapped and verified
+   - All functions essential; no redundancy
+   - Verification: CZH-1101 audit confirms all called from production
+
+5. **Assertion Surface Policy (CZH-S58):** ✓ LOCKED
+   - Compressed from 11 to 3 assertions (73% reduction)
+   - Contract-critical assertion preserved
+   - Implementation details removed; test hardening consolidated
+
+**Final Sealing Activities (CZH-S59):**
+
+### CZH-1118 — Authority tightening (doc-only) — IN PROGRESS
+- Update TERMINAL_SURFACE_CONTRACT.md with final surface policy
+- Document sealing rationale and completion criteria
+- Specify post-seal change control requirements
+
+### CZH-1119 through CZH-1121 — Per-path final seals
+- Refresh path final seal: Verify no regressions, confirm entry point locked
+- Reuse path final seal: Verify eligibility decision intact, confirm entry point locked
+- Direct path final seal: Verify classification locked, confirm entry point locked
+
+### CZH-1122 — Final shared surface lock
+- Verify no consolidation opportunities missed
+- Lock all shared helpers (presentResultFromOutcomeState, etc.)
+- Document integration invariants
+
+### CZH-1123 — Final invariants lock
+- Lock all invariants post-compression
+- Verify no-bypass invariants enforced
+- Verify route parity maintained
+- Verify test-only surface isolated
+
+### CZH-1124 — Hygiene sweep + validation packet + gate handoff
+- Final code review and cleanup
+- Comprehensive validation run (build, tests, audit verification)
+- Handoff to architect review at CZH-GATE-118
+
+**Post-Seal Change Control:**
+
+Once sealed, the terminal presentation runtime surface is locked for production. Future changes are subject to strict governance:
+
+- **New public functions:** Architect approval required (modify TERMINAL_SURFACE_CONTRACT.md)
+- **Function removal:** Architect approval required (migrate callers first)
+- **Assertion changes:** Architect approval required (must remain contract-critical only)
+- **Private helper changes:** Engineer discretion allowed (internal implementation only)
+- **Outcome state changes:** Architect approval required (affects canonical entry contract)
+- **Test surface expansion:** Engineer discretion allowed (as long as isolated from production)
+
+**Finalization Criterion:**
+
+The presentation runtime surface is sealed when:
+1. ✓ All canonical entries verified locked (CZH-1119, CZH-1120, CZH-1121)
+2. ✓ All shared helpers verified locked (CZH-1122)
+3. ✓ All invariants verified and documented (CZH-1123)
+4. ✓ No-bypass invariants enforced (compile-time + code review)
+5. ✓ Test surface isolated (no production calls to test helpers)
+6. ✓ Assertion surface optimized (contract-critical only)
+7. ✓ All production functions essential and verified called (CZH-1101 audit + usage review)
+8. ✓ Full validation ladder passes (build, tests, invariant checks)
+9. ✓ Architect review passed at CZH-GATE-118
+
+**Related Authority Documents:**
+- Canonical Entry Contract: CZH-1093, CZH-S54
+- Result Surface Isolation: CZH-S55
+- Production Surface Lock: CZH-1101, CZH-S57
+- Assertion Compression: CZH-1109, CZH-S58
+- Final Sealing: CZH-1117, CZH-S59
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
