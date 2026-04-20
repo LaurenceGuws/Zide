@@ -179,7 +179,11 @@ test "Reuse boundary helper forwards reused and non-reused transport consistentl
 }
 
 test "Direct boundary timing carrier preserves explicit timing transport" {
-    const timing = presentation_runtime.directPresentTimingResult(2.0, 3.5, 1.25);
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 2.0,
+        .glyph_ms = 3.5,
+        .kitty_ms = 1.25,
+    };
 
     try std.testing.expectEqual(timing.background_ms, 2.0);
     try std.testing.expectEqual(timing.glyph_ms, 3.5);

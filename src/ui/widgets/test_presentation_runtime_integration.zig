@@ -311,7 +311,7 @@ test "Callback contract: terminal classification used regardless of widget execu
 
 test "Integration invariant: direct folded-result route preserves canonical timing carrier semantics" {
     const direct_outcome = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
-    const timing = terminal_presentation_runtime.directPresentTimingResult(2.0, 1.0, 0.0);
+    const timing = .{ .background_ms = 2.0, .glyph_ms = 1.0, .kitty_ms = 0.0 };
     const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_outcome, timing);
 
     try std.testing.expect(direct_result.outcome == direct_outcome.outcome);

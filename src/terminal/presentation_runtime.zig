@@ -26,7 +26,6 @@
 //! - `presentResultFromRefreshOutcomeState(outcome, timing) -> TerminalPresentResult`
 //! - `foldReuseAttemptResultToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromDirectPresentOutcomeState(outcome, timing) -> TerminalPresentResult`
-//! - `directPresentTimingResult(bg_ms, glyph_ms, kitty_ms) -> TerminalPresentTiming`
 //! - `presentResultFromOutcomeState()` — generic fold used by all paths
 
 const std = @import("std");
@@ -200,21 +199,6 @@ pub fn foldReuseAttemptResultToPresent(
         timing,
         outcome_state.shared_surface_attachment_ready,
     );
-}
-
-/// **Build direct boundary timing carrier:** canonical helper for threading direct boundary
-/// phase timings into terminal timing transport.
-/// *Flattening:* centralizes timing field mapping for direct boundary transport callsites.
-pub fn directPresentTimingResult(
-    bg_ms: f64,
-    glyph_ms: f64,
-    kitty_ms: f64,
-) renderer_presentable_host.TerminalPresentTiming {
-    return .{
-        .background_ms = bg_ms,
-        .glyph_ms = glyph_ms,
-        .kitty_ms = kitty_ms,
-    };
 }
 
 /// **Canonical direct boundary fold route:** folds direct boundary outcome through generic result helper.
