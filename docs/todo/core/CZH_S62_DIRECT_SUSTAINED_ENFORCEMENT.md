@@ -154,4 +154,19 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 **Determinism format:** ✓ APPLIED (3/3 claims standardized per CZH-S68)
 **Cross-references:** ✓ COMPLETE (all claims map to TERMINAL_SURFACE_CONTRACT authority)
 
+## Direct Path Drift-Guard Summary (CZH-S69)
+
+**Guards preventing drift from determinism rules:**
+
+- **Guard 1 (New Claims):** Any new direct claim requires 6 determinism criteria or architect pre-approval
+- **Guard 2 (Lock Detail):** Direct lock details must follow standardized format; changes require architect review
+- **Guard 3 (Test Binding):** All direct test bindings must be verifiable file:RANGE or defined category
+- **Guard 4 (Layer Explicitness):** All 3 direct claims must have explicit layer coverage table
+- **Guard 5 (Cross-Path):** Outcome type freeze claim (shared with refresh, reuse) must maintain variant notation and relationship
+- **Guard 6 (Authority Sync):** Direct claims must remain synchronized with authority definitions
+- **Guard 7 (Cross-Refs):** Direct claims in shared lock mappings (outcome freeze, transport, field guarantees) must be updated when claims change
+- **Guard 8 (Test Staleness):** Test function changes require simultaneous documentation updates across all 3 direct claims
+
+**Maintenance gate:** Code review checklist (8 guards) required before any direct claim addition/modification.
+
 Status: Ready for CZH-1194 (shared determinism rewrite)
