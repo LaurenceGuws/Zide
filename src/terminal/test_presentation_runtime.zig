@@ -215,6 +215,9 @@ test "Helper contraction removes boundary mapping helper callsites" {
         std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromRefreshOutcome"));
         std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromReuseOutcome"));
         std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromDirectOutcome"));
+        std.debug.assert(@hasDecl(presentation_runtime, "foldRefreshEntry"));
+        std.debug.assert(@hasDecl(presentation_runtime, "foldReuseEntry"));
+        std.debug.assert(@hasDecl(presentation_runtime, "foldDirectEntry"));
         std.debug.assert(@hasDecl(presentation_runtime, "refreshTransportFromResult"));
         std.debug.assert(@hasDecl(presentation_runtime, "reuseTransportFromOutcome"));
         std.debug.assert(@hasDecl(presentation_runtime, "directTransportFromUpdated"));
@@ -241,6 +244,20 @@ test "Fold routes consume contracted transport carrier directly" {
     const direct = presentation_runtime.classifyDirectPresentOutcome(true);
     const direct_folded = presentation_runtime.foldDirectOutcomeToPresent(direct, timing);
     try std.testing.expectEqual(direct_folded.outcome, direct.transport.outcome);
+}
+
+test "Boundary field routes stay locked to transport carriers" {
+    const refresh = presentation_runtime.classifyRefreshOutcome(.presented, true);
+    try std.testing.expectEqual(refresh.transport.outcome, refresh.outcome);
+    try std.testing.expectEqual(refresh.transport.cache_state_advanced, refresh.cache_state_advanced);
+
+    const reuse = presentation_runtime.reuseSuccessOutcome();
+    try std.testing.expectEqual(reuse.transport.outcome, reuse.outcome);
+    try std.testing.expectEqual(reuse.transport.shared_surface_attachment_ready, reuse.shared_surface_attachment_ready);
+
+    const direct = presentation_runtime.classifyDirectPresentOutcome(false);
+    try std.testing.expectEqual(direct.transport.outcome, direct.outcome);
+    try std.testing.expectEqual(direct.transport.host_surface_target_available, direct.host_surface_target_available);
 }
 
 test "Unified fold transport fields map through canonical reuse fold helper" {
