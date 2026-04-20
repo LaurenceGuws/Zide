@@ -614,6 +614,88 @@ Prior sprint records:
 - CZH-S60 baseline: `CZH_S60_CHECKPOINT.md`
 - CZH-S61 enforcement: `CZH_S61_CHECKPOINT.md`, `CZH_S61_ENFORCEMENT_SUMMARY.md`
 
+## Evidence Format Reference (CZH-S66)
+
+Authority policy and format definitions for enforcement evidence artifacts (checkpoints, audits, verifications, implementations).
+
+### Checkpoint Document Format
+
+**Canonical structure:**
+1. Header: title, date, sprint ID, authority parent, super-gate
+2. Sprint Overview: goal, outcome metrics
+3. Execution Summary: ticket-by-ticket completion status
+4. Domain-Specific Summary: locks preserved / signals retained / evidence normalized (sprint-dependent)
+5. Metrics table: baseline vs post-work, change column
+6. Files Modified: documentation + verification/tracking lists
+7. Commit History: all tickets listed with status
+8. Validation Results: build, test, domain-specific validations
+9. Lessons & Observations: sprint-specific learnings (3-5 observations)
+10. Integration Ready: checklist confirming all work complete
+11. Status: Ready for review gate at super-gate
+
+**Rule:** All checkpoint documents use this structure. Domain-specific content (locks vs signals vs evidence) goes in section 4; structure remains uniform across sprints.
+
+### Verification Document Format
+
+**Canonical structure:**
+1. Header: title, date, sprint ID, scope
+2. [Domain] Summary: what was compressed/verified, impact metrics
+3. Verification Checklist: per-category verification (✓ RETAINED / VERIFIED)
+4. Enforcement Verification: compile-time/runtime/test/code-review checks
+5. Validation Results: build, test, code quality
+6. Comprehensive Summary Table: item × verification type
+7. [Domain] Verification Confirmation: summary statement
+8. Status: Ready for next phase
+
+**Rule:** All verification documents follow this structure. Domain-specific categories (locks, signals, evidence) go in section 3; enforcement layers (compile-time, runtime, test, code-review) are always sections 4.
+
+### Audit Document Format
+
+**Canonical structure:**
+1. Header: title, date, sprint ID, scope
+2. Audit Overview: what was audited, why, scope definition
+3. Redundancy Analysis: per-category analysis (current state → compression candidate → retention impact)
+4. [Domain] Summary Table: item × type × current → normalization → retention → risk
+5. Compression Approach: phased implementation plan
+6. Files to be Modified: list of artifacts to change
+7. Compliance Checklist: audit complete, risk assessment, path to implementation
+8. Summary: total compression identified, retention/loss assessment
+
+**Rule:** All audit documents follow this structure. Redundancy categories (documentation, code, structure) are analyzed uniformly; domain-specific findings (compaction vs signals vs evidence) fill the analysis sections.
+
+### Implementation Summary Format
+
+**Canonical structure:**
+1. Header: title, date, sprint ID, status
+2. Ticket Execution Summary: ticket list with status (DONE/IN PROGRESS)
+3. Validation Ladder: per-validation-type results with pass/fail status
+4. Specific Validations: domain-specific validation details
+5. Code Quality Metrics: baseline/post-work/change table
+6. Validation Checklist: comprehensive checklist (12+ items)
+7. Summary: tickets executed, reduction metrics, validation status
+8. Status: Ready for next phase
+
+**Rule:** All implementation summaries use this structure. Validation ladder always covers Build/Test/Domain-Specific sections; code metrics table uses consistent columns (Metric/Baseline/Post-Work/Change).
+
+### Test Binding Citation Format
+
+**Canonical citation format:**
+- Inline comment: `(test: "test name here")`
+- Reference list: `- See authority test binding reference for mapping`
+- Full citation: `test_presentation_runtime.zig:LINE-RANGE "test name"`
+
+**Rule:** Test bindings are cited consistently across all evidence documents. Use inline format for brief mentions, reference format for external lookups, full citation for explicit line references.
+
+### Evidence Traceability Requirement
+
+**Rule:** All evidence documents must explicitly map to enforcement artifacts:
+- Checkpoint documents: reference per-path enforcement docs and tests
+- Verification documents: reference compile-time/runtime/test/code-review enforcement
+- Audit documents: reference preserved locks/signals/evidence categories
+- Implementation documents: reference validation artifact locations
+
+**Verification:** Cross-check all evidence citations resolve to actual documents and line numbers (no broken references).
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
