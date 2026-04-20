@@ -417,199 +417,88 @@ These execute GPU and flow operations:
 - Must be contract-critical; implementation details must be inferred
 - Keep assertion surface minimal and focused on invariants
 
-## Final Surface Seal (CZH-S59)
+## Sustained Enforcement Policy (CZH-S59 through CZH-S62)
 
-**Authority:** Complete finalization and locking of terminal presentation runtime contract.
+**Authority:** Comprehensive enforcement and maintenance policy for sealed presentation runtime contract.
 
-**Finalization Scope:**
-After four sprints of progressive refinement (CZH-S54 through CZH-S58), the presentation runtime contract is ready for final seal. All surfaces have been unified, locked, and compressed; all invariants verified; all assertions optimized to contract-critical only. CZH-S59 performs final verification and formally locks the surface for the production system.
+**Policy Scope:**
+After contract finalization (CZH-S59), the terminal presentation runtime surface is locked for production. This section consolidates post-seal change control, regression guards, and enforcement mechanisms into a single maintained policy ensuring the sealed contract remains intact through all future development.
 
-**Contract Status Before Finalization:**
+**Sealed Contract Status:**
 
-1. **Canonical Entry Contract (CZH-S54):** ✓ LOCKED
-   - Three canonical entries encapsulate all outcome classification and folding
-   - No secondary routes; fold helpers private
-   - Enforced at compile time
-
-2. **Result Surface vs Test Surface (CZH-S55):** ✓ LOCKED
-   - Production surface: 11 essential functions
-   - Test surface: 4 isolated helpers + 1 shared construction
-   - Clear boundary maintained
-
-3. **Canonical Entry Contract Lock (CZH-S56):** ✓ LOCKED
-   - Three canonical entries are ONLY widget entry points
-   - All secondary routes verified blocked
-   - Verification: CZH-1093 audit confirms no violations
-
-4. **Production-Callable Surface Lock (CZH-S57):** ✓ LOCKED
-   - Complete 11-function surface mapped and verified
-   - All functions essential; no redundancy
-   - Verification: CZH-1101 audit confirms all called from production
-
-5. **Assertion Surface Policy (CZH-S58):** ✓ LOCKED
-   - Compressed from 11 to 3 assertions (73% reduction)
-   - Contract-critical assertion preserved
-   - Implementation details removed; test hardening consolidated
-
-**Final Sealing Activities (CZH-S59):**
-
-### CZH-1118 — Authority tightening (doc-only) — IN PROGRESS
-- Update TERMINAL_SURFACE_CONTRACT.md with final surface policy
-- Document sealing rationale and completion criteria
-- Specify post-seal change control requirements
-
-### CZH-1119 through CZH-1121 — Per-path final seals
-- Refresh path final seal: Verify no regressions, confirm entry point locked
-- Reuse path final seal: Verify eligibility decision intact, confirm entry point locked
-- Direct path final seal: Verify classification locked, confirm entry point locked
-
-### CZH-1122 — Final shared surface lock
-- Verify no consolidation opportunities missed
-- Lock all shared helpers (presentResultFromOutcomeState, etc.)
-- Document integration invariants
-
-### CZH-1123 — Final invariants lock
-- Lock all invariants post-compression
-- Verify no-bypass invariants enforced
-- Verify route parity maintained
-- Verify test-only surface isolated
-
-### CZH-1124 — Hygiene sweep + validation packet + gate handoff
-- Final code review and cleanup
-- Comprehensive validation run (build, tests, audit verification)
-- Handoff to architect review at CZH-GATE-118
-
-**Post-Seal Change Control:**
-
-Once sealed, the terminal presentation runtime surface is locked for production. Future changes are subject to strict governance:
-
-- **New public functions:** Architect approval required (modify TERMINAL_SURFACE_CONTRACT.md)
-- **Function removal:** Architect approval required (migrate callers first)
-- **Assertion changes:** Architect approval required (must remain contract-critical only)
-- **Private helper changes:** Engineer discretion allowed (internal implementation only)
-- **Outcome state changes:** Architect approval required (affects canonical entry contract)
-- **Test surface expansion:** Engineer discretion allowed (as long as isolated from production)
-
-**Finalization Criterion:**
-
-The presentation runtime surface is sealed when:
-1. ✓ All canonical entries verified locked (CZH-1119, CZH-1120, CZH-1121)
-2. ✓ All shared helpers verified locked (CZH-1122)
-3. ✓ All invariants verified and documented (CZH-1123)
-4. ✓ No-bypass invariants enforced (compile-time + code review)
-5. ✓ Test surface isolated (no production calls to test helpers)
-6. ✓ Assertion surface optimized (contract-critical only)
-7. ✓ All production functions essential and verified called (CZH-1101 audit + usage review)
-8. ✓ Full validation ladder passes (build, tests, invariant checks)
-9. ✓ Architect review passed at CZH-GATE-118
-
-**Related Authority Documents:**
-- Canonical Entry Contract: CZH-1093, CZH-S54
-- Result Surface Isolation: CZH-S55
-- Production Surface Lock: CZH-1101, CZH-S57
-- Assertion Compression: CZH-1109, CZH-S58
-- Final Sealing: CZH-1117, CZH-S59
-
-## Post-Seal Contract Governance (CZH-S60)
-
-**Authority:** Governance baseline and regression guards for sealed contract.
-
-**Governance Objective:**
-After contract seal (CZH-S59), ensure no-bypass invariants remain enforced and no regression vectors (test leaks, outcome mutation, widget bypass, attachment drift) cause divergence. CZH-S60 establishes governance checks and documentation baseline for post-seal maintenance.
+The presentation runtime contract is sealed when all of the following hold:
+1. ✓ Canonical Entry Contract (CZH-S54): Three entries encapsulate all outcome classification + folding; fold helpers private; enforced at compile time
+2. ✓ Result Surface Isolation (CZH-S55): Production surface 11 essential functions; test surface 4 isolated helpers + 1 shared; clear boundary maintained
+3. ✓ Production-Callable Surface (CZH-S57): Complete 11-function surface verified called from production; all essential; no redundancy
+4. ✓ Assertion Surface Policy (CZH-S58): Compressed to 3 assertions (1 contract-critical + 2 test hardening); 73% reduction maintained
+5. ✓ No-Bypass Invariants Enforced: Compile-time (type system privacy) + code review verified
+6. ✓ Test Surface Isolated: No production calls to test helpers verified
+7. ✓ Full Validation Ladder Passes: build, tests, invariant checks, Android deployment
 
 **Change-Vector Governance:**
 
-### Extension Vectors (Already Locked by CZH-S59 Seal)
-- New canonical entries: Architect approval required (no new entry points allowed)
-- New production functions: Architect approval required (all 11 verified essential)
-- Assertion changes: Architect approval required (contract-critical + test hardening frozen)
-- Fold helper exposure: Prohibited (private enforcement remains)
+### Extension Vectors (Already Locked by Seal)
+- **New canonical entries:** Architect approval required; no new entry points allowed
+- **New production functions:** Architect approval required; all 11 currently essential
+- **Assertion changes:** Architect approval required; must remain contract-critical only
+- **Fold helper exposure:** Prohibited; private enforcement remains
 
-### Regression Vectors (Requires CZH-S60 Guards)
+### Regression Vectors (Active Guards)
 
-1. **No-Bypass Invariant Drift**
-   - Risk: Widget code bypassing canonical entries via fold helpers or direct outcome construction
-   - Guard: Per-path verification (CZH-1127, CZH-1128, CZH-1129) ensures no alternate routes exist
-   - Enforcement: Code review + compile-time privacy
+1. **No-Bypass Invariant Drift:** Widget code bypassing canonical entries via fold helpers or direct outcome construction
+   - Guard: Compile-time (type system privacy) + code review verification per path (CZH-1135, CZH-1136, CZH-1137, CZH-1138)
+   - Enforcement: Type system prevents fold helper calls externally; code review blocks alternate routes
 
-2. **Test-Only Surface Leak**
-   - Risk: Production code calling test assertions or outcome classification helpers
-   - Guard: Test-surface isolation guard (CZH-1131) prevents production calls to test helpers
-   - Enforcement: Code review + test coverage
+2. **Test-Only Surface Leak:** Production code calling test assertions or outcome classification helpers
+   - Guard: Test-surface isolation enforcement (CZH-1139) prevents production calls to test helpers
+   - Enforcement: Code review + test coverage validates no production paths use test surface
 
-3. **Outcome State Mutation**
-   - Risk: Production code modifying outcome state after canonical entry returns
-   - Guard: Outcome immutability verification (CZH-1131) ensures no post-production mutation
-   - Enforcement: Code review + invariant verification
+3. **Outcome State Mutation:** Production code modifying outcome state after canonical entry returns
+   - Guard: Outcome immutability verification (CZH-1139) ensures no post-production mutation
+   - Enforcement: Code review + invariant verification; outcome state private to terminal layer
 
-4. **Attachment State Drift**
-   - Risk: Widget recomputing attachment state instead of using canonical path
-   - Guard: Attachment consistency check (CZH-1130) verifies single-path computation
-   - Enforcement: Code review + state consistency guard
-
-**Governance Baseline (CZH-S60 Checklist):**
-
-- ✓ CZH-1125: Change vectors mapped, lock points identified
-- ✓ CZH-1126: Authority updated with post-seal governance policy
-- CZH-1127: Refresh path governance lock baseline
-- CZH-1128: Reuse path governance lock baseline
-- CZH-1129: Direct path governance lock baseline
-- CZH-1130: Shared governance lock baseline
-- CZH-1131: Regression/integration governance locks
-- CZH-1132: Hygiene sweep + validation + gate handoff
+4. **Attachment State Drift:** Widget recomputing attachment state instead of using canonical path
+   - Guard: Attachment consistency enforcement (CZH-1139) verifies single-path computation
+   - Enforcement: Code review validates only canonical path (TerminalPresentationBridge) computes conjunction
 
 **Post-Seal Maintenance Rules:**
 
 1. **No public function removal without architect approval** (caller migration required)
 2. **No canonical entry modification without architect approval** (affects contract)
-3. **No test-only helper calls in production code** (isolation enforced)
+3. **No test-only helper calls in production code** (isolation enforced by code review)
 4. **No private fold helper exposure** (type system + code review enforces)
 5. **No outcome state construction outside canonical entries** (type system enforces)
 6. **All assertion changes require architect approval** (keep contract-critical only)
 
-**Architect Review Gates:**
-- CZH-GATE-118: Contract seal (CZH-S59) accepted
-- CZH-GATE-119: Governance baseline (CZH-S60) ready for review
-- Future: Post-seal drift detection at each sprint
+**Enforcement Layers:**
 
-**Related Governance Documents:**
-- Change vectors: `CZH_S60_GOVERNANCE_AUDIT.md`
-- Per-path locks: `CZH_S60_REFRESH/REUSE/DIRECT_GOVERNANCE.md`
-- Shared locks: `CZH_S60_SHARED_GOVERNANCE.md`
-- Regression locks: `CZH_S60_REGRESSION_LOCKS.md`
-- Final checkpoint: `CZH_S60_CHECKPOINT.md`
-
-## Governance Enforcement Tightening (CZH-S61)
-
-**Authority:** Enforcement mechanisms for governance baseline.
-
-**Enforcement Ownership:**
+The policy is enforced across four independent layers:
 
 1. **Compile-Time Enforcement** (Type System)
    - Owner: Zig type system + module visibility
    - Responsibility: Prevent invalid function calls at compile time
-   - Enforcement: Private fold helpers cannot be imported/called externally
-   - Escalation: If violated, must modify build constraints or re-architect seams
+   - Enforcement: Private fold helpers (`foldRefreshOutcomeToPresent`, `foldReuseOutcomeToPresent`, `foldDirectOutcomeToPresent`) cannot be imported/called externally
+   - Violation: Compile error; cannot proceed
 
 2. **Runtime Enforcement** (Assertions)
    - Owner: Production assertions in canonical entries
    - Responsibility: Detect outcome mutation, invalid state transitions
-   - Enforcement: Contract-critical assertion at canonical entry output
-   - Escalation: If assertion fires, contract violation detected; must review and fix
+   - Enforcement: Contract-critical assertion at canonical entry output (line 168 in presentation_runtime.zig)
+   - Violation: Assertion fire indicates contract violation; must review and fix
 
 3. **Test Enforcement** (Test Coverage)
    - Owner: Unit test suite (zig build test)
    - Responsibility: Detect regression vectors in test execution
-   - Enforcement: Tests check no-bypass invariants, test-only isolation, outcome immutability
-   - Escalation: If test fails, regression detected; must review and fix
+   - Enforcement: Tests validate no-bypass invariants, test-only isolation, outcome immutability, attachment consistency
+   - Violation: Test failure indicates regression; must review and fix
 
 4. **Code Review Enforcement** (Architecture)
    - Owner: Architect approval for contract-affecting changes
    - Responsibility: Block new public functions, signature changes, exposure violations
-   - Enforcement: All changes touching canonical entries or production surface require approval
-   - Escalation: Engineer cannot merge without architect approval
+   - Enforcement: All changes touching canonical entries or production surface require architect approval
+   - Violation: Engineer cannot merge without architect approval
 
-**Enforcement Escalation Criteria:**
+**Escalation Criteria:**
 
 **Severity 1 (Critical):** Immediate halt + architect escalation
 - Compile error due to violated type constraints
@@ -641,18 +530,32 @@ After contract seal (CZH-S59), ensure no-bypass invariants remain enforced and n
 
 **Drift Detection & Response:**
 
-**If regression vector detected (test failure, assertion, or code review):**
-1. Identify specific violation: contract boundary breach, test leak, mutation, bypass
+If regression vector detected (test failure, assertion fire, or code review finding):
+1. Identify specific violation: contract boundary breach, test leak, mutation, bypass, or drift
 2. Assess severity: critical (block), high (review), medium (doc)
-3. Fix approach: revert change, add guard, or architect redesign
+3. Determine fix approach: revert change, add guard, strengthen test, or architect redesign
 4. Update enforcement: add test, assertion, or code comment to prevent recurrence
-5. Escalate if: severity 1 or new pattern not covered by existing guards
+5. Escalate if: severity 1, affects core contract, or represents new pattern not covered by existing guards
 
 **Non-Goals:**
 - Adding complexity to normal development flow
-- Freezing internal implementation details
+- Freezing internal implementation details (private helpers remain open to optimization)
 - Preventing legitimate optimization or refactoring within sealed contract
 - Enforcing specific code style or organization
+
+**Related Governance Documents:**
+
+Core enforcement:
+- Refresh enforcement: `CZH_S62_REFRESH_SUSTAINED_ENFORCEMENT.md` (consolidates CZH-S60 + CZH-S61 refresh)
+- Reuse enforcement: `CZH_S62_REUSE_SUSTAINED_ENFORCEMENT.md` (consolidates CZH-S60 + CZH-S61 reuse)
+- Direct enforcement: `CZH_S62_DIRECT_SUSTAINED_ENFORCEMENT.md` (consolidates CZH-S60 + CZH-S61 direct)
+- Shared enforcement: `CZH_S62_SHARED_SUSTAINED_LOCK.md` (consolidates governance + enforcement + integration)
+- Audit trail: `CZH_S62_SIMPLIFICATION_AUDIT.md` (documents consolidation)
+
+Prior sprint records:
+- CZH-S59 finalization: `CZH_S59_CHECKPOINT.md`
+- CZH-S60 baseline: `CZH_S60_CHECKPOINT.md`
+- CZH-S61 enforcement: `CZH_S61_CHECKPOINT.md`, `CZH_S61_ENFORCEMENT_SUMMARY.md`
 
 ## Android mapping (example, not definition)
 
