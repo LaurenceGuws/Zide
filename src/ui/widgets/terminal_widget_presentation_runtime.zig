@@ -101,12 +101,6 @@ pub const PresentationUpdatePlan = struct {
 // Terminal-layer type re-exported for callers
 pub const ViewportShiftState = terminal_presentation_runtime.ViewportShiftState;
 
-pub const DirectPresentResult = struct {
-    bg_ms: f64 = 0.0,
-    glyph_ms: f64 = 0.0,
-    kitty_ms: f64 = 0.0,
-};
-
 pub const IncrementalPresentableUpdateResult = struct {
     completed: bool = false,
     bg_ms: f64 = 0.0,
@@ -1215,7 +1209,7 @@ pub fn runPresentation(
                     local_renderer: @TypeOf(renderer),
                     _: TerminalPresentPlan,
                 ) DirectTerminalPresentExecutionResult {
-                    const direct = directPresent(
+                    return directPresent(
                         local_ctx.base.self_widget,
                         local_ctx.base.shell,
                         local_renderer,
@@ -1236,14 +1230,6 @@ pub fn runPresentation(
                         local_ctx.base.note_present_ctx,
                         note_present,
                     );
-                    return .{
-                        .updated = false,
-                        .timing = terminal_presentation_runtime.directPresentTimingResult(
-                            direct.bg_ms,
-                            direct.glyph_ms,
-                            direct.kitty_ms,
-                        ),
-                    };
                 }
             };
             const direct = renderer_presentable_host.runDirectTerminalPresentExecution(
@@ -1490,8 +1476,8 @@ pub fn directPresent(
     height: f32,
     note_present_ctx: anytype,
     note_present: anytype,
-) DirectPresentResult {
-    var result = DirectPresentResult{};
+) DirectTerminalPresentExecutionResult {
+    var result = DirectTerminalPresentExecutionResult{};
     const rows = terminal_view.rows;
     const cols = terminal_view.cols;
     const view_cells = terminal_view.cells;
@@ -1555,13 +1541,13 @@ pub fn directPresent(
         );
     }
     renderer.flushTerminalBatch();
-    result.bg_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
+    result.timing.background_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
 
     if (has_kitty) {
         const kitty_phase_start = app_shell.getTime();
         self.surface.kitty.cleanupTextures(self.session.allocator, self.surface.kitty.images_view.items);
         self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, false, start_line, rows, cols);
-        result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+        result.timing.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
 
     const glyph_phase_start = app_shell.getTime();
@@ -1597,12 +1583,12 @@ pub fn directPresent(
     }
     recordMetalFallbackStats(self, terminal_view.generation, glyph_stats);
     renderer.flushTerminalGlyphBatch();
-    result.glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
+    result.timing.glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 
     if (has_kitty) {
         const kitty_phase_start = app_shell.getTime();
         self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, true, start_line, rows, cols);
-        result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+        result.timing.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
 
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
