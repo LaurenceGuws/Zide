@@ -22,11 +22,10 @@
 //! - `classifyDirectPresentOutcome(updated) -> DirectPresentOutcomeState`
 //! - `reuseSuccessOutcome() -> ReusePresentOutcomeState`
 //!
-//! **Canonical fold routes:**
-//! - `foldRefreshOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
-//! - `foldReuseOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
-//! - `foldDirectOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
-//! - internal generic fold helper routes all path-specific fold helpers
+//! **Terminal-internal fold helpers** (widget does not call directly):
+//! - `foldRefreshOutcomeToPresent(outcome, timing) -> TerminalPresentResult` — called by `refreshPresentEntry` only
+//! - `foldReuseOutcomeToPresent(outcome, timing) -> TerminalPresentResult` — called by `reuseEligibilityEntry` only
+//! - `foldDirectOutcomeToPresent(outcome, timing) -> TerminalPresentResult` — called by `directPresentEntry` only
 
 const std = @import("std");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
@@ -145,7 +144,8 @@ fn presentResultFromOutcomeState(
 /// **Canonical outcome fold for refresh path:** routes transport and followup.
 /// *Simplification:* transport carries all outcome fields; followup separate.
 /// *Hardening:* validates followup propagation.
-pub fn foldRefreshOutcomeToPresent(
+/// *Internal:* called only by `refreshPresentEntry`; widget does not call directly.
+fn foldRefreshOutcomeToPresent(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
