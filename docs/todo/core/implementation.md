@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B59` (in_progress, super-gate `CZH-GATE-113`). Sprint `CZH-S54` in progress.
+- Current active macro batch: `CZH-B59` (architect_review_pending, super-gate `CZH-GATE-113`). Sprint `CZH-S54` completed and at review gate.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
@@ -4409,7 +4409,7 @@ Owner docs:
 - Reuse production flow now constructs outcome state in terminal runtime via `reuseEligibilityEntry(...)`; widget no longer constructs outcome carriers.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke remained green through `CZH-GATE-112`.
 
-### `CZH-B59` Canonical Entry/Eligibility Unification (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B59` Canonical Entry/Eligibility Unification (Larger-Cut Sprint) (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -4426,12 +4426,27 @@ Acceptance:
 - source comments remain present-tense ownership/invariant statements only
 - Linux and connected Android validation stay green through `CZH-GATE-113`
 
+Engineer completion (2026-04-20):
+
+- **All 8 tickets executed:** CZH-1077 through CZH-1084 (7 commits)
+- **Validation ladder:** SL-0 PASS, SL-1 PASS, SL-2 PASS, SL-3 PASS
+- **Canonical entries unified:** refreshPresentEntry, reuseEligibilityEntry, directPresentEntry
+- **Redundant helpers removed:** reusePresentEntry (collapsed)
+- **Fold helpers privatized:** foldRefreshOutcomeToPresent, foldReuseOutcomeToPresent, foldDirectOutcomeToPresent
+- **Sprint checkpoint:** `docs/todo/core/CZH_S54_CHECKPOINT.md`
+- **Board state:** All tickets moved to review_gate
+- **Acceptance criteria:** All met (canonical entries, no boundary glue, docs updated, no behavior changes, no ABI changes, validation green)
+
 Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S54_TICKETS.md`
-- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/todo/core/CZH_S54_CHECKPOINT.md`
+- `docs/todo/core/CZH_S54_AUDIT.md`
+- `docs/todo/core/CZH_S54_PRUNING.md`
+- `docs/todo/core/CZH_S54_INVARIANTS.md`
 - `docs/AGENT_HANDOFF.md`
+- `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
 
 ## Response Contract
 
