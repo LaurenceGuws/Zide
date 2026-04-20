@@ -1425,7 +1425,7 @@ pub fn tryFastPresentExisting(
             },
         };
     }
-    return foldReuseOutcomeToPresent(outcome, .{});
+    return terminal_presentation_runtime.reusePresentEntry(outcome, .{});
 }
 
 /// **Direct presentation:** terminal-owned eligibility check, widget executes if eligible.

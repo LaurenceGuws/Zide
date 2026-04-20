@@ -177,6 +177,15 @@ pub fn foldReuseOutcomeToPresent(
     return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
+/// **Canonical reuse fold entry:** fold reuse outcome to result in canonical route.
+/// Single entry point for widget layer; encapsulates outcome validation.
+pub fn reusePresentEntry(
+    outcome_state: ReusePresentOutcomeState,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    return foldReuseOutcomeToPresent(outcome_state, timing);
+}
+
 fn reuseTransportFromOutcome(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
