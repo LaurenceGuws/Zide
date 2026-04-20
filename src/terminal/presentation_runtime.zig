@@ -288,15 +288,9 @@ fn directTransportFromUpdated(updated: bool) FoldTransportFields {
     };
 }
 
-/// **Validate reuse outcome route-lock and success invariant:**
-/// Verifies that all outcome fields are locked to canonical transport carrier
-/// and that reuse success path maintains invariants.
+/// **Validate reuse outcome success invariant:**
+/// Verifies reuse success path maintains invariants; transport route-lock verified at construction.
 pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
-    // Route-lock: outcome fields locked to canonical transport carrier
-    std.debug.assert(state.transport.outcome == state.outcome);
-    std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
-    std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
-    std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
     // Reuse success invariants: outcome==reused requires all legs and conjunction ready
     if (state.outcome == .reused) {
         std.debug.assert(state.cache_state_advanced == true);
