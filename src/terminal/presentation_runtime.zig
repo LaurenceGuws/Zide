@@ -51,11 +51,11 @@ pub const RefreshOutcomeState = struct {
     followup_reason: TerminalPresentFollowupReason = .none,
 };
 
-/// **Direct present outcome snapshot:** result when drawing directly bypasses reuse path.
-/// Host-target leg hardcoded to `true` (drawing implies renderer is available).
-/// Conjunction hardcoded to `false` (direct path does not verify full attachment before returning).
-/// *Invariants:* `cache_state_advanced` always true (drawing implies advancement); both legs fixed.
-/// Hardening assertions validate invariants in `classifyDirectPresentOutcome()`.
+/// **Direct boundary outcome snapshot:** result when direct boundary execution bypasses reuse path.
+/// Host-target leg is fixed to `true` (direct boundary draw implies renderer availability).
+/// Conjunction is fixed to `false` (direct boundary path does not pre-verify full attachment before returning).
+/// *Invariants:* `cache_state_advanced` remains true (draw implies advancement); boundary legs remain fixed.
+/// Hardening assertions validate direct boundary invariants in `classifyDirectPresentOutcome()`.
 pub const DirectPresentOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = true,
@@ -95,9 +95,9 @@ pub fn classifyRefreshOutcome(
     return outcome_state;
 }
 
-/// **Classify direct present outcome:** derive outcome from direct draw completion.
-/// Invariant: both legs and conjunction are fixed to correct values (drawing succeeded).
-/// *Hardening:* validates invariant fields to catch invalid state early.
+/// **Classify direct boundary outcome:** derive outcome from direct boundary draw completion.
+/// Invariant: both legs and conjunction remain fixed to the direct boundary contract values.
+/// *Hardening:* validates direct boundary invariant fields to catch invalid state early.
 pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     const outcome_state: DirectPresentOutcomeState = .{
         .outcome = if (updated) .updated_and_presented else .presented,
@@ -223,9 +223,9 @@ pub fn presentResultFromReuseOutcomeState(
     return foldReuseAttemptResultToPresent(outcome_state, timing);
 }
 
-/// **Build direct-present timing carrier:** canonical helper for threading direct-present
+/// **Build direct boundary timing carrier:** canonical helper for threading direct boundary
 /// phase timings into terminal timing transport.
-/// *Flattening:* centralizes timing field mapping for direct-present transport callsites.
+/// *Flattening:* centralizes timing field mapping for direct boundary transport callsites.
 pub fn directPresentTimingResult(
     bg_ms: f64,
     glyph_ms: f64,
@@ -238,9 +238,9 @@ pub fn directPresentTimingResult(
     };
 }
 
-/// **Canonical outcome fold for direct-present path:** folds direct outcome through generic result helper.
-/// *Simplification:* collapses direct outcome transport hop at callsites.
-/// *Hardening:* validates direct invariants before folding.
+/// **Canonical direct boundary fold route:** folds direct boundary outcome through generic result helper.
+/// *Simplification:* collapses direct boundary transport hop at callsites.
+/// *Hardening:* validates direct boundary invariants before folding.
 pub fn presentResultFromDirectPresentOutcomeState(
     outcome_state: DirectPresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -264,9 +264,9 @@ pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
     }
 }
 
-/// **Validate direct present outcome consistency:** hardening check that direct present outcome
-/// state has invariant field values. Direct draws always advance cache and have renderer available;
-/// conjunction is false (not pre-verified).
+/// **Validate direct boundary outcome consistency:** hardening check that direct boundary outcome
+/// state has invariant field values. Direct boundary draws always advance cache and keep renderer available;
+/// conjunction remains false (not pre-verified).
 pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void {
     std.debug.assert(state.cache_state_advanced == true);
     std.debug.assert(state.host_surface_target_available == true);

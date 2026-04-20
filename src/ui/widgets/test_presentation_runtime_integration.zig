@@ -309,17 +309,17 @@ test "Callback contract: terminal classification used regardless of widget execu
     try std.testing.expect(reuse_outcome.outcome == .reused);
 }
 
-test "Integration invariant: direct fold helper parity with direct classification" {
+test "Integration invariant: direct folded-result parity with direct classification" {
     const direct_outcome = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
     const timing = .{ .background_ms = 2.0, .glyph_ms = 1.0, .kitty_ms = 0.0 };
-    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_outcome, timing);
+    const direct_folded_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_outcome, timing);
 
-    try std.testing.expect(direct_result.outcome == direct_outcome.outcome);
-    try std.testing.expect(direct_result.cache_state_advanced == direct_outcome.cache_state_advanced);
-    try std.testing.expect(direct_result.host_surface_target_available == direct_outcome.host_surface_target_available);
-    try std.testing.expect(direct_result.shared_surface_attachment_ready == direct_outcome.shared_surface_attachment_ready);
-    try std.testing.expect(direct_result.timing.background_ms == timing.background_ms);
-    try std.testing.expect(direct_result.timing.glyph_ms == timing.glyph_ms);
+    try std.testing.expect(direct_folded_result.outcome == direct_outcome.outcome);
+    try std.testing.expect(direct_folded_result.cache_state_advanced == direct_outcome.cache_state_advanced);
+    try std.testing.expect(direct_folded_result.host_surface_target_available == direct_outcome.host_surface_target_available);
+    try std.testing.expect(direct_folded_result.shared_surface_attachment_ready == direct_outcome.shared_surface_attachment_ready);
+    try std.testing.expect(direct_folded_result.timing.background_ms == timing.background_ms);
+    try std.testing.expect(direct_folded_result.timing.glyph_ms == timing.glyph_ms);
 }
 
 test "Integration invariant: refresh boundary helper folds cycle result into host-facing carrier" {
