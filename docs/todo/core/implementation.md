@@ -3627,7 +3627,7 @@ Owner docs:
 - Added invariants and integration tests locked reduced boundary contracts.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B43` Outcome Carrier Simplification and Boundary De-duplication (`in_progress`)
+### `CZH-B43` Outcome Carrier Simplification and Boundary De-duplication (`review_gate`)
 
 Queue line (exact):
 
@@ -3641,6 +3641,33 @@ Acceptance:
 - no host ABI/C export changes
 - source comments remain present-tense ownership/invariant statements only
 - Linux and connected Android validation stay green through `CZH-GATE-97`
+
+#### `CZH-B43` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded startup smoke; process exited by timeout after successful startup banner)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B43` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B43`
+- `Verdict: architect_review_pending`
+- `Scope summary:` outcome carrier flow was simplified across refresh/reuse/direct paths with terminal-owned canonical folds:
+  - refresh path now carries `shared_surface_attachment_ready` inline in `RefreshOutcomeState` and folds without a separate conjunction argument
+  - reuse path removed redundant `reused` carrier flag and uses canonical `outcome == .reused` semantics
+  - direct path now uses canonical direct-fold helper `presentResultFromDirectPresentOutcomeState(...)` to remove duplicate fold transport at widget boundary
+  - widget/runtime boundary glue duplicates were removed where outcome transport was previously re-threaded or documented as separate
+  - helper and integration invariants were expanded to lock inline refresh carrier semantics and direct-fold parity
+- `Engineer commits reviewed:` `8c72dd32`, `3627c76e`, `8c24955f`, `0fea268b`, `edd8ef1e`, `a1d756b1`, `24effe28`, `a46ac4dd`
+- `Residual risks / follow-ups:`
+  - JIRA sprint board state transition (`in_progress` → `review_gate`) and sprint checkpoint file publication remain architect-owned acceptance actions
+  - Android Java compile-only guard commands were not separately executed in this packet because deploy path remained green and launch/logcat smoke was clean
+- `Architect validation request:` validate behavior-neutral carrier simplification and boundary de-duplication against `CZH-GATE-97`; confirm ticket closure and move sprint artifacts to accepted state if approved.
 
 Owner docs:
 
