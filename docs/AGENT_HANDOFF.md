@@ -8,6 +8,7 @@ Session entrypoint only. Keep this file short and current.
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
 - Active macro batch (`in_progress`, super-gate `CZH-GATE-126`): `CZH-B72` in
   `docs/todo/core/implementation.md`
+- Recent sprint completion (review_gate `CZH-GATE-126`): `docs/todo/core/CZH_S67_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`
