@@ -25,7 +25,7 @@
 //! **Canonical fold routes:**
 //! - `foldRefreshOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `foldReuseOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
-//! - `presentResultFromDirectPresentOutcomeState(outcome, timing) -> TerminalPresentResult`
+//! - `foldDirectOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromOutcomeState()` — generic fold used by all paths
 
 const std = @import("std");
@@ -204,7 +204,7 @@ pub fn foldReuseOutcomeToPresent(
 /// **Canonical direct boundary fold route:** folds direct boundary outcome through generic result helper.
 /// *Simplification:* collapses direct boundary transport hop at callsites.
 /// *Hardening:* validates direct boundary invariants before folding.
-pub fn presentResultFromDirectPresentOutcomeState(
+pub fn foldDirectOutcomeToPresent(
     outcome_state: DirectPresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {

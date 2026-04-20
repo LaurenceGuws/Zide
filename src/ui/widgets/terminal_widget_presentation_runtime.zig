@@ -1237,7 +1237,7 @@ pub fn runPresentation(
                 Local,
             );
             const outcome_state = classifyDirectPresentOutcome(direct.updated);
-            return terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+            return terminal_presentation_runtime.foldDirectOutcomeToPresent(
                 outcome_state,
                 direct.timing,
             );
@@ -2118,7 +2118,7 @@ test "integration lock consolidated outcome states fold correctly" {
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = false,
     };
-    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+    const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_outcome,
         .{},
     );
@@ -2175,7 +2175,7 @@ test "integration follow-through direct outcome folds correctly through generic 
 
     const direct_updated = classifyDirectPresentOutcome(true);
     const timing = renderer_presentable_host.TerminalPresentTiming{};
-    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+    const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_updated,
         timing,
     );
@@ -2260,7 +2260,7 @@ test "integration consolidation all fold paths route through canonical generic f
 
     // Direct path: uses canonical direct fold helper
     const direct_outcome = classifyDirectPresentOutcome(false);
-    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+    const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_outcome,
         timing,
     );

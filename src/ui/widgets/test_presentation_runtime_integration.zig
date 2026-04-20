@@ -312,7 +312,7 @@ test "Callback contract: terminal classification used regardless of widget execu
 test "Integration invariant: direct folded-result route preserves canonical timing carrier semantics" {
     const direct_outcome = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
     const timing = .{ .background_ms = 2.0, .glyph_ms = 1.0, .kitty_ms = 0.0 };
-    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_outcome, timing);
+    const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(direct_outcome, timing);
 
     try std.testing.expect(direct_result.outcome == direct_outcome.outcome);
     try std.testing.expect(direct_result.cache_state_advanced == direct_outcome.cache_state_advanced);
@@ -432,7 +432,7 @@ test "Integration hygiene: terminal/runtime boundary exposes collapsed transport
     comptime {
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldRefreshOutcomeToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseOutcomeToPresent"));
-        std.debug.assert(@hasDecl(terminal_presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldDirectOutcomeToPresent"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "directPresentTimingResult"));
     }

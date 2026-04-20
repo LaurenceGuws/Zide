@@ -84,7 +84,7 @@ test "Direct present folding uses canonical helper" {
         .glyph_ms = 0.75,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.presentResultFromDirectPresentOutcomeState(outcome, timing);
+    const result = presentation_runtime.foldDirectOutcomeToPresent(outcome, timing);
 
     try std.testing.expect(result.outcome == .updated_and_presented);
     try std.testing.expect(result.cache_state_advanced == true);
@@ -201,7 +201,7 @@ test "Helper contraction keeps one canonical reuse fold helper declaration" {
 test "Helper contraction keeps collapsed refresh and direct transport surface" {
     comptime {
         std.debug.assert(@hasDecl(presentation_runtime, "foldRefreshOutcomeToPresent"));
-        std.debug.assert(@hasDecl(presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
+        std.debug.assert(@hasDecl(presentation_runtime, "foldDirectOutcomeToPresent"));
         std.debug.assert(!@hasDecl(presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(presentation_runtime, "directPresentTimingResult"));
     }
@@ -393,7 +393,7 @@ test "Direct folded-result route preserves classification fields" {
         .glyph_ms = 1.0,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_updated, timing);
+    const result = presentation_runtime.foldDirectOutcomeToPresent(direct_updated, timing);
 
     try std.testing.expect(result.outcome == direct_updated.outcome);
     try std.testing.expect(result.cache_state_advanced == direct_updated.cache_state_advanced);
