@@ -1987,10 +1987,10 @@ test "helper consolidation reuseSuccessOutcome constructs correct outcome state"
     // Verify the consolidation helper produces the expected outcome state for successful reuse.
     // This locks the pattern: successful reuse always has both legs and conjunction true.
     const outcome = reuseSuccessOutcome();
-    try std.testing.expectEqual(outcome.outcome, TerminalPresentOutcome.reused);
-    try std.testing.expect(outcome.cache_state_advanced == true);
-    try std.testing.expect(outcome.host_surface_target_available == true);
-    try std.testing.expect(outcome.shared_surface_attachment_ready == true);
+    try std.testing.expectEqual(outcome.transport.outcome, TerminalPresentOutcome.reused);
+    try std.testing.expect(outcome.transport.cache_state_advanced == true);
+    try std.testing.expect(outcome.transport.host_surface_target_available == true);
+    try std.testing.expect(outcome.transport.shared_surface_attachment_ready == true);
 }
 
 test "helper hardening reuse outcome assertion validates consistency" {
@@ -2002,24 +2002,27 @@ test "helper hardening reuse outcome assertion validates consistency" {
 
     // Non-reused state should not trigger assertions
     const non_reused: ReusePresentOutcomeState = .{
-        .outcome = .skipped,
+        .transport = .{
+            .outcome = .skipped,
+            .cache_state_advanced = false,
+            .host_surface_target_available = false,
+            .shared_surface_attachment_ready = false,
+        },
     };
     terminal_presentation_runtime.assertReuseOutcomeConsistency(non_reused);
 }
 
-test "helper hardening direct outcome assertion validates invariants" {
-    // Verify that the direct outcome hardening assertion validates invariant fields.
+test "helper hardening direct outcome validates invariant fields" {
+    // Verify that classifyDirectPresentOutcome produces correct invariant fields.
     // Direct draws always advance cache, have renderer available, and do not pre-verify conjunction.
     const valid_direct = classifyDirectPresentOutcome(true);
-    terminal_presentation_runtime.assertDirectPresentOutcomeConsistency(valid_direct);
-    try std.testing.expect(valid_direct.cache_state_advanced == true);
-    try std.testing.expect(valid_direct.host_surface_target_available == true);
-    try std.testing.expect(valid_direct.shared_surface_attachment_ready == false);
+    try std.testing.expect(valid_direct.transport.cache_state_advanced == true);
+    try std.testing.expect(valid_direct.transport.host_surface_target_available == true);
+    try std.testing.expect(valid_direct.transport.shared_surface_attachment_ready == false);
 
     const direct_not_updated = classifyDirectPresentOutcome(false);
-    terminal_presentation_runtime.assertDirectPresentOutcomeConsistency(direct_not_updated);
-    try std.testing.expect(direct_not_updated.cache_state_advanced == true);
-    try std.testing.expectEqual(direct_not_updated.outcome, .presented);
+    try std.testing.expect(direct_not_updated.transport.cache_state_advanced == true);
+    try std.testing.expectEqual(direct_not_updated.transport.outcome, .presented);
 }
 
 test "integration lock PresentationPresentState conjunction equals outcome conjunction" {
