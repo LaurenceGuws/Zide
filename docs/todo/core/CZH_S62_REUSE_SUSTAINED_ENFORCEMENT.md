@@ -170,4 +170,19 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 **Determinism format:** ✓ APPLIED (4/4 claims standardized per CZH-S68)
 **Cross-references:** ✓ COMPLETE (all claims map to TERMINAL_SURFACE_CONTRACT authority)
 
+## Reuse Path Drift-Guard Summary (CZH-S69)
+
+**Guards preventing drift from determinism rules:**
+
+- **Guard 1 (New Claims):** Any new reuse claim requires 6 determinism criteria or architect pre-approval
+- **Guard 2 (Lock Detail):** Reuse lock details must follow standardized format; changes require architect review
+- **Guard 3 (Test Binding):** All reuse test bindings must be verifiable file:RANGE or defined category
+- **Guard 4 (Layer Explicitness):** All 4 reuse claims must have explicit layer coverage table
+- **Guard 5 (Cross-Path):** Outcome type freeze and transport consistency claims (shared with refresh, direct) must maintain variant notation
+- **Guard 6 (Authority Sync):** Reuse claims must remain synchronized with authority definitions
+- **Guard 7 (Cross-Refs):** Reuse claims in shared lock mappings (outcome freeze, transport, success signal) must be updated when claims change
+- **Guard 8 (Test Staleness):** Test function changes require simultaneous documentation updates across all 4 reuse claims
+
+**Maintenance gate:** Code review checklist (8 guards) required before any reuse claim addition/modification.
+
 Status: Ready for CZH-1193 (direct determinism rewrite)
