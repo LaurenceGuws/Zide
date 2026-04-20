@@ -203,13 +203,13 @@ fn presentResultFromOutcomeState(
 /// **Canonical outcome fold for refresh path:** uses conjunction carried in outcome state.
 /// *Simplification:* reads `shared_surface_attachment_ready` from outcome state, no separate parameter.
 /// *Hardening:* validates outcome -> result threading and followup propagation.
-/// *Consolidation:* routes refresh outcomes through generic fold with inline followup assignment.
+/// *Consolidation:* routes refresh outcomes directly through generic fold with inline followup assignment.
 pub fn foldRefreshOutcomeToPresent(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertRefreshOutcomeConsistency(outcome_state);
-    var result = foldRefreshEntry(outcome_state, timing);
+    var result = presentResultFromOutcomeState(outcome_state.transport, timing);
     result.followup = outcome_state.followup;
     // Harden: verify followup propagates correctly through fold
     if (outcome_state.followup.required) {
@@ -217,13 +217,6 @@ pub fn foldRefreshOutcomeToPresent(
         std.debug.assert(result.followup.reason != .none);
     }
     return result;
-}
-
-fn foldRefreshEntry(
-    outcome_state: RefreshOutcomeState,
-    timing: renderer_presentable_host.TerminalPresentTiming,
-) TerminalPresentResult {
-    return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
