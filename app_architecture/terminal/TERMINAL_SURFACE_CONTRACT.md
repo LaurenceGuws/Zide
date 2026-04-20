@@ -142,23 +142,24 @@ that manages all semantic presentation logic:
   - Refresh classification carries `shared_surface_attachment_ready` inline in `RefreshOutcomeState` (no separate conjunction transport parameter)
   - All hardening assertions validate semantic consistency (no behavior changes)
   
-- **Outcome folding** (pure computation): `presentResultFromRefreshOutcomeState()`, `foldReuseAttemptResultToPresent()`, `presentResultFromReuseOutcomeState()`, `presentResultFromDirectPresentOutcomeState()`
+- **Outcome folding** (pure computation): `presentResultFromRefreshOutcomeState()`, `foldReuseAttemptResultToPresent()`, `presentResultFromDirectPresentOutcomeState()`
   - Fold outcome state + timing into host-facing result transport
   - Refresh folded result consumes conjunction from `RefreshOutcomeState.shared_surface_attachment_ready` (no separate fold argument)
-  - Reuse folded result routes through `foldReuseAttemptResultToPresent()` for both reused and non-reused attempts; `presentResultFromReuseOutcomeState()` remains canonical entrypoint
+  - Reuse folded result routes through `foldReuseAttemptResultToPresent()` for both reused and non-reused attempts
   - Direct folded result must route through `presentResultFromDirectPresentOutcomeState()` as the canonical host-facing direct result path
   - Attachment-readiness transport remains part of canonical folded result fields
   
 - **Orchestration coordination** (pure except for integration seams):
-  - **Refresh path:** `runPresentableRefreshCycle()`, `runRefreshedPresentablePresentation()`, `executeRefreshPresentFlow()`
+  - **Refresh path:** `runPresentableRefreshCycle()`, `runRefreshBoundaryPresentationResult()`, `executeRefreshPresentFlow()`
     - Drive refresh cycle outcome classification and result folding
-    - Refresh boundary helper transport is single-path: widget execution produces refresh cycle result + refreshed presentation result carriers; terminal `executeRefreshPresentFlow()` returns the canonical folded host-facing result transport
-    - `runRefreshedPresentablePresentation()` supplies conjunction once, `classifyRefreshOutcome` stores it inline, and fold reads from outcome state
-    - Refresh execution-local carriers remain integration-local; host-facing refresh result composition remains terminal-owned
+    - Refresh boundary helper transport is single-path: widget execution supplies cycle output + conjunction once, terminal fold helper finalizes host-facing transport
+    - `classifyRefreshOutcome()` stores conjunction inline and `presentResultFromRefreshOutcomeState()` performs refresh fold composition
+    - Refresh boundary exits carry `TerminalPresentResult` directly (no wrapper-only boundary result carrier)
     - No renderer/shell calls in terminal orchestration; widget retains execution/integration calls
-  - **Reuse path:** `tryFastPresentExisting()`, `runFastPresentIfAvailable()`
+  - **Reuse path:** `tryFastPresentExisting()`
     - Reuse eligibility decision based on generation pairing
-    - Reuse attempt outcome transport folds through terminal-owned `foldReuseAttemptResultToPresent()`/`presentResultFromReuseOutcomeState()` canonical path
+    - Reuse attempt transport folds through terminal-owned `foldReuseAttemptResultToPresent()` canonical path
+    - Reuse boundary exits carry `TerminalPresentResult` directly (no wrapper-only outcome carrier hop)
     - Canonical success signal remains `outcome == .reused`; no duplicate success transport flags
   - **Direct path:** `directPresent()`
     - Direct present path outcome classification and result folding
