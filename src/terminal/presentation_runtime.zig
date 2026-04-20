@@ -220,15 +220,16 @@ pub fn foldDirectOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertDirectPresentOutcomeConsistency(outcome_state);
-    return presentResultFromOutcomeState(
-        .{
-            .outcome = outcome_state.outcome,
-            .cache_state_advanced = outcome_state.cache_state_advanced,
-            .host_surface_target_available = outcome_state.host_surface_target_available,
-            .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
-        },
-        timing,
-    );
+    return presentResultFromOutcomeState(foldFieldsFromDirectOutcome(outcome_state), timing);
+}
+
+fn foldFieldsFromDirectOutcome(outcome_state: DirectPresentOutcomeState) FoldTransportFields {
+    return .{
+        .outcome = outcome_state.outcome,
+        .cache_state_advanced = outcome_state.cache_state_advanced,
+        .host_surface_target_available = outcome_state.host_surface_target_available,
+        .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
+    };
 }
 
 /// **Validate reuse outcome consistency:** hardening check that reuse outcome state has correct field values.
