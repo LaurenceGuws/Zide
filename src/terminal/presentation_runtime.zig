@@ -61,6 +61,21 @@ pub const DirectPresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
+comptime {
+    const fields = @typeInfo(DirectPresentOutcomeState).@"struct".fields;
+    var outcome_count: usize = 0;
+    var cache_count: usize = 0;
+    var host_count: usize = 0;
+    var attachment_count: usize = 0;
+    for (fields) |f| {
+        if (std.mem.eql(u8, f.name, "outcome")) outcome_count += 1;
+        if (std.mem.eql(u8, f.name, "cache_state_advanced")) cache_count += 1;
+        if (std.mem.eql(u8, f.name, "host_surface_target_available")) host_count += 1;
+        if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) attachment_count += 1;
+    }
+    std.debug.assert(outcome_count == 1 and cache_count == 1 and host_count == 1 and attachment_count == 1);
+}
+
 /// **Outcome snapshot from reuse path:** carries result of the reuse attempt.
 pub const ReusePresentOutcomeState = struct {
     outcome: TerminalPresentOutcome = .skipped,
