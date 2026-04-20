@@ -111,6 +111,7 @@ pub fn classifyRefreshOutcome(
     shared_surface_attachment_ready: bool,
 ) RefreshOutcomeState {
     const transport = refreshTransportFromResult(refresh, shared_surface_attachment_ready);
+    const followup_required = refresh == .target_unavailable;
     const outcome_state: RefreshOutcomeState = .{
         .transport = transport,
         .outcome = transport.outcome,
@@ -118,8 +119,8 @@ pub fn classifyRefreshOutcome(
         .host_surface_target_available = transport.host_surface_target_available,
         .shared_surface_attachment_ready = transport.shared_surface_attachment_ready,
         .followup = .{
-            .required = refresh == .target_unavailable,
-            .reason = if (refresh == .target_unavailable) .target_unavailable else .none,
+            .required = followup_required,
+            .reason = if (followup_required) .target_unavailable else .none,
         },
     };
     assertRefreshOutcomeConsistency(outcome_state);
