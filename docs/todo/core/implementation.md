@@ -3859,12 +3859,35 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
-Owner docs:
+#### `CZH-B47` engineer validation record (2026-04-20)
 
-- `docs/todo/core/JIRA_BOARD.md`
-- `docs/todo/core/CZH_S41_TICKETS.md`
-- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
-- `docs/AGENT_HANDOFF.md`
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded smoke; startup banner observed; timeout exit expected for bounded run)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B47` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B47`
+- `Verdict: review_gate`
+- `Scope summary:` boundary helper contraction + refresh/reuse boundary carrier narrowing landed as behavior-neutral seam tightening:
+  - `CZH-961` added explicit helper/carrier contraction audit map and ordered cut plan (`docs/todo/core/CZH_961_BOUNDARY_CONTRACTION_AUDIT_MAP.md`)
+  - `CZH-962` tightened authority language in `TERMINAL_SURFACE_CONTRACT.md` to contracted helper routes and narrowed result carriers
+  - `CZH-963` removed refresh-side wrapper helper duplication; refresh boundary fold now routes directly through `presentResultFromRefreshOutcomeState`
+  - `CZH-964` removed reuse-side terminal wrapper duplication; reuse fold now terminates at `foldReuseAttemptResultToPresent`
+  - `CZH-965` narrowed refresh boundary carrier to direct `TerminalPresentResult` transport (removed wrapper-only refresh boundary carrier)
+  - `CZH-966` narrowed reuse boundary carrier so `tryFastPresentExisting` returns folded `TerminalPresentResult` directly
+  - `CZH-967` removed stale widget passthrough glue (`runFastPresentIfAvailable`) after helper/result contraction
+  - `CZH-968` added helper-level invariants locking canonical reuse helper declaration set and refresh boundary carrier narrowing
+  - `CZH-969` added integration invariants locking contracted widget/terminal parity and no-wrapper boundary hygiene
+- `Engineer commits reviewed:` `7048df90`, `022a1a32`, `4ffb4a0e`, `923cccc4`, `f3718afd`, `17923b45`, `20d76773`, `bb180cce`, `dea6a882`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-101` review
+- `Architect validation request:` validate behavior-neutral helper contraction and boundary carrier narrowing against `CZH-GATE-101`; confirm sprint closure if accepted.
 
 ## Response Contract
 
