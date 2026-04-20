@@ -1276,11 +1276,11 @@ pub fn runPresentation(
                     );
                     return .{
                         .updated = false,
-                        .timing = .{
-                            .background_ms = direct.bg_ms,
-                            .glyph_ms = direct.glyph_ms,
-                            .kitty_ms = direct.kitty_ms,
-                        },
+                        .timing = terminal_presentation_runtime.directPresentTimingResult(
+                            direct.bg_ms,
+                            direct.glyph_ms,
+                            direct.kitty_ms,
+                        ),
                     };
                 }
             };
