@@ -579,6 +579,81 @@ After contract seal (CZH-S59), ensure no-bypass invariants remain enforced and n
 - Regression locks: `CZH_S60_REGRESSION_LOCKS.md`
 - Final checkpoint: `CZH_S60_CHECKPOINT.md`
 
+## Governance Enforcement Tightening (CZH-S61)
+
+**Authority:** Enforcement mechanisms for governance baseline.
+
+**Enforcement Ownership:**
+
+1. **Compile-Time Enforcement** (Type System)
+   - Owner: Zig type system + module visibility
+   - Responsibility: Prevent invalid function calls at compile time
+   - Enforcement: Private fold helpers cannot be imported/called externally
+   - Escalation: If violated, must modify build constraints or re-architect seams
+
+2. **Runtime Enforcement** (Assertions)
+   - Owner: Production assertions in canonical entries
+   - Responsibility: Detect outcome mutation, invalid state transitions
+   - Enforcement: Contract-critical assertion at canonical entry output
+   - Escalation: If assertion fires, contract violation detected; must review and fix
+
+3. **Test Enforcement** (Test Coverage)
+   - Owner: Unit test suite (zig build test)
+   - Responsibility: Detect regression vectors in test execution
+   - Enforcement: Tests check no-bypass invariants, test-only isolation, outcome immutability
+   - Escalation: If test fails, regression detected; must review and fix
+
+4. **Code Review Enforcement** (Architecture)
+   - Owner: Architect approval for contract-affecting changes
+   - Responsibility: Block new public functions, signature changes, exposure violations
+   - Enforcement: All changes touching canonical entries or production surface require approval
+   - Escalation: Engineer cannot merge without architect approval
+
+**Enforcement Escalation Criteria:**
+
+**Severity 1 (Critical):** Immediate halt + architect escalation
+- Compile error due to violated type constraints
+- Runtime assertion failure in production path
+- New public function added to presentation_runtime.zig without approval
+- Fold helper made public
+- Outcome state made constructible from widget
+- Test-only helper called from production code
+
+**Severity 2 (High):** Code review block + architect decision
+- Signature change to canonical entry
+- New production-callable function addition (without approval)
+- Outcome type set expansion
+- Result field addition/removal
+- Canonical entry routing change
+
+**Severity 3 (Medium):** Documentation update required
+- Private helper implementation change affecting behavior
+- New test-only assertion addition
+- Assertion content change (same behavior)
+- Comment-only changes to locked sections
+
+**Approval Gates:**
+
+- **CZH-GATE-118 and later:** All changes to presentation_runtime.zig public surface require architect review
+- **New public functions:** Explicit architect approval required; must update TERMINAL_SURFACE_CONTRACT.md
+- **Assertion changes:** Architect approval required if contract-critical; engineer discretion if test-only
+- **Private helper changes:** Engineer discretion allowed (no approval needed)
+
+**Drift Detection & Response:**
+
+**If regression vector detected (test failure, assertion, or code review):**
+1. Identify specific violation: contract boundary breach, test leak, mutation, bypass
+2. Assess severity: critical (block), high (review), medium (doc)
+3. Fix approach: revert change, add guard, or architect redesign
+4. Update enforcement: add test, assertion, or code comment to prevent recurrence
+5. Escalate if: severity 1 or new pattern not covered by existing guards
+
+**Non-Goals:**
+- Adding complexity to normal development flow
+- Freezing internal implementation details
+- Preventing legitimate optimization or refactoring within sealed contract
+- Enforcing specific code style or organization
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
