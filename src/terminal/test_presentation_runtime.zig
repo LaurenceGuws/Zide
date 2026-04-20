@@ -202,9 +202,29 @@ test "Helper contraction keeps collapsed refresh and direct transport surface" {
     comptime {
         std.debug.assert(@hasDecl(presentation_runtime, "foldRefreshOutcomeToPresent"));
         std.debug.assert(@hasDecl(presentation_runtime, "foldDirectOutcomeToPresent"));
+        std.debug.assert(@hasDecl(presentation_runtime, "FoldTransportFields"));
         std.debug.assert(!@hasDecl(presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(presentation_runtime, "directPresentTimingResult"));
     }
+}
+
+test "Unified fold transport fields map to host-facing result" {
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 0.25,
+        .glyph_ms = 0.5,
+        .kitty_ms = 0.75,
+    };
+    const fields = presentation_runtime.FoldTransportFields{
+        .outcome = .presented,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
+    const result = presentation_runtime.presentResultFromOutcomeState(fields, timing);
+    try std.testing.expectEqual(result.outcome, fields.outcome);
+    try std.testing.expectEqual(result.cache_state_advanced, fields.cache_state_advanced);
+    try std.testing.expectEqual(result.host_surface_target_available, fields.host_surface_target_available);
+    try std.testing.expectEqual(result.shared_surface_attachment_ready, fields.shared_surface_attachment_ready);
 }
 
 test "Refresh boundary carrier narrows to TerminalPresentResult" {
