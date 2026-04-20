@@ -46,39 +46,14 @@ Scope: Consolidated baseline + enforcement for refresh path post-seal
 
 ## Refresh Path Enforcement Layers (CZH-S61 Verified)
 
-### 1. Compile-Time Enforcement (Type System)
-- **Owner:** Zig type system + module visibility
-- **Responsibility:** Prevent invalid function calls at compile time
-- **Enforcement:** Private fold helper cannot be imported/called externally
-- **Verification:** ✓ `foldRefreshOutcomeToPresent` remains private (line 143)
-- **Status:** ✓ LOCKED
+See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitions.
 
-### 2. Runtime Enforcement (Assertions)
-- **Owner:** Production assertions in canonical entry
-- **Responsibility:** Detect outcome type violations
-- **Enforcement:** Contract-critical assertion at canonical entry output (line 168)
-- **Check:** `result.outcome == .updated_and_presented or result.outcome == .presented`
-- **Verification:** ✓ Assertion preserved; validates outcome contract
-- **Test Binding:** `test_presentation_runtime.zig:14-28` "outcome classification from refresh cycle is pure"
-- **Status:** ✓ LOCKED
+**Per-Path Verification:**
 
-### 3. Test Enforcement (Test Coverage)
-- **Owner:** Unit test suite (zig build test)
-- **Responsibility:** Detect regression vectors in test execution
-- **Enforcement:** Tests validate no-bypass invariants, test-only isolation
-- **Check:** `assertRefreshOutcomeConsistency()` (line 259) isolated to tests
-- **Verification:** ✓ No production calls to test helper detected
-- **Test Binding:** `test_presentation_runtime.zig:64-78` "Refresh classification carries inline conjunction"
-- **Test Binding:** `test_presentation_runtime.zig:95-111` "Refresh result helper preserves transport fields"
-- **Test Binding:** `test_presentation_runtime.zig:113-129` "Refresh result helper preserves followup fields"
-- **Status:** ✓ LOCKED
-
-### 4. Code Review Enforcement (Architecture)
-- **Owner:** Architect approval for contract-affecting changes
-- **Responsibility:** Block new entry points, signature changes, exposure violations
-- **Enforcement:** All changes touching canonical entry require architect approval
-- **Verification:** ✓ Code review gates specified
-- **Status:** ✓ LOCKED
+- **Compile-Time:** ✓ `foldRefreshOutcomeToPresent` private (line 143, type system enforces)
+- **Runtime:** ✓ Outcome type assertion line 168 validates contract (test: "outcome classification pure")
+- **Test:** ✓ `assertRefreshOutcomeConsistency()` (line 259) isolated; 3 binding tests verify invariants
+- **Code Review:** ✓ Architect approval gates for canonical entry changes
 
 ## Refresh Path Regression Guards
 
