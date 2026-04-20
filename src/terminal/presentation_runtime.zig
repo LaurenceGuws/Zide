@@ -247,7 +247,7 @@ fn reuseTransportFromOutcome(
     };
 }
 
-/// **Canonical direct boundary fold route:** folds direct boundary outcome through generic result helper.
+/// **Canonical direct boundary fold route:** folds direct boundary outcome directly through generic result helper.
 /// *Simplification:* collapses direct boundary transport hop at callsites.
 /// *Hardening:* validates direct boundary invariants before folding.
 pub fn foldDirectOutcomeToPresent(
@@ -255,13 +255,6 @@ pub fn foldDirectOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertDirectPresentOutcomeConsistency(outcome_state);
-    return foldDirectEntry(outcome_state, timing);
-}
-
-fn foldDirectEntry(
-    outcome_state: DirectPresentOutcomeState,
-    timing: renderer_presentable_host.TerminalPresentTiming,
-) TerminalPresentResult {
     return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
