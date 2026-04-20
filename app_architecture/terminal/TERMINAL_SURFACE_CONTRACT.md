@@ -1,6 +1,6 @@
 # Terminal Surface Contract (host-agnostic)
 
-Date: 2026-04-20 (authority expanded 2026-04-20 — `CZH-S56`; corrected 2026-04-19 — `CZH-B6-corrective`)
+Date: 2026-04-20 (authority locked 2026-04-20 — `CZH-S57`; expanded 2026-04-20 — `CZH-S56`; corrected 2026-04-19 — `CZH-B6-corrective`)
 
 Purpose: freeze the **terminal surface** contract for **shared GPU presentation**
 of terminal frames: what the host supplies, what Zide owns, and what stays in
@@ -314,6 +314,61 @@ Widget layer does not construct, access, or manipulate outcome state types.
 - No alternate production surface
 - All future presentation runtime changes must route through canonical entries
 - Any violation of single-entry constraint must be authorized by architect
+
+## Production-Callable Surface Lock (CZH-S57)
+
+**Authority:** Explicit production-callable surface contract for presentation runtime.
+
+**Complete production-callable surface (11 functions):**
+
+### Canonical Entries (3)
+These are the only outcome-classifying, outcome-folding entry points:
+1. `refreshPresentEntry(refresh, shared_surface_attachment_ready, timing) → TerminalPresentResult`
+2. `reuseEligibilityEntry(eligible, host_surface_target_available, shared_surface_attachment_ready, timing) → TerminalPresentResult`
+3. `directPresentEntry(updated, timing) → TerminalPresentResult`
+
+### Eligibility Checks (2)
+These inform widget flow decisions before calling canonical entries:
+1. `checkReuseEligibility(input: ReuseEligibilityInput) → bool`
+2. `checkDirectPresentEligibility(input: DirectPresentEligibilityInput) → bool`
+
+### State Computation (4)
+These compute transient snapshots and geometry for widget GPU/UI logic:
+1. `refreshPresentState(surface, renderer, refresh, visible_w, visible_h) → PresentationPresentState`
+2. `computeHostSurfaceAttachmentState(bridge) → SharedSurfaceAttachmentPipelinePair`
+3. `computePresentationSurfaceGeometry(rows, cols, view_geometry, cell_metrics) → PresentationGeometry`
+4. `computeTerminalPresentPlanDecision(present_state, cache_state, eligible) → TerminalPresentPlanDecision`
+
+### Orchestration (2)
+These execute GPU and flow operations:
+1. `executeRefreshPresentFlow(rows, cols, ctx, Hooks) → TerminalPresentResult`
+2. `presentDraw(renderer, last_gen, last_rendered, view_geometry, width, height, ctx, callback)`
+
+**All 11 functions are essential:**
+- Canonical entries: Only terminal-controlled outcome paths
+- Eligibility checks: Widget must decide flow before entering canonical entry
+- State computation: Widget needs per-tick snapshots for GPU/UI decisions
+- Orchestration: Execution-layer operations must be callable from widget
+
+**Verification (CZH-1101):**
+- ✓ All 11 functions called from production code
+- ✓ No non-essential exposure found
+- ✓ No redundant or duplicate helpers
+- ✓ All secondary entry routes blocked (fold helpers private)
+- ✓ Test-only surface isolated and documented
+
+**Surface types (10):**
+- Input types: `ReuseEligibilityInput`, `DirectPresentEligibilityInput`
+- Result types: `PresentationGeometry`, `ViewportShiftState`, `TerminalPresentPlanDecision`, `PresentationPresentState`
+- Transport type: `FoldTransportFields` (internal)
+- Outcome types: `RefreshOutcomeState`, `ReusePresentOutcomeState`, `DirectPresentOutcomeState` (internal, not constructed in widget)
+
+**Lock enforcement:**
+- Compile-time: Private fold helpers prevent secondary routes
+- Code review: All 11 functions verified called from widget code
+- Documentation: Authority specified in TERMINAL_SURFACE_CONTRACT.md (this document)
+
+**Lock status:** ✓ LOCKED — No additional production-callable functions allowed without architect approval
 
 ## Android mapping (example, not definition)
 
