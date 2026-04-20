@@ -3677,7 +3677,7 @@ Acceptance:
 - Boundary de-duplication remained within widget-facade constraints.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B44` Result Transport Flattening and Contract Locking (`in_progress`)
+### `CZH-B44` Result Transport Flattening and Contract Locking (`review_gate`)
 
 Queue line (exact):
 
@@ -3692,17 +3692,39 @@ Acceptance:
 - source comments remain present-tense ownership/invariant statements only
 - Linux and connected Android validation stay green through `CZH-GATE-98`
 
+#### `CZH-B44` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded startup smoke; process exited by timeout after startup banner)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B44` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B44`
+- `Verdict: architect_review_pending`
+- `Scope summary:` result transport flattening and contract-locking landed as behavior-neutral seams:
+  - `CZH-931` added audit authority map for remaining result transport indirections and flattening targets
+  - `CZH-932` tightened architecture authority around terminal-owned result transport and fold exits
+  - `CZH-933` flattened refresh transport mapping by introducing terminal helper `refreshedPresentationResultFromCycleTiming(...)` and routing widget refresh result timing through the canonical helper
+  - `CZH-934` flattened reuse transport by introducing terminal helper `foldReuseAttemptOutcome(...)` and routing widget reuse wrapper through canonical terminal fold helper
+  - `CZH-935` flattened direct-present timing transport via terminal helper `directPresentTimingResult(...)`
+  - `CZH-936` removed boundary glue duplication while preserving widget-as-facade and terminal-owned fold semantics
+  - `CZH-937` and `CZH-938` added helper/integration invariants locking refresh/reuse/direct flattened transport contracts
+  - `CZH-939` completed hygiene sweep with no residual probe/debug lineage in touched seams
+- `Engineer commits reviewed:` `ccac0976`, `01c48e58`, `1f159554`, `0a3e1185`, `279dd12c`, `917a89f7`, `705ed67e`, `877c5fcb`, `8d971f41`
+- `Residual risks / follow-ups:`
+  - Sprint board checkpoint transition to accepted remains architect-owned after `CZH-GATE-98` review
+- `Architect validation request:` validate behavior-neutral transport flattening and contract locks against `CZH-GATE-98`; confirm sprint closure if accepted.
+
 Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S39_TICKETS.md`
-- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
-- `docs/AGENT_HANDOFF.md`
-
-Owner docs:
-
-- `docs/todo/core/JIRA_BOARD.md`
-- `docs/todo/core/CZH_S38_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
