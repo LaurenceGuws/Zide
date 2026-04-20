@@ -707,6 +707,150 @@ Authority mapping of enforcement claims to concrete compile/test locks.
 - Ambiguous claims: 0
 - Traceability: ✓ COMPLETE AND UNAMBIGUOUS
 
+## Claim-to-Lock Determinism Criteria (CZH-S68)
+
+Authority criteria for maintaining deterministic, unambiguous claim-to-lock mappings across all enforcement claims.
+
+**Determinism definition:** All reviewers interpret the same claim identically; future updates do not introduce wording drift, lock detail ambiguity, or ordering inconsistency.
+
+### Criterion 1: Claim Naming Consistency
+
+**Rule:** Claim names follow consistent naming scheme. Same concept across paths uses prefix or variant notation to signal relationship.
+
+**Naming schemes:**
+- **Semantic quality names:** "determinism", "consistency", "immutability", "uniqueness" (describe what property holds)
+- **Mechanism names:** "freeze", "isolation", "privacy", "production" (describe how property enforced)
+- Use **one scheme consistently per category** (e.g., all outcome-related claims use "freeze" not "freezing")
+
+**Cross-path naming rule:**
+- If same concept appears in multiple paths (e.g., "outcome type freeze" in refresh, reuse, direct): use notation `[Concept] - [Path variant]`
+  - Example: "Outcome type freeze (Refresh variant: updated_and_presented | presented)"
+  - Example: "Outcome type freeze (Reuse variant: reused | skipped)"
+- Group related claims with shared locks under unified label: "Fold helper privacy" covers both "No-bypass invariant" and "Transport routing immutability"
+
+**Ambiguity check:** Two reviewers should independently recognize that Claim N and Claim M are (a) the same principle across different paths, or (b) distinct principles with unrelated locks. Ambiguous names violate this rule.
+
+### Criterion 2: Lock Detail Standardization
+
+**Rule:** All lock descriptions use standardized format: `artifact:line[property]` or descriptive detail matching pattern below.
+
+**Standardized formats:**
+
+**Compile-time locks:**
+- Format: `ArtifactName[property]` where property ∈ {private, frozen, enum, internal}
+- Examples:
+  - `foldRefreshOutcomeToPresent[private]`
+  - `OutcomeEnum[frozen]`
+  - `RefreshOutcomeState[internal]`
+- Or include line: `ArtifactName:LINE[property]`
+
+**Runtime locks:**
+- Format: `function_name():LINE` (line number of assertion or deterministic logic)
+- Examples:
+  - `classifyRefreshOutcome():168`
+  - `reuseSuccessOutcome():112`
+
+**Type locks:**
+- Format: `TypeName[guarantee]` where guarantee ∈ {frozen, immutable, exclusive}
+- Example: `TerminalPresentResult[field_set_frozen]`
+
+**Uniqueness locks:**
+- Format: `FunctionName[sole_implementer]`
+- Example: `computeHostSurfaceAttachmentState[sole_implementer]`
+
+**Consistency check:** Lock detail must be sufficient to locate the artifact in code (function + line number, or type name + property). Vague details like "logic" or "field mapping" require explicit function name.
+
+### Criterion 3: Lock Type Coverage Rule
+
+**Rule:** All claims must cite enforcement layers explicitly. Minimum coverage: compile-time AND (runtime OR test).
+
+**Coverage notation:**
+- Single-layer: `Compile-time: ✓ [artifact]` (sufficient if compile-time privacy is sole lock)
+- Multi-layer: `Compile-time: ✓ [artifact], Runtime: ✓ [function:line], Test: ✓ [name]`
+- Complete: `Compile-time: ✓, Runtime: ✓, Test: ✓, Code-review: ✓ [approval]`
+
+**Coverage rule:**
+- **Compile-time layer:** Type system (privacy, enums, immutability) — always cite artifact and property
+- **Runtime layer:** Assertions, deterministic logic — cite if applicable, include line number
+- **Test layer:** Test binding — cite for all claims (even if test primarily validates compile-time lock)
+- **Code-review layer:** Architect approval — cite if lock required explicit review (else implicit)
+
+**Ambiguity check:** "Ambiguity: ✓ NONE" means the claim-to-lock binding is unambiguous AND all cited enforcement layers are documented. Do not hide layer coverage in "NONE" status; make layers explicit.
+
+**Notation:** Change ambiguity status to include layer count: `✓ NONE (3/4 layers)` or `✓ NONE (4/4 layers)`
+
+### Criterion 4: Test Binding Citation Format
+
+**Rule:** All test bindings use standardized citation format. Quoted strings must correspond to actual test function names.
+
+**Standardized format:**
+- **Full citation (preferred):** `test_file.zig:LINE-RANGE "test_function_name"`
+- **Example:** `test_presentation_runtime.zig:14-28 "outcome classification from refresh cycle is pure"`
+
+**Generic categories (allowed only if defined):**
+- Generic category allowed only if defined once in authority document with specific function examples
+- Example: "outcome classification tests" → define once as "includes test_presentation_runtime.zig:14-28, test_presentation_runtime.zig:30-39"
+
+**Citation consistency check:**
+- Quoted test name must match actual test function name in codebase (no paraphrasing)
+- If line numbers not available, category must be defined in authority document
+- All test citations must be verifiable (no broken references)
+
+### Criterion 5: Cross-Path Claim Grouping
+
+**Rule:** Claims with shared locks are grouped and cross-referenced. Relationship explicitly stated.
+
+**Grouping structure:**
+- Group by lock mechanism (e.g., "Fold helper privacy" group includes Claim 1 and Claim 14)
+- Within group, enumerate per-path instances with variant notation
+- Include cross-reference table: Lock → Claims using it
+
+**Cross-reference table structure:**
+| Lock Mechanism | Artifact | Paths Using Lock | Claim IDs |
+|---|---|---|---|
+| Outcome enum freeze | OutcomeEnum[frozen] | Refresh, Reuse, Direct | 2, 6, 11 |
+| Fold helper privacy | foldXOutcomeToPresent[private] | Refresh, Reuse, Direct, Shared | 1, 14 |
+
+**Relationship rule:**
+- If same named claim appears in multiple paths: explicitly state "per-path variant of [Principle]"
+- If different-named claims share same lock: explicitly state "both enforce [Lock mechanism]"
+
+**Ambiguity check:** Two reviewers should independently understand which claims are instances of same principle vs. distinct principles.
+
+### Criterion 6: Enforcement Layer Explicitness
+
+**Rule:** All 4 enforcement layers (compile-time, runtime, test, code-review) are explicitly documented per claim. "Not applicable" is explicit.
+
+**Layer documentation requirement:**
+- **Compile-time:** Type system artifact + property (or N/A if not applicable)
+- **Runtime:** Assertion line + logic description (or N/A)
+- **Test:** Test name + line range (required for all claims)
+- **Code-review:** Architect approval + approval gate (or implicit if already approved)
+
+**Explicit layer table per claim:**
+
+| Claim | Compile-time | Runtime | Test | Code-review |
+|-------|---|---|---|---|
+| 2 | OutcomeEnum[frozen] | assertion:168 | outcome_classification_test | CZH-S67 |
+| 1 | foldHelper[private] | N/A | binding_test | CZH-S67 |
+
+**No "implicit" layers:** All 4 layers must be listed (even if "N/A" or "implied by prior approval"). This makes future maintenance explicit: if test coverage is missing, it shows up as empty cell, not hidden in "✓ NONE".
+
+**Ambiguity status notation change:**
+- Old: `Ambiguity: ✓ NONE` (implicitly assumes all 4 layers)
+- New: `Ambiguity: ✓ NONE; Layers: CT/RT/Test/CR` or `Ambiguity: ✓ NONE; Layers: CT+Test (RT n/a, CR implicit)`
+
+This makes layer coverage visible and prevents future drift.
+
+---
+
+**Determinism criteria application:**
+- **CZH-S68 Phase 1 (CZH-1190):** Define criteria (complete)
+- **CZH-S68 Phase 2 (CZH-1191..1194):** Apply criteria to all per-path claims, standardizing format
+- **CZH-S68 Phase 3 (CZH-1195):** Verify deterministic mapping with new criteria applied
+
+**Lock enforcement:** Future claim-to-lock updates must follow these 6 determinism criteria to prevent reviewer drift and maintain unambiguous mapping as codebase evolves.
+
 ## Evidence Format Reference (CZH-S66)
 
 Authority policy and format definitions for enforcement evidence artifacts (checkpoints, audits, verifications, implementations).
