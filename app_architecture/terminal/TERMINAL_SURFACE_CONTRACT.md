@@ -226,7 +226,28 @@ in UI layer.
 **Outcome types:** Outcome structs and classification helpers are defined in terminal layer.
 Widget layer does not construct, access, or manipulate outcome state types.
 
-**Canonical entry-point authority (CZH-S54):** `refreshPresentEntry`, `reuseEligibilityEntry`, and `directPresentEntry` are the only three terminal layer functions the widget layer calls for outcome classification and folding. No outcome-specific fold routes, no intermediate helpers, no outcome state construction at widget boundary. All three are consolidation boundaries: each encapsulates the full path (decision/classify → fold → result) for its flow. Reuse eligibility is the decision input; terminal owns outcome construction.
+**Canonical entry-point authority (CZH-S54, CZH-S55):** `refreshPresentEntry`, `reuseEligibilityEntry`, and `directPresentEntry` are the only three terminal layer functions the widget layer calls for outcome classification and folding. No outcome-specific fold routes, no intermediate helpers, no outcome state construction at widget boundary. All three are consolidation boundaries: each encapsulates the full path (decision/classify → fold → result) for its flow. Reuse eligibility is the decision input; terminal owns outcome construction.
+
+## Result Surface vs Test Surface (CZH-S55)
+
+**Production result surface (widget-calling boundary):**
+- 3 canonical entries: `refreshPresentEntry`, `reuseEligibilityEntry`, `directPresentEntry`
+- 2 eligibility checks: `checkReuseEligibility`, `checkDirectPresentEligibility`
+- 4 state computation: `refreshPresentState`, `computeHostSurfaceAttachmentState`, `computePresentationSurfaceGeometry`, `computeTerminalPresentPlanDecision`
+- 2 orchestration: `executeRefreshPresentFlow`, `presentDraw`
+- Result types: `TerminalPresentResult` (host-facing), `PresentationPresentState` (internal snapshot), outcome state structs for internal composition only
+
+**Test-only helpers:**
+- Classification: `classifyRefreshOutcome()`, `classifyDirectPresentOutcome()` — outcome analysis for test validation
+- Invariants: `assertReuseOutcomeConsistency()`, `assertRefreshOutcomeConsistency()` — consistency checking for test hardening
+- Shared construction: `reuseSuccessOutcome()` — called by production (`reuseEligibilityEntry`) and tests
+
+**Explicit isolation (CZH-S55):**
+- Private fold helpers remain private to terminal layer (`foldRefreshOutcomeToPresent`, `foldReuseOutcomeToPresent`, `foldDirectOutcomeToPresent`)
+- Widget never calls fold helpers directly; only canonical entries
+- Tests can call classification and invariant helpers for understanding outcome semantics
+- No outcome state construction or manipulation in widget layer
+- No test helper calls in production code paths
 
 ## Android mapping (example, not definition)
 
