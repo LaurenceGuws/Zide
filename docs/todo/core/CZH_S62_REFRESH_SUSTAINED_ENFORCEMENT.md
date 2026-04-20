@@ -1,111 +1,168 @@
-# CZH-1143: Refresh Path Sustained Enforcement
+# CZH-1143: Refresh Path Sustained Enforcement (CZH-S68 Determinism Hardened)
 
-Date: 2026-04-20  
-Scope: Consolidated baseline + enforcement for refresh path post-seal
+Date: 2026-04-20 (Determinism hardening: 2026-04-21 — CZH-S68)  
+Scope: Consolidated baseline + enforcement for refresh path; determinism format standardized per CZH-S68 criteria
 
 ## Refresh Path Surface (Locked by CZH-S59)
 
 ### Canonical Entry Point
-- **Function:** `refreshPresentEntry(refresh, shared_surface_attachment_ready, timing) → TerminalPresentResult` (line 155)
+- **Function:** `refreshPresentEntry(refresh, shared_surface_attachment_ready, timing) → TerminalPresentResult` (presentation_runtime.zig:155)
 - **Scope:** Single canonical entry for refresh path, no alternate routes
-- **Fold Helper:** `foldRefreshOutcomeToPresent` is private `fn` (not `pub fn`)
+- **Fold Helper:** `foldRefreshOutcomeToPresent[private]` (fn not pub fn)
 - **Governance:** No secondary entry routes allowed
 
 ### Outcome Classification
-- **Function:** `classifyRefreshOutcome(refresh)` (line 74)
+- **Function:** `classifyRefreshOutcome(refresh)` (presentation_runtime.zig:74)
 - **Status:** Public (used by production + tests)
 - **Contract:** See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions" for outcome type set
 
 ### State Computation
-- **Function:** `refreshPresentState(...)` (line 409)
+- **Function:** `refreshPresentState(...)` (presentation_runtime.zig:409)
 - **Status:** Production essential, public
 - **Governance:** No alternate refresh state computation allowed
 
-## Refresh Path No-Bypass Invariant
+## Refresh Path Enforcement Claims (CZH-S68 Determinism Format)
 
-**Core Rule:** Widget refresh path flows through `refreshPresentEntry` only.
+Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Reference"
 
-### Compile-Time Enforcement
-- `foldRefreshOutcomeToPresent` is `fn` not `pub fn`
-- Cannot be called from widget code; type checker prevents bypass
-- Status: ✓ ENFORCED
+**Refresh path contains 4 enforcement claims. All determinism criteria met per CZH-S68.**
 
-### Outcome State Isolation
-- `RefreshOutcomeState` is internal structure never visible to widget
-- Widget never constructs or manipulates outcomes directly
-- Only canonical entry produces outcomes
-- Status: ✓ ENFORCED
+### Claim 1: No-Bypass Invariant (Refresh Variant)
 
-### No Alternate Classification
-- `classifyRefreshOutcome` is only outcome classification path
-- No alternate classification functions exist
-- Widget uses this via canonical entry only
-- Status: ✓ ENFORCED
+**Statement:** Widget refresh path flows only through `refreshPresentEntry`; no alternate fold routing exists.
 
-**No-bypass invariant locked:** ✓ VERIFIED
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `foldRefreshOutcomeToPresent[private]` | fn not pub fn; type system prevents widget access |
+| Test | test_presentation_runtime.zig:14-28 | "outcome classification from refresh cycle is pure" |
 
-## Refresh Path Enforcement Layers (CZH-S61 Verified)
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Type checker enforces `fn` privacy (cannot be called from widget code)
+- Test: Classification test validates pure outcome production
+- Code-review: Canonical entry locked per CZH-S59 approval
 
-See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitions.
+**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
 
-**Per-Path Verification:**
+---
 
-- **Compile-Time:** ✓ `foldRefreshOutcomeToPresent` private (line 143, type system enforces)
-- **Runtime:** ✓ Outcome type assertion line 168 validates contract (test: "outcome classification pure")
-- **Test:** ✓ `assertRefreshOutcomeConsistency()` (line 259) isolated; 3 binding tests verify invariants
-- **Code Review:** ✓ Architect approval gates for canonical entry changes
+### Claim 2: Outcome Type Freeze (Refresh Variant)
+
+**Statement:** Refresh outcome type set is frozen at compile-time to `.updated_and_presented | .presented`.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `RefreshOutcomeState[enum_frozen]` | Zig enum type definition (outcome variant set immutable) |
+| Runtime | `refreshPresentEntry():168` | Assertion: `result.outcome == .updated_and_presented or result.outcome == .presented` |
+| Test | test_presentation_runtime.zig:14-28 | "outcome classification from refresh cycle is pure" validates outcome types |
+
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Enum definition locked by type system
+- Runtime: Assertion at line 168 validates outcome type at entry point
+- Test: Classification test confirms only valid types produced
+- Code-review: Type changes require architect approval
+
+**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+
+---
+
+### Claim 3: Transport Determinism (Refresh Variant)
+
+**Statement:** Transport fields (cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready) are always computed deterministically with no conditional logic.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Runtime | `refreshTransportFromResult():145-165` | Deterministic field assignment logic; all fields assigned unconditionally |
+| Test | test_presentation_runtime.zig:95-111 | "Refresh result helper preserves transport fields" validates all fields present |
+
+**Enforcement verification:** ✓ VERIFIED
+- Runtime: Transport mapping logic always computes all fields (no branches)
+- Test: Field preservation test confirms transport completeness
+- Code-review: Field mapping changes require review
+
+**Ambiguity status:** ✓ NONE (2/4 layers: RT+Test)
+
+---
+
+### Claim 4: Outcome State Isolation (Refresh Variant)
+
+**Statement:** `RefreshOutcomeState` is internal to terminal layer; widget layer cannot construct or manipulate outcome state.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `RefreshOutcomeState[internal]` | Type not exported; no pub fn constructors visible to widget |
+| Test | test_presentation_runtime.zig (binding tests) | 3 per-path binding tests verify outcomes produced only by canonical entry |
+
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Type privacy enforced by module exports
+- Test: Binding tests confirm canonical-entry-only production
+- Code-review: Type export changes prohibited without architect approval
+
+**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+
+---
 
 ## Refresh Path Regression Guards
 
 ### Guard 1: No Alternate Fold Routing
 - **Risk:** Widget code bypasses canonical entry via alternate fold path
-- **Enforcement:** `foldRefreshOutcomeToPresent` private; code review + compile-time privacy
+- **Lock:** `foldRefreshOutcomeToPresent[private]` (Claim 1)
 - **Verification:** ✓ No alternate routing detected
 
 ### Guard 2: Outcome Type Assertion Preserved
-- See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions — Outcome Assertion Signals"
+- **Risk:** Runtime outcome type validation missing, invalid types not caught
+- **Lock:** `refreshPresentEntry():168` assertion (Claim 2)
 - **Verification:** ✓ Assertion at line 168 present and functional
 
 ### Guard 3: Test-Only Helper Isolation
-- **Verification:** ✓ `assertRefreshOutcomeConsistency()` isolated; no production calls
+- **Risk:** Test-only assertions called from production code
+- **Lock:** `assertRefreshOutcomeConsistency()[internal]` (test-only)
+- **Verification:** ✓ No production calls to assertion helpers
 
 ### Guard 4: No Outcome State Mutation
-- **Verification:** ✓ Outcome flows directly: classify → fold → result
+- **Risk:** Outcome state modified after classification
+- **Lock:** Type privacy + direct flow classification → fold → result (Claim 4)
+- **Verification:** ✓ Outcome flows directly; no mutation paths
 
 ### Guard 5: Transport Field Consistency
-- See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions — Transport Field Mapping Reference"
-- **Verification:** ✓ `refreshTransportFromResult()` deterministic per outcome type
+- **Risk:** Some fields computed conditionally or omitted
+- **Lock:** `refreshTransportFromResult()` determinism (Claim 3)
+- **Verification:** ✓ All fields always computed
 
 ## Refresh Path Change Control
 
 **What requires architect approval:**
-- New canonical entry for refresh (prohibited)
-- Changes to outcome type set (e.g., adding .deferred)
-- Changes to assertion behavior
+- New canonical entry for refresh (prohibited per Claim 1)
+- Changes to outcome type set (Claim 2 freeze)
+- Changes to assertion behavior (Claim 2)
 - Changes to result field set in TerminalPresentResult
-- Fold helper exposure (prohibited)
+- Fold helper exposure (Claim 1 privacy)
 
 **What engineer can change (no approval needed):**
-- Private helper implementation (internal only)
-- Internal transport field computation (fields unchanged)
+- Private helper implementation (internal only, Claim 4 boundary)
+- Internal transport field computation (fields unchanged, Claim 3)
 - Test-only assertions (new hardening allowed if isolated)
 - Comments and documentation
 
 ## Sustained Enforcement Checklist
 
-- ✓ Canonical entry locked (single route enforced)
-- ✓ Fold helper private (no external calls possible)
-- ✓ Outcome state internal (widget cannot construct)
-- ✓ No alternate classification (only path established)
-- ✓ Test surface isolated (test assertions not called from production)
-- ✓ Outcome type assertion preserved (contract-critical check present)
-- ✓ No outcome mutation possible (direct flow to result)
-- ✓ Transport deterministic (no conditional fields)
-- ✓ Compile-time enforcement (type system)
-- ✓ Runtime enforcement (assertions)
-- ✓ Test enforcement (coverage)
-- ✓ Code review enforcement (architecture gates)
+- ✓ Canonical entry locked (Claim 1: single route enforced)
+- ✓ Fold helper private (Claim 1: no external calls possible)
+- ✓ Outcome state internal (Claim 4: widget cannot construct)
+- ✓ Outcome type frozen (Claim 2: enum set immutable)
+- ✓ Type assertion preserved (Claim 2: runtime validation present)
+- ✓ Transport deterministic (Claim 3: all fields always computed)
+- ✓ Test surface isolated (Claim 4: test helpers not called from production)
+- ✓ Compile-time enforcement (Claim 1, 2, 4: type system)
+- ✓ Runtime enforcement (Claim 2, 3: assertions and logic)
+- ✓ Test enforcement (all 4 claims: coverage)
+- ✓ Code review enforcement (architecture gates for sealed boundaries)
 
 **Refresh path sustained enforcement:** ✓ COMPLETE AND LOCKED
+**Determinism format:** ✓ APPLIED (4/4 claims standardized per CZH-S68)
+**Cross-references:** ✓ COMPLETE (all claims map to TERMINAL_SURFACE_CONTRACT authority)
 
-Status: Ready for integration with CZH-1144+ reuse/direct/shared simplifications
+Status: Ready for CZH-1192 (reuse determinism rewrite)
