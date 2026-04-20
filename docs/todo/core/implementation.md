@@ -4219,6 +4219,36 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B53` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded smoke; startup banner observed; timeout exit expected for bounded run)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B53` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B53`
+- `Verdict: review_gate`
+- `Scope summary:` canonical fold-entry collapse + boundary field-route lock landed as behavior-neutral seam tightening:
+  - `CZH-1021` added explicit fold-entry/field-route audit map and ordered cut plan (`docs/todo/core/CZH_1021_FOLD_ENTRY_FIELD_ROUTE_AUDIT_MAP.md`)
+  - `CZH-1022` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to canonical fold-entry collapse and boundary route locks
+  - `CZH-1023` collapsed refresh canonical fold-entry setup to one helper route
+  - `CZH-1024` collapsed reuse canonical fold-entry setup to one helper route
+  - `CZH-1025` collapsed direct canonical fold-entry setup to one helper route
+  - `CZH-1026` locked refresh boundary field routes via mirrored-route assertions against transport carrier
+  - `CZH-1027` locked reuse/direct boundary field routes via mirrored-route assertions against transport carrier
+  - `CZH-1028` added helper-level invariants for collapsed fold entries + locked field routes
+  - `CZH-1029` added integration invariants + hygiene locks for canonicalized fold-entry and route behavior
+- `Engineer commits reviewed:` `e9345539`, `77e5398e`, `b4f48524`, `8993d575`, `da021f69`, `937c0789`, `aff06657`, `731ede6e`, `4d02d345`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-107` review
+- `Architect validation request:` validate behavior-neutral canonical fold-entry collapse and boundary field-route lock against `CZH-GATE-107`; confirm sprint closure if accepted.
+
 ## Response Contract
 
 Every batch update must include:
