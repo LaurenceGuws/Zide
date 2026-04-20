@@ -269,6 +269,13 @@ pub fn foldDirectOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertDirectPresentOutcomeConsistency(outcome_state);
+    return foldDirectEntry(outcome_state, timing);
+}
+
+fn foldDirectEntry(
+    outcome_state: DirectPresentOutcomeState,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
     return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
