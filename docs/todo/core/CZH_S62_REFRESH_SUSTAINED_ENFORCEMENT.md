@@ -14,7 +14,7 @@ Scope: Consolidated baseline + enforcement for refresh path post-seal
 ### Outcome Classification
 - **Function:** `classifyRefreshOutcome(refresh)` (line 74)
 - **Status:** Public (used by production + tests)
-- **Contract:** Outcome types frozen (2 states: .updated_and_presented | .presented)
+- **Contract:** See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions" for outcome type set
 
 ### State Computation
 - **Function:** `refreshPresentState(...)` (line 409)
@@ -63,24 +63,18 @@ See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitio
 - **Verification:** ✓ No alternate routing detected
 
 ### Guard 2: Outcome Type Assertion Preserved
-- **Risk:** Outcome type assertion removed, losing contract validation
-- **Enforcement:** Assertion surface governance (architect approval required)
+- See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions — Outcome Assertion Signals"
 - **Verification:** ✓ Assertion at line 168 present and functional
 
 ### Guard 3: Test-Only Helper Isolation
-- **Risk:** Production code calls `assertRefreshOutcomeConsistency` for logic
-- **Enforcement:** Code review + test coverage
-- **Verification:** ✓ Test helper isolated; no production calls
+- **Verification:** ✓ `assertRefreshOutcomeConsistency()` isolated; no production calls
 
 ### Guard 4: No Outcome State Mutation
-- **Risk:** Widget or helper code modifies outcome state after production
-- **Enforcement:** Code review + integration tests
 - **Verification:** ✓ Outcome flows directly: classify → fold → result
 
 ### Guard 5: Transport Field Consistency
-- **Risk:** Transport field computation modified to bypass field guarantees
-- **Enforcement:** Code review + invariant verification
-- **Verification:** ✓ Transport fields deterministic per outcome type
+- See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions — Transport Field Mapping Reference"
+- **Verification:** ✓ `refreshTransportFromResult()` deterministic per outcome type
 
 ## Refresh Path Change Control
 
