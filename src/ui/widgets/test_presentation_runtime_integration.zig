@@ -119,7 +119,7 @@ test "Widget layer delegates outcome folding without re-derivation" {
 test "Widget layer canonical reuse alias export preserves outcome semantics" {
     const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
-    const via_alias = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(reuse, timing);
+    const via_alias = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse, timing);
     const via_boundary_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse, timing);
 
     try std.testing.expect(via_alias.outcome == .reused);
@@ -402,7 +402,7 @@ test "Integration invariant: reuse canonical alias route parity stays equivalent
     };
     const timing = .{ .background_ms = 0.125, .glyph_ms = 0.25, .kitty_ms = 0.375 };
 
-    const via_widget_alias_export = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(reuse_attempt, timing);
+    const via_widget_alias_export = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
     const via_widget_boundary_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
     const via_terminal_boundary_helper = terminal_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
 

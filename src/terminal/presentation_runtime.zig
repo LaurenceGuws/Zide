@@ -24,7 +24,7 @@
 //!
 //! **Canonical fold routes:**
 //! - `presentResultFromRefreshOutcomeState(outcome, timing) -> TerminalPresentResult`
-//! - `presentResultFromReuseOutcomeState(outcome, timing) -> TerminalPresentResult`
+//! - `foldReuseAttemptResultToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromDirectPresentOutcomeState(outcome, timing) -> TerminalPresentResult`
 //! - `directPresentTimingResult(bg_ms, glyph_ms, kitty_ms) -> TerminalPresentTiming`
 //! - `presentResultFromOutcomeState()` — generic fold used by all paths
@@ -125,7 +125,7 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
 /// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths**
 /// — all outcome-specific folds route through this function.
 /// *Consolidation:* central hub of fold path composition — `presentResultFromRefreshOutcomeState`
-/// and `presentResultFromReuseOutcomeState` call this with outcome-specific parameters, then apply
+/// and `foldReuseAttemptResultToPresent` call this with outcome-specific parameters, then apply
 /// outcome-type-specific fields via `applyOutcomeSpecificFields`.
 /// *Hardening:* validates output result consistency across all outcome types.
 pub fn presentResultFromOutcomeState(
@@ -182,12 +182,9 @@ pub fn presentResultFromRefreshOutcomeState(
     return result;
 }
 
-/// **Fold reuse-attempt outcome into host-facing result:** single-path helper for
-/// both success and non-success reuse attempts.
-/// *Flattening:* keeps reuse-attempt fold transport centralized and removes callsite
-/// branching duplication around `.reused` checks.
-/// *Hardening:* validates reused-path invariants before folding.
-pub fn foldReuseAttemptOutcome(
+/// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
+/// Widget/runtime boundaries should call this helper when completing reuse attempt transport.
+pub fn foldReuseAttemptResultToPresent(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
@@ -203,24 +200,6 @@ pub fn foldReuseAttemptOutcome(
         timing,
         outcome_state.shared_surface_attachment_ready,
     );
-}
-
-/// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
-/// Widget/runtime boundaries should call this helper when completing reuse attempt transport.
-pub fn foldReuseAttemptResultToPresent(
-    outcome_state: ReusePresentOutcomeState,
-    timing: renderer_presentable_host.TerminalPresentTiming,
-) TerminalPresentResult {
-    return foldReuseAttemptOutcome(outcome_state, timing);
-}
-
-/// **Canonical outcome fold for reuse path:** delegates to reuse-attempt fold helper.
-/// *Consolidation:* preserves canonical entrypoint while sharing single reuse-attempt fold route.
-pub fn presentResultFromReuseOutcomeState(
-    outcome_state: ReusePresentOutcomeState,
-    timing: renderer_presentable_host.TerminalPresentTiming,
-) TerminalPresentResult {
-    return foldReuseAttemptResultToPresent(outcome_state, timing);
 }
 
 /// **Build direct boundary timing carrier:** canonical helper for threading direct boundary

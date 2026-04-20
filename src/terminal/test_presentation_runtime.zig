@@ -197,14 +197,14 @@ test "Reuse outcome folding preserves attachment state" {
         .glyph_ms = 0.0,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.presentResultFromReuseOutcomeState(outcome, timing);
+    const result = presentation_runtime.foldReuseAttemptResultToPresent(outcome, timing);
 
     try std.testing.expect(result.outcome == .reused);
     try std.testing.expect(result.cache_state_advanced == true);
     try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
-test "Reuse fold alias parity matches canonical reuse boundary helper route" {
+test "Reuse boundary helper route is deterministic across repeated folds" {
     const attempt = presentation_runtime.ReusePresentOutcomeState{
         .outcome = .skipped,
         .cache_state_advanced = false,
@@ -217,16 +217,16 @@ test "Reuse fold alias parity matches canonical reuse boundary helper route" {
         .kitty_ms = 0.9,
     };
 
-    const via_alias = presentation_runtime.presentResultFromReuseOutcomeState(attempt, timing);
-    const via_boundary = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
+    const first_fold = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
+    const second_fold = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
 
-    try std.testing.expectEqual(via_alias.outcome, via_boundary.outcome);
-    try std.testing.expectEqual(via_alias.cache_state_advanced, via_boundary.cache_state_advanced);
-    try std.testing.expectEqual(via_alias.host_surface_target_available, via_boundary.host_surface_target_available);
-    try std.testing.expectEqual(via_alias.shared_surface_attachment_ready, via_boundary.shared_surface_attachment_ready);
-    try std.testing.expectEqual(via_alias.timing.background_ms, via_boundary.timing.background_ms);
-    try std.testing.expectEqual(via_alias.timing.glyph_ms, via_boundary.timing.glyph_ms);
-    try std.testing.expectEqual(via_alias.timing.kitty_ms, via_boundary.timing.kitty_ms);
+    try std.testing.expectEqual(first_fold.outcome, second_fold.outcome);
+    try std.testing.expectEqual(first_fold.cache_state_advanced, second_fold.cache_state_advanced);
+    try std.testing.expectEqual(first_fold.host_surface_target_available, second_fold.host_surface_target_available);
+    try std.testing.expectEqual(first_fold.shared_surface_attachment_ready, second_fold.shared_surface_attachment_ready);
+    try std.testing.expectEqual(first_fold.timing.background_ms, second_fold.timing.background_ms);
+    try std.testing.expectEqual(first_fold.timing.glyph_ms, second_fold.timing.glyph_ms);
+    try std.testing.expectEqual(first_fold.timing.kitty_ms, second_fold.timing.kitty_ms);
 }
 
 test "Refresh boundary helper route matches canonical refresh folded result route" {
