@@ -136,7 +136,7 @@ pub const DirectPresentEligibilityInput = terminal_presentation_runtime.DirectPr
 
 // Terminal-layer fold and classification helpers
 const presentResultFromRefreshOutcomeState = terminal_presentation_runtime.presentResultFromRefreshOutcomeState;
-const presentResultFromReuseOutcomeState = terminal_presentation_runtime.presentResultFromReuseOutcomeState;
+const foldReuseAttemptResultToPresent = terminal_presentation_runtime.foldReuseAttemptResultToPresent;
 
 const classifyRefreshOutcome = terminal_presentation_runtime.classifyRefreshOutcome;
 const classifyDirectPresentOutcome = terminal_presentation_runtime.classifyDirectPresentOutcome;
@@ -2170,7 +2170,7 @@ test "integration lock result fold preserves outcome conjunction" {
         .shared_surface_attachment_ready = true,
     };
     const timing = renderer_presentable_host.TerminalPresentTiming{};
-    const result = presentResultFromReuseOutcomeState(outcome, timing);
+    const result = foldReuseAttemptResultToPresent(outcome, timing);
     try std.testing.expectEqual(result.shared_surface_attachment_ready, outcome.shared_surface_attachment_ready);
     try std.testing.expectEqual(result.outcome, outcome.outcome);
 }
@@ -2205,7 +2205,7 @@ test "integration lock consolidated outcome states fold correctly" {
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
     };
-    const reuse_result = presentResultFromReuseOutcomeState(reuse_outcome, .{});
+    const reuse_result = foldReuseAttemptResultToPresent(reuse_outcome, .{});
     try std.testing.expectEqual(reuse_result.outcome, TerminalPresentOutcome.reused);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
@@ -2229,7 +2229,7 @@ test "integration hardening fold paths harden outcome consistency" {
 
     // Test: successful reuse outcome produces result with all fields true
     const reuse_success = reuseSuccessOutcome();
-    const reuse_result = presentResultFromReuseOutcomeState(reuse_success, .{});
+    const reuse_result = foldReuseAttemptResultToPresent(reuse_success, .{});
     try std.testing.expectEqual(reuse_result.outcome, .reused);
     try std.testing.expect(reuse_result.cache_state_advanced == true);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
@@ -2351,7 +2351,7 @@ test "integration consolidation all fold paths route through canonical generic f
 
     // Reuse path: uses generic fold with input validation
     const reuse_outcome = reuseSuccessOutcome();
-    const reuse_result = presentResultFromReuseOutcomeState(reuse_outcome, timing);
+    const reuse_result = foldReuseAttemptResultToPresent(reuse_outcome, timing);
     try std.testing.expectEqual(reuse_result.outcome, .reused);
     try std.testing.expect(reuse_result.cache_state_advanced == true);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
