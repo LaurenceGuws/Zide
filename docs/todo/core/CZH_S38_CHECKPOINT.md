@@ -8,7 +8,7 @@
 
 ## Sprint Outcome
 
-Tickets `CZH-922` through `CZH-930` were executed in strict order with one commit per ticket.
+Tickets `CZH-921` through `CZH-930` were executed in strict order with one commit per ticket.
 This sprint remained behavior-neutral and preserved all hard constraints:
 
 - behavior freeze maintained
@@ -21,6 +21,7 @@ This sprint remained behavior-neutral and preserved all hard constraints:
 
 | Ticket | Commit | Description |
 |--------|--------|-------------|
+| CZH-921 | `602e977e` | Carrier-flow audit + de-dup map |
 | CZH-922 | `8c72dd32` | Authority tightening (doc-only) |
 | CZH-923 | `3627c76e` | Refresh outcome carrier simplification (inline conjunction carrier + folded path simplification) |
 | CZH-924 | `8c24955f` | Reuse outcome carrier simplification (removed redundant `reused` field transport; outcome enum is canonical) |
@@ -29,7 +30,7 @@ This sprint remained behavior-neutral and preserved all hard constraints:
 | CZH-927 | `a1d756b1` | Helper-level invariants (carrier-path helper tests tightened for refresh/direct semantics) |
 | CZH-928 | `24effe28` | Integration invariants (widget/terminal boundary parity tests for inline refresh + direct fold helper) |
 | CZH-929 | `a46ac4dd` | Hygiene sweep (no remaining stale carrier-comment residue in touched seams) |
-| CZH-930 | (this commit) | Validation packet + gate handoff |
+| CZH-930 | `017ade77` | Validation packet + gate handoff |
 
 ## Validation
 

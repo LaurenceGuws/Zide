@@ -3657,13 +3657,14 @@ Acceptance:
 
 - `Review chunk: CZH-B43`
 - `Verdict: architect_review_pending`
-- `Scope summary:` outcome carrier flow was simplified across refresh/reuse/direct paths with terminal-owned canonical folds:
+- `Scope summary:` outcome carrier flow was simplified across refresh/reuse/direct paths with terminal-owned canonical folds, preceded by corrective carrier-flow audit mapping for ticket-accounting integrity:
+  - `CZH-921` corrective doc-only audit map added to capture carrier-flow and de-dup targets as sprint authority evidence
   - refresh path now carries `shared_surface_attachment_ready` inline in `RefreshOutcomeState` and folds without a separate conjunction argument
   - reuse path removed redundant `reused` carrier flag and uses canonical `outcome == .reused` semantics
   - direct path now uses canonical direct-fold helper `presentResultFromDirectPresentOutcomeState(...)` to remove duplicate fold transport at widget boundary
   - widget/runtime boundary glue duplicates were removed where outcome transport was previously re-threaded or documented as separate
   - helper and integration invariants were expanded to lock inline refresh carrier semantics and direct-fold parity
-- `Engineer commits reviewed:` `8c72dd32`, `3627c76e`, `8c24955f`, `0fea268b`, `edd8ef1e`, `a1d756b1`, `24effe28`, `a46ac4dd`
+- `Engineer commits reviewed:` `602e977e`, `8c72dd32`, `3627c76e`, `8c24955f`, `0fea268b`, `edd8ef1e`, `a1d756b1`, `24effe28`, `a46ac4dd`
 - `Residual risks / follow-ups:`
   - JIRA sprint board state transition (`in_progress` → `review_gate`) and sprint checkpoint file publication remain architect-owned acceptance actions
   - Android Java compile-only guard commands were not separately executed in this packet because deploy path remained green and launch/logcat smoke was clean
