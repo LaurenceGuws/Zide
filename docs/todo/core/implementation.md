@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B60` (architect_review_pending, super-gate `CZH-GATE-114`). Sprint `CZH-S55` completed and at review gate.
+- Current active macro batch: `CZH-B61` (in_progress, super-gate `CZH-GATE-115`). Sprint `CZH-S56` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -4457,7 +4457,7 @@ Owner docs:
 - Fold helpers are terminal-internal and no longer broad production boundary surface.
 - Linux validation remained green for this batch scope.
 
-### `CZH-B60` Result-Surface Tightening + Test-Surface Isolation (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B60` Result-Surface Tightening + Test-Surface Isolation (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4478,6 +4478,37 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S55_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+`Verdict: accepted`
+
+- Architect review confirmed result-surface tightening and test-surface isolation remained behavior-neutral and ABI-stable.
+- Production boundary remains canonical-entry only; fold/classification/assertion helpers are isolated to terminal-internal or explicit test usage.
+- Linux validation remained green for batch scope.
+
+### `CZH-B61` Canonical Entry Contract Lockdown + Exposure Prune (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- lock canonical entry contract as the only production boundary while pruning remaining non-essential helper exposure and hardening no-bypass invariants
+
+Acceptance:
+
+- production widget/runtime paths use canonical entries only with no secondary helper routes
+- remaining helper exposure is minimal and explicitly justified (or pruned)
+- helper + integration tests lock no-bypass and parity invariants
+- docs align with canonical-entry contract and exposure rules
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-115`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S56_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
