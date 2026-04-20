@@ -95,9 +95,20 @@ Lines 2034, 2045, 2058, 2070, 2081, 2092, 2117, 2193, 2200, 2215 and others: All
 - No DirectPresentOutcomeState construction in production
 - CZH-1073 verifies boundary is clean
 
-**Reuse path:** Partially contracted in CZH-1064 (reusePresentEntry canonical entry)
-- Widget still constructs ReusePresentOutcomeState (line 1391) before passing to reusePresentEntry
-- CZH-1072 moves outcome construction to terminal layer
+**Reuse path:** Fully contracted in CZH-1072 (reuseEligibilityEntry new entry)
+- Widget checks eligibility and executes, then calls reuseEligibilityEntry
+- Terminal constructs ReusePresentOutcomeState based on eligible flag
+- No outcome state construction in production widget code
+- CZH-1072 moved outcome construction to terminal layer
+
+## Contraction completion
+
+All three presentation paths are now result-only at widget/runtime boundary:
+- Refresh: refreshPresentEntry (CZH-1063 + CZH-1071 verification)
+- Reuse: reuseEligibilityEntry (CZH-1072)
+- Direct: directPresentEntry (CZH-1065 + CZH-1073 verification)
+
+Widget layer never constructs outcome-state types in production; only receives TerminalPresentResult.
 
 ## Non-goals
 
