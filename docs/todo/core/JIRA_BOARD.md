@@ -23,28 +23,28 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S39`
-- Previous Sprint: `CZH-S38` (accepted)
-- Super-gate: `CZH-GATE-98` (CZH-B44, `review_gate`)
+- Sprint ID: `CZH-S40`
+- Previous Sprint: `CZH-S39` (accepted)
+- Super-gate: `CZH-GATE-99` (CZH-B45, `in_progress`)
 
-## Ticket Order (`CZH-S39`)
+## Ticket Order (`CZH-S40`)
 
-1. `CZH-931`
-2. `CZH-932`
-3. `CZH-933`
-4. `CZH-934`
-5. `CZH-935`
-6. `CZH-936`
-7. `CZH-937`
-8. `CZH-938`
-9. `CZH-939`
-10. `CZH-940`
+1. `CZH-941`
+2. `CZH-942`
+3. `CZH-943`
+4. `CZH-944`
+5. `CZH-945`
+6. `CZH-946`
+7. `CZH-947`
+8. `CZH-948`
+9. `CZH-949`
+10. `CZH-950`
 
 ## Current State
 
-- `in_progress`: none
-- `todo`: none
+- `in_progress`: `CZH-941` (S40 seam-audit + execution map)
+- `todo`: `CZH-942`, `CZH-943`, `CZH-944`, `CZH-945`, `CZH-946`, `CZH-947`, `CZH-948`, `CZH-949`, `CZH-950`
 - `blocked`: none
-- `review_gate`: `CZH-GATE-98` (`CZH-B44`) — `CZH-931`, `CZH-932`, `CZH-933`, `CZH-934`, `CZH-935`, `CZH-936`, `CZH-937`, `CZH-938`, `CZH-939`, `CZH-940`
+- `review_gate`: none
 - `changes_required`: `CZH-B35` at `CZH-GATE-89`
-- `done`: `CZH-901`, `CZH-902`, `CZH-903`, `CZH-904`, `CZH-905`, `CZH-906`, `CZH-907`, `CZH-908`, `CZH-909`, `CZH-910`, `CZH-911`, `CZH-912`, `CZH-913`, `CZH-914`, `CZH-915`, `CZH-916`, `CZH-917`, `CZH-918`, `CZH-919`, `CZH-920`, `CZH-921`, `CZH-922`, `CZH-923`, `CZH-924`, `CZH-925`, `CZH-926`, `CZH-927`, `CZH-928`, `CZH-929`, `CZH-930`, `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-B10` (accepted), `CZH-B11` (accepted), `CZH-B12` (accepted), `CZH-B13` (accepted), `CZH-B14` (accepted), `CZH-B15` (accepted), `CZH-B16` (accepted), `CZH-B17` (accepted), `CZH-B18` (accepted), `CZH-B19` (accepted), `CZH-B20` (accepted), `CZH-B21` (accepted), `CZH-B22` (accepted), `CZH-B23` (accepted), `CZH-B24` (accepted), `CZH-B25` (accepted), `CZH-B26` (accepted), `CZH-B27` (accepted), `CZH-B28` (accepted), `CZH-B29` (accepted), `CZH-B30` (accepted), `CZH-B31` (accepted), `CZH-B32` (accepted), `CZH-B33` (accepted), `CZH-B34` (accepted), `CZH-B36` (accepted), `CZH-B37` (accepted), `CZH-B38` (accepted), `CZH-B39` (accepted), `CZH-B40` (accepted), `CZH-B41` (accepted), `CZH-B42` (accepted), `CZH-B43` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`, `CZH-626`, `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`, `CZH-631`, `CZH-632`, `CZH-633`, `CZH-634`, `CZH-635`, `CZH-636`, `CZH-637`, `CZH-638`, `CZH-639`, `CZH-640`, `CZH-641`, `CZH-642`, `CZH-643`, `CZH-644`, `CZH-645`, `CZH-646`, `CZH-647`, `CZH-648`, `CZH-649`, `CZH-650`, `CZH-651`, `CZH-652`, `CZH-653`, `CZH-654`, `CZH-655`, `CZH-656`, `CZH-657`, `CZH-658`, `CZH-659`, `CZH-660`, `CZH-661`, `CZH-662`, `CZH-663`, `CZH-664`, `CZH-665`, `CZH-666`, `CZH-667`, `CZH-668`, `CZH-669`, `CZH-670`, `CZH-671`, `CZH-672`, `CZH-673`, `CZH-674`, `CZH-675`, `CZH-676`, `CZH-677`, `CZH-678`, `CZH-679`, `CZH-680`, `CZH-681`, `CZH-682`, `CZH-683`, `CZH-684`, `CZH-685`, `CZH-686`, `CZH-687`, `CZH-688`, `CZH-689`, `CZH-690`, `CZH-691`, `CZH-692`, `CZH-693`, `CZH-694`, `CZH-695`, `CZH-696`, `CZH-697`, `CZH-698`, `CZH-699`, `CZH-700`, `CZH-701`, `CZH-702`, `CZH-703`, `CZH-704`, `CZH-705`, `CZH-706`, `CZH-707`, `CZH-708`, `CZH-709`, `CZH-710`, `CZH-711`, `CZH-712`, `CZH-713`, `CZH-714`, `CZH-715`, `CZH-716`, `CZH-717`, `CZH-718`, `CZH-719`, `CZH-720`, `CZH-721`, `CZH-722`, `CZH-723`, `CZH-724`, `CZH-725`, `CZH-726`, `CZH-727`, `CZH-728`, `CZH-729`, `CZH-730`, `CZH-731`, `CZH-732`, `CZH-733`, `CZH-734`, `CZH-735`, `CZH-736`, `CZH-737`, `CZH-738`, `CZH-739`, `CZH-740`, `CZH-741`, `CZH-742`, `CZH-743`, `CZH-744`, `CZH-745`, `CZH-746`, `CZH-747`, `CZH-748`, `CZH-749`, `CZH-750`, `CZH-751`, `CZH-752`, `CZH-753`, `CZH-754`, `CZH-755`, `CZH-756`, `CZH-757`, `CZH-758`, `CZH-759`, `CZH-760`, `CZH-761`, `CZH-762`, `CZH-763`, `CZH-764`, `CZH-765`, `CZH-766`, `CZH-767`, `CZH-768`, `CZH-769`, `CZH-770`, `CZH-771`, `CZH-772`, `CZH-773`, `CZH-774`, `CZH-775`, `CZH-776`, `CZH-777`, `CZH-778`, `CZH-779`, `CZH-780`, `CZH-781`, `CZH-782`, `CZH-783`, `CZH-784`, `CZH-785`, `CZH-786`, `CZH-787`, `CZH-788`, `CZH-789`, `CZH-790`, `CZH-861`, `CZH-862`, `CZH-863`, `CZH-864`, `CZH-865`, `CZH-866`, `CZH-867`, `CZH-868`, `CZH-869`, `CZH-870`, `CZH-871`, `CZH-872`, `CZH-873`, `CZH-874`, `CZH-875`, `CZH-876`, `CZH-877`, `CZH-878`, `CZH-879`, `CZH-880`, `CZH-881`, `CZH-882`, `CZH-883`, `CZH-884`, `CZH-885`, `CZH-886`, `CZH-887`, `CZH-888`, `CZH-889`, `CZH-890`, `CZH-891`, `CZH-892`, `CZH-893`, `CZH-894`, `CZH-895`, `CZH-896`, `CZH-897`, `CZH-898`, `CZH-899`, `CZH-900`
+- `done`: `CZH-901`, `CZH-902`, `CZH-903`, `CZH-904`, `CZH-905`, `CZH-906`, `CZH-907`, `CZH-908`, `CZH-909`, `CZH-910`, `CZH-911`, `CZH-912`, `CZH-913`, `CZH-914`, `CZH-915`, `CZH-916`, `CZH-917`, `CZH-918`, `CZH-919`, `CZH-920`, `CZH-921`, `CZH-922`, `CZH-923`, `CZH-924`, `CZH-925`, `CZH-926`, `CZH-927`, `CZH-928`, `CZH-929`, `CZH-930`, `CZH-931`, `CZH-932`, `CZH-933`, `CZH-934`, `CZH-935`, `CZH-936`, `CZH-937`, `CZH-938`, `CZH-939`, `CZH-940`, `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-B10` (accepted), `CZH-B11` (accepted), `CZH-B12` (accepted), `CZH-B13` (accepted), `CZH-B14` (accepted), `CZH-B15` (accepted), `CZH-B16` (accepted), `CZH-B17` (accepted), `CZH-B18` (accepted), `CZH-B19` (accepted), `CZH-B20` (accepted), `CZH-B21` (accepted), `CZH-B22` (accepted), `CZH-B23` (accepted), `CZH-B24` (accepted), `CZH-B25` (accepted), `CZH-B26` (accepted), `CZH-B27` (accepted), `CZH-B28` (accepted), `CZH-B29` (accepted), `CZH-B30` (accepted), `CZH-B31` (accepted), `CZH-B32` (accepted), `CZH-B33` (accepted), `CZH-B34` (accepted), `CZH-B36` (accepted), `CZH-B37` (accepted), `CZH-B38` (accepted), `CZH-B39` (accepted), `CZH-B40` (accepted), `CZH-B41` (accepted), `CZH-B42` (accepted), `CZH-B43` (accepted), `CZH-B44` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`, `CZH-626`, `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`, `CZH-631`, `CZH-632`, `CZH-633`, `CZH-634`, `CZH-635`, `CZH-636`, `CZH-637`, `CZH-638`, `CZH-639`, `CZH-640`, `CZH-641`, `CZH-642`, `CZH-643`, `CZH-644`, `CZH-645`, `CZH-646`, `CZH-647`, `CZH-648`, `CZH-649`, `CZH-650`, `CZH-651`, `CZH-652`, `CZH-653`, `CZH-654`, `CZH-655`, `CZH-656`, `CZH-657`, `CZH-658`, `CZH-659`, `CZH-660`, `CZH-661`, `CZH-662`, `CZH-663`, `CZH-664`, `CZH-665`, `CZH-666`, `CZH-667`, `CZH-668`, `CZH-669`, `CZH-670`, `CZH-671`, `CZH-672`, `CZH-673`, `CZH-674`, `CZH-675`, `CZH-676`, `CZH-677`, `CZH-678`, `CZH-679`, `CZH-680`, `CZH-681`, `CZH-682`, `CZH-683`, `CZH-684`, `CZH-685`, `CZH-686`, `CZH-687`, `CZH-688`, `CZH-689`, `CZH-690`, `CZH-691`, `CZH-692`, `CZH-693`, `CZH-694`, `CZH-695`, `CZH-696`, `CZH-697`, `CZH-698`, `CZH-699`, `CZH-700`, `CZH-701`, `CZH-702`, `CZH-703`, `CZH-704`, `CZH-705`, `CZH-706`, `CZH-707`, `CZH-708`, `CZH-709`, `CZH-710`, `CZH-711`, `CZH-712`, `CZH-713`, `CZH-714`, `CZH-715`, `CZH-716`, `CZH-717`, `CZH-718`, `CZH-719`, `CZH-720`, `CZH-721`, `CZH-722`, `CZH-723`, `CZH-724`, `CZH-725`, `CZH-726`, `CZH-727`, `CZH-728`, `CZH-729`, `CZH-730`, `CZH-731`, `CZH-732`, `CZH-733`, `CZH-734`, `CZH-735`, `CZH-736`, `CZH-737`, `CZH-738`, `CZH-739`, `CZH-740`, `CZH-741`, `CZH-742`, `CZH-743`, `CZH-744`, `CZH-745`, `CZH-746`, `CZH-747`, `CZH-748`, `CZH-749`, `CZH-750`, `CZH-751`, `CZH-752`, `CZH-753`, `CZH-754`, `CZH-755`, `CZH-756`, `CZH-757`, `CZH-758`, `CZH-759`, `CZH-760`, `CZH-761`, `CZH-762`, `CZH-763`, `CZH-764`, `CZH-765`, `CZH-766`, `CZH-767`, `CZH-768`, `CZH-769`, `CZH-770`, `CZH-771`, `CZH-772`, `CZH-773`, `CZH-774`, `CZH-775`, `CZH-776`, `CZH-777`, `CZH-778`, `CZH-779`, `CZH-780`, `CZH-781`, `CZH-782`, `CZH-783`, `CZH-784`, `CZH-785`, `CZH-786`, `CZH-787`, `CZH-788`, `CZH-789`, `CZH-790`, `CZH-861`, `CZH-862`, `CZH-863`, `CZH-864`, `CZH-865`, `CZH-866`, `CZH-867`, `CZH-868`, `CZH-869`, `CZH-870`, `CZH-871`, `CZH-872`, `CZH-873`, `CZH-874`, `CZH-875`, `CZH-876`, `CZH-877`, `CZH-878`, `CZH-879`, `CZH-880`, `CZH-881`, `CZH-882`, `CZH-883`, `CZH-884`, `CZH-885`, `CZH-886`, `CZH-887`, `CZH-888`, `CZH-889`, `CZH-890`, `CZH-891`, `CZH-892`, `CZH-893`, `CZH-894`, `CZH-895`, `CZH-896`, `CZH-897`, `CZH-898`, `CZH-899`, `CZH-900`
