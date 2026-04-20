@@ -26,7 +26,7 @@
 //! - `foldRefreshOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `foldReuseOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `foldDirectOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
-//! - `presentResultFromOutcomeState()` — generic fold used by all paths
+//! - internal generic fold helper routes all path-specific fold helpers
 
 const std = @import("std");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
@@ -151,7 +151,7 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
 /// *Consolidation:* central hub of fold path composition — `foldRefreshOutcomeToPresent`
 /// and `foldReuseOutcomeToPresent` call this with outcome-specific parameters.
 /// *Hardening:* validates output result consistency across all outcome types.
-pub fn presentResultFromOutcomeState(
+fn presentResultFromOutcomeState(
     fields: FoldTransportFields,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {

@@ -203,28 +203,30 @@ test "Helper contraction keeps collapsed refresh and direct transport surface" {
         std.debug.assert(@hasDecl(presentation_runtime, "foldRefreshOutcomeToPresent"));
         std.debug.assert(@hasDecl(presentation_runtime, "foldDirectOutcomeToPresent"));
         std.debug.assert(@hasDecl(presentation_runtime, "FoldTransportFields"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "presentResultFromOutcomeState"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "applyOutcomeSpecificFields"));
         std.debug.assert(!@hasDecl(presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(presentation_runtime, "directPresentTimingResult"));
     }
 }
 
-test "Unified fold transport fields map to host-facing result" {
+test "Unified fold transport fields map through canonical reuse fold helper" {
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 0.25,
         .glyph_ms = 0.5,
         .kitty_ms = 0.75,
     };
-    const fields = presentation_runtime.FoldTransportFields{
-        .outcome = .presented,
-        .cache_state_advanced = true,
+    const outcome = presentation_runtime.ReusePresentOutcomeState{
+        .outcome = .skipped,
+        .cache_state_advanced = false,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = false,
     };
-    const result = presentation_runtime.presentResultFromOutcomeState(fields, timing);
-    try std.testing.expectEqual(result.outcome, fields.outcome);
-    try std.testing.expectEqual(result.cache_state_advanced, fields.cache_state_advanced);
-    try std.testing.expectEqual(result.host_surface_target_available, fields.host_surface_target_available);
-    try std.testing.expectEqual(result.shared_surface_attachment_ready, fields.shared_surface_attachment_ready);
+    const result = presentation_runtime.foldReuseOutcomeToPresent(outcome, timing);
+    try std.testing.expectEqual(result.outcome, outcome.outcome);
+    try std.testing.expectEqual(result.cache_state_advanced, outcome.cache_state_advanced);
+    try std.testing.expectEqual(result.host_surface_target_available, outcome.host_surface_target_available);
+    try std.testing.expectEqual(result.shared_surface_attachment_ready, outcome.shared_surface_attachment_ready);
 }
 
 test "Refresh boundary carrier narrows to TerminalPresentResult" {
@@ -239,6 +241,33 @@ test "Refresh boundary carrier narrows to TerminalPresentResult" {
     );
     try std.testing.expect(@TypeOf(result) == renderer_presentable_host.TerminalPresentResult);
     try std.testing.expectEqual(result.timing.background_ms, timing.background_ms);
+}
+
+test "Outcome carriers keep locked canonical field shapes" {
+    comptime {
+        {
+            const fields = @typeInfo(presentation_runtime.RefreshOutcomeState).@"struct".fields;
+            var followup_fields: usize = 0;
+            for (fields) |f| {
+                if (std.mem.eql(u8, f.name, "followup")) followup_fields += 1;
+            }
+            std.debug.assert(followup_fields == 1);
+        }
+        {
+            const fields = @typeInfo(presentation_runtime.FoldTransportFields).@"struct".fields;
+            var outcome: usize = 0;
+            var cache: usize = 0;
+            var host: usize = 0;
+            var attachment: usize = 0;
+            for (fields) |f| {
+                if (std.mem.eql(u8, f.name, "outcome")) outcome += 1;
+                if (std.mem.eql(u8, f.name, "cache_state_advanced")) cache += 1;
+                if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
+                if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) attachment += 1;
+            }
+            std.debug.assert(outcome == 1 and cache == 1 and host == 1 and attachment == 1);
+        }
+    }
 }
 
 test "Reuse outcome folding preserves attachment state" {
