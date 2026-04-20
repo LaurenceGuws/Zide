@@ -11,13 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B51` (in_progress, super-gate `CZH-GATE-105`). Sprint `CZH-S46` in progress.
+- Current active macro batch: `CZH-B52` (in_progress, super-gate `CZH-GATE-106`). Sprint `CZH-S47` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S46`. Ticket source: `docs/todo/core/CZH_S46_TICKETS.md`.
+- Active sprint: `CZH-S47`. Ticket source: `docs/todo/core/CZH_S47_TICKETS.md`.
+- Accepted sprint: `CZH-S46` (`CZH-B51`, `CZH-GATE-105`). Checkpoint: `docs/todo/core/CZH_S46_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S45` (`CZH-B50`, `CZH-GATE-104`). Checkpoint: `docs/todo/core/CZH_S45_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S44` (`CZH-B49`, `CZH-GATE-103`). Checkpoint: `docs/todo/core/CZH_S44_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S43` (`CZH-B48`, `CZH-GATE-102`). Checkpoint: `docs/todo/core/CZH_S43_CHECKPOINT.md`.
@@ -4076,7 +4077,7 @@ Owner docs:
 - Helper and integration invariants lock the narrowed fold API surface and canonical field-shape semantics.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B51` Fold/Result Struct Contraction + Boundary Callsite Collapse (`in_progress`)
+### `CZH-B51` Fold/Result Struct Contraction + Boundary Callsite Collapse (`accepted`)
 
 Queue line (exact):
 
@@ -4113,7 +4114,7 @@ Owner docs:
 #### `CZH-B51` super-gate packet (engineer → architect)
 
 - `Review chunk: CZH-B51`
-- `Verdict: review_gate`
+- `Verdict: accepted`
 - `Scope summary:` fold/result struct contraction + boundary callsite collapse landed as behavior-neutral seam tightening:
   - `CZH-1001` added explicit struct/callsite contraction audit map and ordered cut plan (`docs/todo/core/CZH_1001_STRUCT_CALLSITE_CONTRACTION_AUDIT_MAP.md`)
   - `CZH-1002` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to contracted fold/result carriers and collapsed boundary callsites
@@ -4128,6 +4129,35 @@ Owner docs:
 - `Residual risks / follow-ups:`
   - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-105` review
 - `Architect validation request:` validate behavior-neutral fold/result struct contraction and boundary callsite collapse against `CZH-GATE-105`; confirm sprint closure if accepted.
+
+`Verdict: accepted`
+
+- Architect review confirmed fold/result struct contraction and boundary callsite collapse remained behavior-neutral and ABI-stable.
+- Helper and integration invariants lock contracted carrier shapes and canonical callsite routes.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B52` Outcome/Transport Helper Collapse + Boundary Callsite Canonicalization (`in_progress`)
+
+Queue line (exact):
+
+- collapse remaining outcome/transport helper duplication and canonicalize boundary callsites to one route per flow without behavior change
+
+Acceptance:
+
+- refresh/reuse/direct outcome/transport helper surface is canonical and minimal per flow
+- boundary callsites are canonicalized to one route per flow
+- widget/runtime boundary contains no duplicate helper/callsite glue
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-106`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S47_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 ## Response Contract
 
