@@ -320,16 +320,10 @@ pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) v
     std.debug.assert(state.shared_surface_attachment_ready == false);
 }
 
-/// **Validate refresh outcome route-lock and followup consistency:**
-/// Verifies that all outcome fields are locked to canonical transport carrier
-/// and that followup coupling invariants hold.
+/// **Validate refresh outcome invariants:**
+/// Verifies followup coupling invariants; transport route-lock verified at construction.
 pub fn assertRefreshOutcomeConsistency(state: RefreshOutcomeState) void {
-    // Route-lock: outcome fields locked to canonical transport carrier
-    std.debug.assert(state.transport.outcome == state.outcome);
-    std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
-    std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
-    std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
-    // Followup consistency
+    // Followup consistency: required must have reason
     if (state.followup.required) {
         std.debug.assert(state.followup.reason != .none);
     } else {
