@@ -140,7 +140,7 @@ test "Reuse fold helper preserves non-reused transport state" {
         .glyph_ms = 0.2,
         .kitty_ms = 0.3,
     };
-    const result = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
+    const result = presentation_runtime.foldReuseOutcomeToPresent(attempt, timing);
 
     try std.testing.expectEqual(result.outcome, attempt.outcome);
     try std.testing.expectEqual(result.cache_state_advanced, attempt.cache_state_advanced);
@@ -165,8 +165,8 @@ test "Reuse boundary helper forwards reused and non-reused transport consistentl
         .kitty_ms = 0.0,
     };
 
-    const reused_result = presentation_runtime.foldReuseAttemptResultToPresent(reused_attempt, timing);
-    const non_reused_result = presentation_runtime.foldReuseAttemptResultToPresent(non_reused_attempt, timing);
+    const reused_result = presentation_runtime.foldReuseOutcomeToPresent(reused_attempt, timing);
+    const non_reused_result = presentation_runtime.foldReuseOutcomeToPresent(non_reused_attempt, timing);
 
     try std.testing.expectEqual(reused_result.outcome, .reused);
     try std.testing.expectEqual(reused_result.cache_state_advanced, true);
@@ -192,7 +192,7 @@ test "Direct boundary timing carrier preserves explicit timing transport" {
 
 test "Helper contraction keeps one canonical reuse fold helper declaration" {
     comptime {
-        std.debug.assert(@hasDecl(presentation_runtime, "foldReuseAttemptResultToPresent"));
+        std.debug.assert(@hasDecl(presentation_runtime, "foldReuseOutcomeToPresent"));
         std.debug.assert(!@hasDecl(presentation_runtime, "foldReuseAttemptOutcome"));
         std.debug.assert(!@hasDecl(presentation_runtime, "presentResultFromReuseOutcomeState"));
     }
@@ -228,7 +228,7 @@ test "Reuse outcome folding preserves attachment state" {
         .glyph_ms = 0.0,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.foldReuseAttemptResultToPresent(outcome, timing);
+    const result = presentation_runtime.foldReuseOutcomeToPresent(outcome, timing);
 
     try std.testing.expect(result.outcome == .reused);
     try std.testing.expect(result.cache_state_advanced == true);
@@ -248,8 +248,8 @@ test "Reuse boundary helper route is deterministic across repeated folds" {
         .kitty_ms = 0.9,
     };
 
-    const first_fold = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
-    const second_fold = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
+    const first_fold = presentation_runtime.foldReuseOutcomeToPresent(attempt, timing);
+    const second_fold = presentation_runtime.foldReuseOutcomeToPresent(attempt, timing);
 
     try std.testing.expectEqual(first_fold.outcome, second_fold.outcome);
     try std.testing.expectEqual(first_fold.cache_state_advanced, second_fold.cache_state_advanced);

@@ -24,7 +24,7 @@
 //!
 //! **Canonical fold routes:**
 //! - `foldRefreshOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
-//! - `foldReuseAttemptResultToPresent(outcome, timing) -> TerminalPresentResult`
+//! - `foldReuseOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromDirectPresentOutcomeState(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromOutcomeState()` — generic fold used by all paths
 
@@ -124,7 +124,7 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
 /// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths**
 /// — all outcome-specific folds route through this function.
 /// *Consolidation:* central hub of fold path composition — `foldRefreshOutcomeToPresent`
-/// and `foldReuseAttemptResultToPresent` call this with outcome-specific parameters, then apply
+/// and `foldReuseOutcomeToPresent` call this with outcome-specific parameters, then apply
 /// outcome-type-specific fields via `applyOutcomeSpecificFields`.
 /// *Hardening:* validates output result consistency across all outcome types.
 pub fn presentResultFromOutcomeState(
@@ -183,7 +183,7 @@ pub fn foldRefreshOutcomeToPresent(
 
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
 /// Widget/runtime boundaries should call this helper when completing reuse attempt transport.
-pub fn foldReuseAttemptResultToPresent(
+pub fn foldReuseOutcomeToPresent(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {

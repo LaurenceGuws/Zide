@@ -113,8 +113,8 @@ test "Widget layer delegates outcome folding without re-derivation" {
 test "Widget layer canonical reuse helper preserves outcome semantics" {
     const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
-    const via_canonical_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse, timing);
-    const via_boundary_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse, timing);
+    const via_canonical_helper = terminal_widget_presentation_runtime.foldReuseOutcomeToPresent(reuse, timing);
+    const via_boundary_helper = terminal_widget_presentation_runtime.foldReuseOutcomeToPresent(reuse, timing);
 
     try std.testing.expect(via_canonical_helper.outcome == .reused);
     try std.testing.expect(via_canonical_helper.shared_surface_attachment_ready == true);
@@ -259,7 +259,7 @@ test "Callback contract: reuse boundary helper preserves attachment state throug
         const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
 
         // Widget folds reuse attempt via canonical reuse boundary helper
-        const result = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(outcome, timing);
+        const result = terminal_widget_presentation_runtime.foldReuseOutcomeToPresent(outcome, timing);
 
         // Verify attachment state preserved through fold
         try std.testing.expect(result.shared_surface_attachment_ready == true);
@@ -372,7 +372,7 @@ test "Integration invariant: reuse fold helper preserves flattened reuse transpo
         .shared_surface_attachment_ready = false,
     };
     const timing = .{ .background_ms = 0.4, .glyph_ms = 0.6, .kitty_ms = 0.2 };
-    const result = terminal_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
+    const result = terminal_presentation_runtime.foldReuseOutcomeToPresent(reuse_attempt, timing);
 
     try std.testing.expect(result.outcome == reuse_attempt.outcome);
     try std.testing.expect(result.cache_state_advanced == reuse_attempt.cache_state_advanced);
@@ -392,9 +392,9 @@ test "Integration invariant: reuse canonical helper parity stays equivalent acro
     };
     const timing = .{ .background_ms = 0.125, .glyph_ms = 0.25, .kitty_ms = 0.375 };
 
-    const via_widget_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
-    const via_widget_boundary_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
-    const via_terminal_boundary_helper = terminal_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
+    const via_widget_helper = terminal_widget_presentation_runtime.foldReuseOutcomeToPresent(reuse_attempt, timing);
+    const via_widget_boundary_helper = terminal_widget_presentation_runtime.foldReuseOutcomeToPresent(reuse_attempt, timing);
+    const via_terminal_boundary_helper = terminal_presentation_runtime.foldReuseOutcomeToPresent(reuse_attempt, timing);
 
     try std.testing.expectEqual(via_widget_helper.outcome, via_widget_boundary_helper.outcome);
     try std.testing.expectEqual(via_widget_helper.cache_state_advanced, via_widget_boundary_helper.cache_state_advanced);
@@ -431,7 +431,7 @@ test "Integration hygiene: widget boundary removes wrapper-only refresh and reus
 test "Integration hygiene: terminal/runtime boundary exposes collapsed transport surface" {
     comptime {
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldRefreshOutcomeToPresent"));
-        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseAttemptResultToPresent"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseOutcomeToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "directPresentTimingResult"));
