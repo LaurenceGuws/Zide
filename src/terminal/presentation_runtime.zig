@@ -414,27 +414,24 @@ pub fn computeTerminalPresentPlanDecision(
     };
 }
 
-/// **Outcome from refresh + presentation:** timing and attachment state after refresh cycle handling.
-/// Produced by `runRefreshedPresentablePresentation` (widget layer orchestration).
-/// Canonically owns outcome aggregation responsibility.
+/// **Outcome from refresh + presentation:** host-facing refresh fold result.
+/// Produced at the refresh boundary by terminal-owned canonical fold route.
 pub const RefreshedPresentablePresentationResult = struct {
-    bg_ms: f64 = 0.0,
-    glyph_ms: f64 = 0.0,
-    kitty_ms: f64 = 0.0,
-    shared_surface_attachment_ready: bool = false,
+    present_result: TerminalPresentResult = .{},
 };
 
-/// **Build refreshed presentation result from cycle timing:** canonical helper for
-/// threading refresh-cycle timing into refreshed presentation result transport.
-/// *Flattening:* centralizes timing field mapping so refresh transport callsites
-/// avoid duplicating `{ bg_ms, glyph_ms, kitty_ms }` wiring.
-pub fn refreshedPresentationResultFromCycleTiming(
+/// **Build refreshed presentation result from cycle outcome + timing:** canonical
+/// refresh boundary helper that classifies and folds into host-facing result.
+/// *Consolidation:* refresh boundary transport is collapsed to one terminal-owned
+/// fold route, avoiding split timing/conjunction assembly at callsites.
+pub fn refreshedPresentationResultFromCycle(
+    refresh: TerminalPresentableRefresh,
+    shared_surface_attachment_ready: bool,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) RefreshedPresentablePresentationResult {
+    const outcome_state = classifyRefreshOutcome(refresh, shared_surface_attachment_ready);
     return .{
-        .bg_ms = timing.background_ms,
-        .glyph_ms = timing.glyph_ms,
-        .kitty_ms = timing.kitty_ms,
+        .present_result = presentResultFromRefreshOutcomeState(outcome_state, timing),
     };
 }
 
@@ -584,7 +581,7 @@ pub fn checkDirectPresentEligibility(
 ///   `runPresentation(ctx, cycle: TerminalPresentableRefreshExecutionResult) -> RefreshedPresentablePresentationResult`
 ///
 /// Terminal owns orchestration and classification; widget owns execution via `Hooks`.
-/// *Simplification:* refresh outcome now carries conjunction inline; no separate parameter to fold.
+/// *Consolidation:* refresh boundary transport returns canonical folded host-facing result.
 pub fn executeRefreshPresentFlow(
     rows: usize,
     cols: usize,
@@ -594,10 +591,5 @@ pub fn executeRefreshPresentFlow(
     if (rows == 0 or cols == 0) return .{};
     const cycle = Hooks.runCycle(ctx);
     const refreshed = Hooks.runPresentation(ctx, cycle);
-    const outcome_state = classifyRefreshOutcome(cycle.refresh, refreshed.shared_surface_attachment_ready);
-    return presentResultFromRefreshOutcomeState(outcome_state, .{
-        .background_ms = refreshed.bg_ms,
-        .glyph_ms = refreshed.glyph_ms,
-        .kitty_ms = refreshed.kitty_ms,
-    });
+    return refreshed.present_result;
 }

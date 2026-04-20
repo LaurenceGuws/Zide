@@ -92,18 +92,23 @@ test "Direct present folding uses canonical helper" {
     try std.testing.expect(result.shared_surface_attachment_ready == false);
 }
 
-test "Refresh timing helper preserves cycle timing fields" {
+test "Refresh result helper preserves folded refresh transport fields" {
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 4.25,
         .glyph_ms = 1.5,
         .kitty_ms = 0.75,
     };
-    const refreshed = presentation_runtime.refreshedPresentationResultFromCycleTiming(timing);
+    const refreshed = presentation_runtime.refreshedPresentationResultFromCycle(
+        .refreshed,
+        true,
+        timing,
+    );
 
-    try std.testing.expectEqual(refreshed.bg_ms, timing.background_ms);
-    try std.testing.expectEqual(refreshed.glyph_ms, timing.glyph_ms);
-    try std.testing.expectEqual(refreshed.kitty_ms, timing.kitty_ms);
-    try std.testing.expect(refreshed.shared_surface_attachment_ready == false);
+    try std.testing.expectEqual(refreshed.present_result.outcome, .updated_and_presented);
+    try std.testing.expectEqual(refreshed.present_result.timing.background_ms, timing.background_ms);
+    try std.testing.expectEqual(refreshed.present_result.timing.glyph_ms, timing.glyph_ms);
+    try std.testing.expectEqual(refreshed.present_result.timing.kitty_ms, timing.kitty_ms);
+    try std.testing.expect(refreshed.present_result.shared_surface_attachment_ready == true);
 }
 
 test "Reuse fold helper preserves non-reused transport state" {
@@ -161,13 +166,18 @@ test "Geometry struct is defined and initializable" {
 
 test "RefreshedPresentablePresentationResult is defined in terminal layer" {
     const result = presentation_runtime.RefreshedPresentablePresentationResult{
-        .bg_ms = 1.5,
-        .glyph_ms = 2.5,
-        .kitty_ms = 0.0,
-        .shared_surface_attachment_ready = true,
+        .present_result = .{
+            .outcome = .presented,
+            .shared_surface_attachment_ready = true,
+            .timing = .{
+                .background_ms = 1.5,
+                .glyph_ms = 2.5,
+                .kitty_ms = 0.0,
+            },
+        },
     };
-    try std.testing.expect(result.bg_ms == 1.5);
-    try std.testing.expect(result.shared_surface_attachment_ready == true);
+    try std.testing.expect(result.present_result.timing.background_ms == 1.5);
+    try std.testing.expect(result.present_result.shared_surface_attachment_ready == true);
 }
 
 test "RefreshOutcomeState validates followup coupling" {

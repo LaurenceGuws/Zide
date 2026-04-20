@@ -12,22 +12,32 @@ const terminal_presentation_runtime = @import("../../terminal/presentation_runti
 const terminal_widget_presentation_runtime = @import("./terminal_widget_presentation_runtime.zig");
 
 test "Widget layer re-exports terminal presentation types" {
-    // RefreshedPresentablePresentationResult should be from terminal
+    // RefreshedPresentablePresentationResult should be from terminal and carry folded host-facing result.
     const widget_result = terminal_widget_presentation_runtime.RefreshedPresentablePresentationResult{
-        .bg_ms = 1.0,
-        .glyph_ms = 2.0,
-        .kitty_ms = 0.0,
-        .shared_surface_attachment_ready = true,
+        .present_result = .{
+            .outcome = .presented,
+            .timing = .{
+                .background_ms = 1.0,
+                .glyph_ms = 2.0,
+                .kitty_ms = 0.0,
+            },
+            .shared_surface_attachment_ready = true,
+        },
     };
     const terminal_result = terminal_presentation_runtime.RefreshedPresentablePresentationResult{
-        .bg_ms = 1.0,
-        .glyph_ms = 2.0,
-        .kitty_ms = 0.0,
-        .shared_surface_attachment_ready = true,
+        .present_result = .{
+            .outcome = .presented,
+            .timing = .{
+                .background_ms = 1.0,
+                .glyph_ms = 2.0,
+                .kitty_ms = 0.0,
+            },
+            .shared_surface_attachment_ready = true,
+        },
     };
     // Both should have identical structure (same type)
-    try std.testing.expect(widget_result.bg_ms == terminal_result.bg_ms);
-    try std.testing.expect(widget_result.shared_surface_attachment_ready == terminal_result.shared_surface_attachment_ready);
+    try std.testing.expect(widget_result.present_result.timing.background_ms == terminal_result.present_result.timing.background_ms);
+    try std.testing.expect(widget_result.present_result.shared_surface_attachment_ready == terminal_result.present_result.shared_surface_attachment_ready);
 }
 
 test "Widget layer uses terminal outcome classification" {
@@ -312,14 +322,19 @@ test "Integration invariant: direct fold helper parity with direct classificatio
     try std.testing.expect(direct_result.timing.glyph_ms == timing.glyph_ms);
 }
 
-test "Integration invariant: refresh timing helper parity with refresh cycle timing transport" {
+test "Integration invariant: refresh boundary helper folds cycle result into host-facing carrier" {
     const cycle_timing = .{ .background_ms = 3.25, .glyph_ms = 1.75, .kitty_ms = 0.5 };
-    const refreshed = terminal_presentation_runtime.refreshedPresentationResultFromCycleTiming(cycle_timing);
+    const refreshed = terminal_presentation_runtime.refreshedPresentationResultFromCycle(
+        .refreshed,
+        true,
+        cycle_timing,
+    );
 
-    try std.testing.expectEqual(refreshed.bg_ms, cycle_timing.background_ms);
-    try std.testing.expectEqual(refreshed.glyph_ms, cycle_timing.glyph_ms);
-    try std.testing.expectEqual(refreshed.kitty_ms, cycle_timing.kitty_ms);
-    try std.testing.expect(refreshed.shared_surface_attachment_ready == false);
+    try std.testing.expectEqual(refreshed.present_result.timing.background_ms, cycle_timing.background_ms);
+    try std.testing.expectEqual(refreshed.present_result.timing.glyph_ms, cycle_timing.glyph_ms);
+    try std.testing.expectEqual(refreshed.present_result.timing.kitty_ms, cycle_timing.kitty_ms);
+    try std.testing.expect(refreshed.present_result.shared_surface_attachment_ready == true);
+    try std.testing.expectEqual(refreshed.present_result.outcome, .updated_and_presented);
 }
 
 test "Integration invariant: reuse fold helper preserves flattened reuse transport" {
