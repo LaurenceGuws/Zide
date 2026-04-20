@@ -1,7 +1,74 @@
-# CZH-1146: Shared Transport and Integration Sustained Lock
+# CZH-1146: Shared Transport and Integration Sustained Lock (CZH-S68 Determinism Hardened)
 
-Date: 2026-04-20  
-Scope: Consolidated governance + enforcement + integration for all shared helpers and contract points
+Date: 2026-04-20 (Determinism hardening: 2026-04-21 — CZH-S68)  
+Scope: Consolidated governance + enforcement + integration for all shared helpers; determinism format standardized per CZH-S68 criteria
+
+## Shared Enforcement Claims (CZH-S68 Determinism Format)
+
+Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Reference"
+
+**Shared layer contains 3 enforcement claims. All determinism criteria met per CZH-S68.**
+
+### Claim 12: No Shared Outcome Production (Shared Variant)
+
+**Statement:** Outcome types are produced only per-path (refresh, reuse, direct); no shared outcome construction helper exists; no outcome produced outside canonical path-specific entries.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `OutcomeTypes[internal_per_path]` | RefreshOutcomeState, ReusePresentOutcomeState, DirectPresentOutcomeState are internal per-path only; no shared outcome type exists |
+| Test | test_presentation_runtime.zig (outcome type tests) | Outcome type tests validate per-path production only |
+
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Outcome types defined per-path in terminal layer; no shared constructor
+- Test: Outcome tests confirm canonical-entry-only production per path
+- Code-review: Outcome type additions prohibited without architect approval
+
+**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+
+---
+
+### Claim 13: Attachment Consistency (Shared Variant)
+
+**Statement:** Attachment state (full conjunction of pipeline ∧ host target) is computed via single canonical path only; no re-derivation or alternate computation exists.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `computeHostSurfaceAttachmentState[sole_implementer]` | Single function is only attachment state computation; no alternate helpers |
+| Runtime | `TerminalPresentationBridge` (canonical) | Bridge provides single read/write path for attachment state via `notePresentableAvailability()` and `readSharedSurfaceAttachmentReady()` |
+| Test | test_presentation_runtime.zig (integration tests) | Integration tests verify single computation path, no re-derivation |
+
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Single-function uniqueness enforced by architecture
+- Runtime: Bridge owns all attachment state reads/writes
+- Test: Integration tests confirm no alternate computation paths
+- Code-review: New attachment functions require architect approval
+
+**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+
+---
+
+### Claim 14: Transport Routing Immutability (Shared Variant)
+
+**Statement:** All transport fields route through canonical fold paths only; no alternate transport construction or routing allowed; fold helpers are private per-path.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `fold*OutcomeToPresent[private]` (all 3: refresh, reuse, direct) | All fold helpers are fn not pub fn; type system prevents direct calls |
+| Runtime | `presentResultFromOutcomeState[private]:125` | Generic fold composition private; only fold helpers call it |
+| Test | test_presentation_runtime.zig | "Fold routes consume contracted transport carrier" validates single routing path |
+
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Fold helper privacy prevents alternate routes
+- Runtime: Generic fold composition private; no direct calls possible
+- Test: Routing test confirms all transports flow through canonical paths
+- Code-review: Fold helper exposure changes prohibited
+
+**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+
+---
 
 ## Shared Helper Surface (Locked by CZH-S59)
 
@@ -153,27 +220,31 @@ See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitio
 
 ## Sustained Lock Checklist
 
-- ✓ Generic fold composition private (no widget access possible)
-- ✓ Outcome construction path-specific (no shared outcome helpers)
-- ✓ Transport routing locked (private fold helpers enforce paths)
-- ✓ Attachment state single-path (canonical computation enforced)
+- ✓ No shared outcome production (Claim 12: per-path only)
+- ✓ Attachment consistency (Claim 13: single-path canonical computation)
+- ✓ Transport routing immutable (Claim 14: all paths through canonical folds)
+- ✓ Generic fold composition private (Claim 14: no widget access possible)
+- ✓ Outcome construction path-specific (Claim 12: no shared helpers)
+- ✓ Fold helpers private (Claim 14: per-path enforcement)
+- ✓ Attachment state single-path (Claim 13: no re-derivation)
 - ✓ State computation essential (all 4 verified called from production)
 - ✓ Test surface isolated (no shared test helpers)
 - ✓ Result type unified (all paths return TerminalPresentResult)
-- ✓ No alternate routing (all paths through canonical entries)
+- ✓ No alternate routing (Claim 14: all paths through canonical entries)
 - ✓ Test-only surface leak prevented (code review verified)
 - ✓ Outcome state mutation prevented (direct flow enforced)
-- ✓ Widget bypass prevented (type system enforced)
+- ✓ Widget bypass prevented (type system enforced per Claim 12)
 - ✓ No-bypass invariant maintained (call sites verified)
-- ✓ Attachment consistency maintained (single-path verified)
-- ✓ Transport routing immutable (deterministic field logic)
-- ✓ Compile-time enforcement (type system)
-- ✓ Runtime enforcement (field guarantees)
-- ✓ Test enforcement (coverage)
+- ✓ Deterministic field logic (Claim 14: no conditional routing)
+- ✓ Compile-time enforcement (Claims 12, 13, 14: type system)
+- ✓ Runtime enforcement (Claim 13: attachment computation)
+- ✓ Test enforcement (all 3 claims: coverage)
 - ✓ Code review enforcement (architecture gates)
 
-**Shared transport and integration sustained lock:** ✓ COMPLETE AND LOCKED
+**Shared enforcement:** ✓ COMPLETE AND LOCKED
+**Determinism format:** ✓ APPLIED (3/3 claims standardized per CZH-S68)
+**Cross-references:** ✓ COMPLETE (all claims map to TERMINAL_SURFACE_CONTRACT authority)
 
 All 5 regression vectors + 4 extension vectors protected by enforcement stack.
 
-Status: Ready for integration with CZH-1147 regression/integration verification
+Status: Ready for CZH-1195 (regression/integration determinism verification)
