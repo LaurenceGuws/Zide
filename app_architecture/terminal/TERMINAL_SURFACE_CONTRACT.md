@@ -103,6 +103,66 @@ for that tick (not from `readSharedSurfaceAttachmentReady()` at the log callsite
   tokens in the widget draw path; `presented_generation` / `published_generation` /
   `pending_generation` in frame pacing — generation triples, not attachment conjunction logs.
 
+## Signal Definitions Reference (CZH-S65)
+
+Enforcement signal definitions consolidated for authority policy and per-path reference.
+
+### Attachment Conjunction Field Rules
+
+**Full conjunction name:** `shared_surface_attachment_ready` — computed from pipeline ∧ host target legs.
+
+**Leg names:**
+- `terminal_presentable_pipeline_ready` — pipeline leg only (buffer ready, scheduling ok, no stalls)
+- `host_surface_target_available` — host drawable target leg only (host has provided drawable, not lost)
+
+**Contexts where field names appear:**
+- Widget storage (`PresentationState`): legs stored separately (`terminal_presentable_pipeline_ready`, `host_surface_target_available`)
+- Transient present gate (`PresentationPresentState`): both legs + full conjunction before draw
+- Canonical result (`TerminalPresentResult`): both legs after folding (carrier for host/GPU logic)
+- Structured logs (`renderer.terminal_present`): full conjunction from present-state field, pipeline leg explicit, host leg explicit
+- Outcome states (internal): refresh carries conjunction inline; reuse/direct compute from legs
+
+**Rule:** Use full conjunction name `shared_surface_attachment_ready` in result types and logs (operator visibility).  
+Use leg names in internal state and widget storage (clarity on which leg).  
+Bridge conjunction computation (`TerminalPresentationBridge.notePresentableAvailability`) is canonical read/compute source.
+
+### Outcome Assertion Signals
+
+**Outcome type set per path (frozen):**
+- **Refresh:** `.updated_and_presented | .presented`
+- **Reuse:** `.reused | .skipped`
+- **Direct:** `.updated_and_presented | .presented`
+
+**Assertion locations:**
+- Refresh: assertion at line 168 `result.outcome == .updated_and_presented or result.outcome == .presented`
+- Reuse: outcome construction at `reuseEligibilityEntry` (deterministic, no assertion needed)
+- Direct: assertion at line 238 (field guarantees logic)
+- Shared: `presentResultFromOutcomeState()` generic fold validation (assertion-free; type system enforces)
+
+**Test binding:** Outcome classification tests validate these signals; test helpers (`assertRefreshOutcomeConsistency`, `assertReuseOutcomeConsistency`) provide hardening validation.
+
+### Transport Field Mapping Reference
+
+**Canonical transport mapping (all paths):**
+- Outcome state → `TerminalPresentResult` fields: `cache_state_advanced`, `host_surface_target_available`, `shared_surface_attachment_ready`
+
+**Path-specific mapping:**
+- **Refresh:** `refreshTransportFromResult()` maps refresh outcome conjunction into full attachment field
+- **Reuse:** `reuseTransportFromOutcome()` maps reuse eligibility decision + legs into result legs
+- **Direct:** `directTransportFromUpdated()` maps updated flag + legs into result legs
+
+**Rule:** Transport mapping is path-specific internal helper; field set is unified in result type.
+
+### Outcome Type Signal Set
+
+**Signal:** Outcome struct type name and field set encode which path + which invariant-carrying fields.
+
+- **Refresh outcome:** `RefreshOutcomeState` carries outcome type + `shared_surface_attachment_ready` inline
+- **Reuse outcome:** `ReusePresentOutcomeState` carries outcome type only (legs computed at entry call)
+- **Direct outcome:** `DirectPresentOutcomeState` carries outcome type only (field guarantees computed at entry call)
+
+**Rule:** Widget never constructs outcome types. Terminal entries produce outcomes; fold helpers consume them.
+
 ## Widget presentation storage (dominant field names, `CZH-B25`)
 
 **Storage ownership:** `PresentationState` (`src/ui/widgets/terminal_widget_presentation_state.zig`)
