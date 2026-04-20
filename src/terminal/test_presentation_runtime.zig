@@ -761,3 +761,24 @@ test "refreshPresentState visible requires non-zero dimensions" {
     try std.testing.expect(invisible_w.present == false);
     try std.testing.expect(invisible_h.present == false);
 }
+
+test "attachment state computed via canonical path only" {
+    // Test binding for CZH-1155 attachment consistency gap remediation
+    // Validates that attachment state is immutable through refresh path
+    const attached = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
+    const detached = presentation_runtime.classifyRefreshOutcome(.refreshed, false);
+
+    try std.testing.expect(attached.shared_surface_attachment_ready == true);
+    try std.testing.expect(attached.host_surface_target_available == true);
+
+    try std.testing.expect(detached.shared_surface_attachment_ready == false);
+    try std.testing.expect(detached.host_surface_target_available == true);
+
+    // Attachment state immutability through fold
+    const timing = renderer_presentable_host.TerminalPresentTiming{ .background_ms = 1.0, .glyph_ms = 1.0, .kitty_ms = 0.0 };
+    const folded_attached = presentation_runtime.foldRefreshOutcomeToPresent(attached, timing);
+    const folded_detached = presentation_runtime.foldRefreshOutcomeToPresent(detached, timing);
+
+    try std.testing.expect(folded_attached.shared_surface_attachment_ready == true);
+    try std.testing.expect(folded_detached.shared_surface_attachment_ready == false);
+}
