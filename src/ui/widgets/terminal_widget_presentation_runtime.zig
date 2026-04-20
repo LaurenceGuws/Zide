@@ -1460,7 +1460,7 @@ pub fn tryFastPresentExisting(
     view_geometry: TerminalViewGeometry,
     note_present_ctx: anytype,
     note_present: anytype,
-) ReusePresentOutcomeState {
+) TerminalPresentResult {
     const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
     const eligible = terminal_presentation_runtime.checkReuseEligibility(
         plan,
@@ -1471,10 +1471,12 @@ pub fn tryFastPresentExisting(
             .supports_reuse_without_sync = renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer),
         },
     );
-    if (!eligible) return .{
-        .host_surface_target_available = attachment_state.host_surface_target_available,
-        .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
-    };
+    if (!eligible) {
+        return foldReuseAttemptResultToPresent(.{
+            .host_surface_target_available = attachment_state.host_surface_target_available,
+            .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
+        }, .{});
+    }
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
     terminal_presentation_runtime.presentDraw(
         renderer,
@@ -1498,7 +1500,7 @@ pub fn tryFastPresentExisting(
         composing_active,
         composing_hash,
     );
-    return reuseSuccessOutcome();
+    return foldReuseAttemptResultToPresent(reuseSuccessOutcome(), .{});
 }
 
 pub fn runFastPresentIfAvailable(
@@ -1521,28 +1523,25 @@ pub fn runFastPresentIfAvailable(
     note_present_ctx: anytype,
     note_present: anytype,
 ) TerminalPresentResult {
-    return foldReuseAttemptResultToPresent(
-        tryFastPresentExisting(
-            surface_state,
-            renderer,
-            plan,
-            terminal_view,
-            draw_cursor,
-            cursor,
-            cursor_style,
-            hover_link_id,
-            composing_active,
-            composing_hash,
-            bg_color,
-            x,
-            y,
-            width,
-            height,
-            view_geometry,
-            note_present_ctx,
-            note_present,
-        ),
-        .{},
+    return tryFastPresentExisting(
+        surface_state,
+        renderer,
+        plan,
+        terminal_view,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+        bg_color,
+        x,
+        y,
+        width,
+        height,
+        view_geometry,
+        note_present_ctx,
+        note_present,
     );
 }
 
