@@ -42,6 +42,7 @@ const TerminalPresentableRefresh = renderer_presentable_host.TerminalPresentable
 /// **Outcome snapshot from refresh cycle:** carries result and followup state.
 /// Simplified carrier: full attachment state carried inline, no separate conjunction parameter.
 pub const RefreshOutcomeState = struct {
+    transport: FoldTransportFields = .{},
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = false,
     host_surface_target_available: bool = false,
@@ -106,6 +107,12 @@ pub fn classifyRefreshOutcome(
     shared_surface_attachment_ready: bool,
 ) RefreshOutcomeState {
     const outcome_state: RefreshOutcomeState = .{
+        .transport = .{
+            .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
+            .cache_state_advanced = refresh == .refreshed,
+            .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
+            .shared_surface_attachment_ready = shared_surface_attachment_ready,
+        },
         .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
         .cache_state_advanced = refresh == .refreshed,
         .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
@@ -186,7 +193,7 @@ pub fn foldRefreshOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertRefreshOutcomeConsistency(outcome_state);
-    var result = presentResultFromOutcomeState(foldFieldsFromRefreshOutcome(outcome_state), timing);
+    var result = presentResultFromOutcomeState(outcome_state.transport, timing);
     result.followup = outcome_state.followup;
     // Harden: verify followup propagates correctly through fold
     if (outcome_state.followup.required) {
@@ -194,15 +201,6 @@ pub fn foldRefreshOutcomeToPresent(
         std.debug.assert(result.followup.reason != .none);
     }
     return result;
-}
-
-fn foldFieldsFromRefreshOutcome(outcome_state: RefreshOutcomeState) FoldTransportFields {
-    return .{
-        .outcome = outcome_state.outcome,
-        .cache_state_advanced = outcome_state.cache_state_advanced,
-        .host_surface_target_available = outcome_state.host_surface_target_available,
-        .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
-    };
 }
 
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
