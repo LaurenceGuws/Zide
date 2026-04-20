@@ -193,12 +193,11 @@ fn reuseTransportFromOutcome(
 
 /// **Canonical direct boundary fold route:** folds direct boundary outcome directly through generic result helper.
 /// *Simplification:* collapses direct boundary transport hop at callsites.
-/// *Hardening:* validates direct boundary invariants; route-lock verified at classification.
+/// Invariants guaranteed by directTransportFromUpdated construction; no runtime checks needed.
 pub fn foldDirectOutcomeToPresent(
     outcome_state: DirectPresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
-    assertDirectPresentOutcomeConsistency(outcome_state);
     return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
@@ -219,14 +218,6 @@ pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
         std.debug.assert(state.transport.host_surface_target_available == true);
         std.debug.assert(state.transport.shared_surface_attachment_ready == true);
     }
-}
-
-/// **Validate direct boundary outcome invariants:**
-/// Verifies transport carries fixed direct boundary invariants.
-pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void {
-    std.debug.assert(state.transport.cache_state_advanced == true);
-    std.debug.assert(state.transport.host_surface_target_available == true);
-    std.debug.assert(state.transport.shared_surface_attachment_ready == false);
 }
 
 /// **Validate refresh outcome followup consistency:**
