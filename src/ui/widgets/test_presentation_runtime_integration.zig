@@ -441,6 +441,9 @@ test "Integration hygiene: terminal/runtime boundary exposes collapsed transport
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "presentResultFromRefreshOutcomeState"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldReuseAttemptResultToPresent"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldFieldsFromRefreshOutcome"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldFieldsFromReuseOutcome"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldFieldsFromDirectOutcome"));
     }
 }
 
@@ -464,6 +467,24 @@ test "Integration invariant: canonical fold transport field shape remains locked
             if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) attachment += 1;
         }
         std.debug.assert(outcome == 1 and cache == 1 and host == 1 and attachment == 1);
+    }
+}
+
+test "Integration invariant: outcome carriers expose contracted transport field" {
+    comptime {
+        var refresh_transport: usize = 0;
+        var reuse_transport: usize = 0;
+        var direct_transport: usize = 0;
+        for (@typeInfo(terminal_presentation_runtime.RefreshOutcomeState).@"struct".fields) |f| {
+            if (std.mem.eql(u8, f.name, "transport")) refresh_transport += 1;
+        }
+        for (@typeInfo(terminal_presentation_runtime.ReusePresentOutcomeState).@"struct".fields) |f| {
+            if (std.mem.eql(u8, f.name, "transport")) reuse_transport += 1;
+        }
+        for (@typeInfo(terminal_presentation_runtime.DirectPresentOutcomeState).@"struct".fields) |f| {
+            if (std.mem.eql(u8, f.name, "transport")) direct_transport += 1;
+        }
+        std.debug.assert(refresh_transport == 1 and reuse_transport == 1 and direct_transport == 1);
     }
 }
 
