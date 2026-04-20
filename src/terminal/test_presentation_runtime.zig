@@ -73,8 +73,8 @@ test "Refresh classification carries inline conjunction coupling" {
     const unavailable = presentation_runtime.classifyRefreshOutcome(.target_unavailable, false);
     try std.testing.expect(unavailable.shared_surface_attachment_ready == false);
     try std.testing.expect(unavailable.host_surface_target_available == false);
-    try std.testing.expect(unavailable.followup_required == true);
-    try std.testing.expectEqual(unavailable.followup_reason, .target_unavailable);
+    try std.testing.expect(unavailable.followup.required == true);
+    try std.testing.expectEqual(unavailable.followup.reason, .target_unavailable);
 }
 
 test "Direct present folding uses canonical helper" {
@@ -309,14 +309,12 @@ test "Refresh boundary result carrier is terminal present result" {
 
 test "RefreshOutcomeState validates followup coupling" {
     const state_with_followup = presentation_runtime.RefreshOutcomeState{
-        .followup_required = true,
-        .followup_reason = .target_unavailable,
+        .followup = .{ .required = true, .reason = .target_unavailable },
     };
     presentation_runtime.assertRefreshOutcomeConsistency(state_with_followup);
 
     const state_without_followup = presentation_runtime.RefreshOutcomeState{
-        .followup_required = false,
-        .followup_reason = .none,
+        .followup = .{ .required = false, .reason = .none },
     };
     presentation_runtime.assertRefreshOutcomeConsistency(state_without_followup);
 }

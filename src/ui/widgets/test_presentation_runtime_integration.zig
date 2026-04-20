@@ -87,7 +87,7 @@ test "All outcome classification paths work in widget context" {
 
     try std.testing.expect(refreshed.outcome == .updated_and_presented);
     try std.testing.expect(presented.outcome == .presented);
-    try std.testing.expect(unavailable.followup_required == true);
+    try std.testing.expect(unavailable.followup.required == true);
 
     // Direct outcomes
     const direct_updated = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);

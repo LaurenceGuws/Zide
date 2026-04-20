@@ -46,8 +46,7 @@ pub const RefreshOutcomeState = struct {
     cache_state_advanced: bool = false,
     host_surface_target_available: bool = false,
     shared_surface_attachment_ready: bool = false,
-    followup_required: bool = false,
-    followup_reason: TerminalPresentFollowupReason = .none,
+    followup: presentable_contract.TerminalPresentFollowup = .{},
 };
 
 /// **Direct boundary outcome snapshot:** result when direct boundary execution bypasses reuse path.
@@ -87,8 +86,10 @@ pub fn classifyRefreshOutcome(
         .cache_state_advanced = refresh == .refreshed,
         .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
         .shared_surface_attachment_ready = shared_surface_attachment_ready,
-        .followup_required = refresh == .target_unavailable,
-        .followup_reason = if (refresh == .target_unavailable) .target_unavailable else .none,
+        .followup = .{
+            .required = refresh == .target_unavailable,
+            .reason = if (refresh == .target_unavailable) .target_unavailable else .none,
+        },
     };
     assertRefreshOutcomeConsistency(outcome_state);
     return outcome_state;
@@ -172,9 +173,9 @@ pub fn foldRefreshOutcomeToPresent(
         timing,
         outcome_state.shared_surface_attachment_ready,
     );
-    applyOutcomeSpecificFields(&result, outcome_state.followup_required, outcome_state.followup_reason);
+    applyOutcomeSpecificFields(&result, outcome_state.followup.required, outcome_state.followup.reason);
     // Harden: verify followup propagates correctly through fold
-    if (outcome_state.followup_required) {
+    if (outcome_state.followup.required) {
         std.debug.assert(result.followup.required == true);
         std.debug.assert(result.followup.reason != .none);
     }
@@ -237,12 +238,12 @@ pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) v
 }
 
 /// **Validate refresh outcome consistency:** consolidation of refresh-path assertion patterns.
-/// Verifies that followup coupling invariants hold (if followup_required, then followup_reason != .none).
+/// Verifies that followup coupling invariants hold (if `followup.required`, then `followup.reason != .none`).
 pub fn assertRefreshOutcomeConsistency(state: RefreshOutcomeState) void {
-    if (state.followup_required) {
-        std.debug.assert(state.followup_reason != .none);
+    if (state.followup.required) {
+        std.debug.assert(state.followup.reason != .none);
     } else {
-        std.debug.assert(state.followup_reason == .none);
+        std.debug.assert(state.followup.reason == .none);
     }
 }
 

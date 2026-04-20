@@ -117,7 +117,7 @@ pub const PresentationExecutionResult = struct {
 
 /// **Refresh outcome snapshot:** classifies refresh cycle result (updated or not).
 /// Carries conjunction inline via `shared_surface_attachment_ready`; fold reads the field directly.
-/// *Invariants:* `followup_required` and `followup_reason` are coupled — must both indicate unavailability
+/// *Invariants:* `followup.required` and `followup.reason` are coupled — must both indicate unavailability
 /// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
 // Terminal-layer outcome structs re-exported for callers
 pub const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
@@ -2142,8 +2142,7 @@ test "integration hardening fold paths harden outcome consistency" {
         .cache_state_advanced = false,
         .host_surface_target_available = false,
         .shared_surface_attachment_ready = false,
-        .followup_required = true,
-        .followup_reason = .target_unavailable,
+        .followup = .{ .required = true, .reason = .target_unavailable },
     };
     const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_unavailable, .{});
     try std.testing.expect(refresh_result.followup.required == true);
@@ -2152,21 +2151,21 @@ test "integration hardening fold paths harden outcome consistency" {
 
 test "integration follow-through refresh classification validates followup coupling" {
     // Verify that refresh outcome classification validates followup coupling invariants.
-    // When followup_required is true, followup_reason must be non-.none.
+    // When followup.required is true, followup.reason must be non-.none.
 
-    // Test: unavailable refresh sets both followup_required and followup_reason
+    // Test: unavailable refresh sets both followup.required and followup.reason
     const refresh_with_followup = classifyRefreshOutcome(.target_unavailable, false);
-    try std.testing.expect(refresh_with_followup.followup_required == true);
-    try std.testing.expect(refresh_with_followup.followup_reason != .none);
+    try std.testing.expect(refresh_with_followup.followup.required == true);
+    try std.testing.expect(refresh_with_followup.followup.reason != .none);
 
     // Test: successful/presented refresh has both followup fields neutral
     const refresh_success = classifyRefreshOutcome(.refreshed, true);
-    try std.testing.expect(refresh_success.followup_required == false);
-    try std.testing.expectEqual(refresh_success.followup_reason, .none);
+    try std.testing.expect(refresh_success.followup.required == false);
+    try std.testing.expectEqual(refresh_success.followup.reason, .none);
 
     const refresh_presented = classifyRefreshOutcome(.presented, true);
-    try std.testing.expect(refresh_presented.followup_required == false);
-    try std.testing.expectEqual(refresh_presented.followup_reason, .none);
+    try std.testing.expect(refresh_presented.followup.required == false);
+    try std.testing.expectEqual(refresh_presented.followup.reason, .none);
 }
 
 test "integration follow-through direct outcome folds correctly through generic path" {
@@ -2216,16 +2215,14 @@ test "consolidation helper refresh outcome assertion unified pattern" {
     // Test: valid state with followup required and reason set
     const valid_with_followup = RefreshOutcomeState{
         .outcome = .presented,
-        .followup_required = true,
-        .followup_reason = .target_unavailable,
+        .followup = .{ .required = true, .reason = .target_unavailable },
     };
     assertRefreshOutcomeConsistency(valid_with_followup);
 
     // Test: valid state with followup neutral
     const valid_neutral = RefreshOutcomeState{
         .outcome = .presented,
-        .followup_required = false,
-        .followup_reason = .none,
+        .followup = .{ .required = false, .reason = .none },
     };
     assertRefreshOutcomeConsistency(valid_neutral);
 }
@@ -2243,8 +2240,7 @@ test "integration consolidation all fold paths route through canonical generic f
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
-        .followup_required = false,
-        .followup_reason = .none,
+        .followup = .{ .required = false, .reason = .none },
     };
     const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_outcome, timing);
     try std.testing.expectEqual(refresh_result.outcome, .updated_and_presented);
