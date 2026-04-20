@@ -215,7 +215,32 @@ test "Helper contraction removes boundary mapping helper callsites" {
         std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromRefreshOutcome"));
         std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromReuseOutcome"));
         std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromDirectOutcome"));
+        std.debug.assert(@hasDecl(presentation_runtime, "refreshTransportFromResult"));
+        std.debug.assert(@hasDecl(presentation_runtime, "reuseTransportFromOutcome"));
+        std.debug.assert(@hasDecl(presentation_runtime, "directTransportFromUpdated"));
     }
+}
+
+test "Fold routes consume contracted transport carrier directly" {
+    const timing = renderer_presentable_host.TerminalPresentTiming{ .background_ms = 0.1, .glyph_ms = 0.2, .kitty_ms = 0.3 };
+
+    const refresh = presentation_runtime.classifyRefreshOutcome(.presented, true);
+    const refresh_folded = presentation_runtime.foldRefreshOutcomeToPresent(refresh, timing);
+    try std.testing.expectEqual(refresh_folded.outcome, refresh.transport.outcome);
+
+    const reuse = presentation_runtime.ReusePresentOutcomeState{
+        .transport = .{ .outcome = .skipped, .cache_state_advanced = false, .host_surface_target_available = true, .shared_surface_attachment_ready = false },
+        .outcome = .skipped,
+        .cache_state_advanced = false,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
+    const reuse_folded = presentation_runtime.foldReuseOutcomeToPresent(reuse, timing);
+    try std.testing.expectEqual(reuse_folded.outcome, reuse.transport.outcome);
+
+    const direct = presentation_runtime.classifyDirectPresentOutcome(true);
+    const direct_folded = presentation_runtime.foldDirectOutcomeToPresent(direct, timing);
+    try std.testing.expectEqual(direct_folded.outcome, direct.transport.outcome);
 }
 
 test "Unified fold transport fields map through canonical reuse fold helper" {
