@@ -402,12 +402,6 @@ pub fn computeTerminalPresentPlanDecision(
     };
 }
 
-/// **Refresh boundary folded result:** host-facing refresh result transport
-/// produced at the terminal-owned refresh boundary fold route.
-pub const RefreshedPresentablePresentationResult = struct {
-    present_result: TerminalPresentResult = .{},
-};
-
 /// **Presentation present state snapshot:** captures conjunction during refresh for operator reporting.
 /// Stores on transient snapshot; not report from result structs. Canonical carrier for conjunction field.
 pub const PresentationPresentState = struct {
@@ -551,7 +545,7 @@ pub fn checkDirectPresentEligibility(
 ///
 /// `Hooks` interface (comptime, widget-provided):
 ///   `runCycle(ctx) -> TerminalPresentableRefreshExecutionResult`
-///   `runPresentation(ctx, cycle: TerminalPresentableRefreshExecutionResult) -> RefreshedPresentablePresentationResult`
+///   `runPresentation(ctx, cycle: TerminalPresentableRefreshExecutionResult) -> TerminalPresentResult`
 ///
 /// Terminal owns orchestration and classification; widget owns execution via `Hooks`.
 /// *Consolidation:* refresh boundary transport returns canonical folded host-facing result transport.
@@ -563,6 +557,5 @@ pub fn executeRefreshPresentFlow(
 ) TerminalPresentResult {
     if (rows == 0 or cols == 0) return .{};
     const cycle = Hooks.runCycle(ctx);
-    const refreshed = Hooks.runPresentation(ctx, cycle);
-    return refreshed.present_result;
+    return Hooks.runPresentation(ctx, cycle);
 }

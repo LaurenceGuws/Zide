@@ -98,18 +98,16 @@ test "Refresh result helper preserves folded refresh transport fields" {
         .glyph_ms = 1.5,
         .kitty_ms = 0.75,
     };
-    const refreshed = presentation_runtime.RefreshedPresentablePresentationResult{
-        .present_result = presentation_runtime.presentResultFromRefreshOutcomeState(
-            presentation_runtime.classifyRefreshOutcome(.refreshed, true),
-            timing,
-        ),
-    };
+    const refreshed = presentation_runtime.presentResultFromRefreshOutcomeState(
+        presentation_runtime.classifyRefreshOutcome(.refreshed, true),
+        timing,
+    );
 
-    try std.testing.expectEqual(refreshed.present_result.outcome, .updated_and_presented);
-    try std.testing.expectEqual(refreshed.present_result.timing.background_ms, timing.background_ms);
-    try std.testing.expectEqual(refreshed.present_result.timing.glyph_ms, timing.glyph_ms);
-    try std.testing.expectEqual(refreshed.present_result.timing.kitty_ms, timing.kitty_ms);
-    try std.testing.expect(refreshed.present_result.shared_surface_attachment_ready == true);
+    try std.testing.expectEqual(refreshed.outcome, .updated_and_presented);
+    try std.testing.expectEqual(refreshed.timing.background_ms, timing.background_ms);
+    try std.testing.expectEqual(refreshed.timing.glyph_ms, timing.glyph_ms);
+    try std.testing.expectEqual(refreshed.timing.kitty_ms, timing.kitty_ms);
+    try std.testing.expect(refreshed.shared_surface_attachment_ready == true);
 }
 
 test "Refresh result helper preserves followup fields for target_unavailable transport" {
@@ -118,18 +116,16 @@ test "Refresh result helper preserves followup fields for target_unavailable tra
         .glyph_ms = 0.4,
         .kitty_ms = 0.0,
     };
-    const refreshed = presentation_runtime.RefreshedPresentablePresentationResult{
-        .present_result = presentation_runtime.presentResultFromRefreshOutcomeState(
-            presentation_runtime.classifyRefreshOutcome(.target_unavailable, false),
-            timing,
-        ),
-    };
+    const refreshed = presentation_runtime.presentResultFromRefreshOutcomeState(
+        presentation_runtime.classifyRefreshOutcome(.target_unavailable, false),
+        timing,
+    );
 
-    try std.testing.expectEqual(refreshed.present_result.outcome, .presented);
-    try std.testing.expectEqual(refreshed.present_result.followup.required, true);
-    try std.testing.expectEqual(refreshed.present_result.followup.reason, .target_unavailable);
-    try std.testing.expectEqual(refreshed.present_result.host_surface_target_available, false);
-    try std.testing.expectEqual(refreshed.present_result.shared_surface_attachment_ready, false);
+    try std.testing.expectEqual(refreshed.outcome, .presented);
+    try std.testing.expectEqual(refreshed.followup.required, true);
+    try std.testing.expectEqual(refreshed.followup.reason, .target_unavailable);
+    try std.testing.expectEqual(refreshed.host_surface_target_available, false);
+    try std.testing.expectEqual(refreshed.shared_surface_attachment_ready, false);
 }
 
 test "Reuse fold helper preserves non-reused transport state" {
@@ -235,25 +231,23 @@ test "Refresh boundary helper route matches canonical refresh folded result rout
         .glyph_ms = 0.6,
         .kitty_ms = 0.9,
     };
-    const via_boundary = presentation_runtime.RefreshedPresentablePresentationResult{
-        .present_result = presentation_runtime.presentResultFromRefreshOutcomeState(
-            presentation_runtime.classifyRefreshOutcome(.refreshed, true),
-            timing,
-        ),
-    };
+    const via_boundary = presentation_runtime.presentResultFromRefreshOutcomeState(
+        presentation_runtime.classifyRefreshOutcome(.refreshed, true),
+        timing,
+    );
 
     const outcome_state = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     const via_canonical_fold = presentation_runtime.presentResultFromRefreshOutcomeState(outcome_state, timing);
 
-    try std.testing.expectEqual(via_boundary.present_result.outcome, via_canonical_fold.outcome);
-    try std.testing.expectEqual(via_boundary.present_result.cache_state_advanced, via_canonical_fold.cache_state_advanced);
-    try std.testing.expectEqual(via_boundary.present_result.host_surface_target_available, via_canonical_fold.host_surface_target_available);
-    try std.testing.expectEqual(via_boundary.present_result.shared_surface_attachment_ready, via_canonical_fold.shared_surface_attachment_ready);
-    try std.testing.expectEqual(via_boundary.present_result.followup.required, via_canonical_fold.followup.required);
-    try std.testing.expectEqual(via_boundary.present_result.followup.reason, via_canonical_fold.followup.reason);
-    try std.testing.expectEqual(via_boundary.present_result.timing.background_ms, via_canonical_fold.timing.background_ms);
-    try std.testing.expectEqual(via_boundary.present_result.timing.glyph_ms, via_canonical_fold.timing.glyph_ms);
-    try std.testing.expectEqual(via_boundary.present_result.timing.kitty_ms, via_canonical_fold.timing.kitty_ms);
+    try std.testing.expectEqual(via_boundary.outcome, via_canonical_fold.outcome);
+    try std.testing.expectEqual(via_boundary.cache_state_advanced, via_canonical_fold.cache_state_advanced);
+    try std.testing.expectEqual(via_boundary.host_surface_target_available, via_canonical_fold.host_surface_target_available);
+    try std.testing.expectEqual(via_boundary.shared_surface_attachment_ready, via_canonical_fold.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_boundary.followup.required, via_canonical_fold.followup.required);
+    try std.testing.expectEqual(via_boundary.followup.reason, via_canonical_fold.followup.reason);
+    try std.testing.expectEqual(via_boundary.timing.background_ms, via_canonical_fold.timing.background_ms);
+    try std.testing.expectEqual(via_boundary.timing.glyph_ms, via_canonical_fold.timing.glyph_ms);
+    try std.testing.expectEqual(via_boundary.timing.kitty_ms, via_canonical_fold.timing.kitty_ms);
 }
 
 test "Geometry struct is defined and initializable" {
@@ -264,20 +258,18 @@ test "Geometry struct is defined and initializable" {
     try std.testing.expect(geometry.cell_w_i == 8);
 }
 
-test "RefreshedPresentablePresentationResult is defined in terminal layer" {
-    const result = presentation_runtime.RefreshedPresentablePresentationResult{
-        .present_result = .{
-            .outcome = .presented,
-            .shared_surface_attachment_ready = true,
-            .timing = .{
-                .background_ms = 1.5,
-                .glyph_ms = 2.5,
-                .kitty_ms = 0.0,
-            },
+test "Refresh boundary result carrier is terminal present result" {
+    const result = renderer_presentable_host.TerminalPresentResult{
+        .outcome = .presented,
+        .shared_surface_attachment_ready = true,
+        .timing = .{
+            .background_ms = 1.5,
+            .glyph_ms = 2.5,
+            .kitty_ms = 0.0,
         },
     };
-    try std.testing.expect(result.present_result.timing.background_ms == 1.5);
-    try std.testing.expect(result.present_result.shared_surface_attachment_ready == true);
+    try std.testing.expect(result.timing.background_ms == 1.5);
+    try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
 test "RefreshOutcomeState validates followup coupling" {

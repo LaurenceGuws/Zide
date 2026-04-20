@@ -121,8 +121,6 @@ pub const PresentationExecutionResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
-pub const RefreshedPresentablePresentationResult = terminal_presentation_runtime.RefreshedPresentablePresentationResult;
-
 /// **Refresh outcome snapshot:** classifies refresh cycle result (updated or not).
 /// Carries conjunction inline via `shared_surface_attachment_ready`; fold reads the field directly.
 /// *Invariants:* `followup_required` and `followup_reason` are coupled — must both indicate unavailability
@@ -821,7 +819,7 @@ pub fn runRefreshBoundaryPresentationResult(
     cycle_result: TerminalPresentableRefreshExecutionResult,
     note_present_ctx: anytype,
     note_present: anytype,
-) RefreshedPresentablePresentationResult {
+) TerminalPresentResult {
     const view_cells_len = terminal_view.cells.len;
 
     const visible_w = surface_update_plan.geometry.visible_w;
@@ -892,9 +890,7 @@ pub fn runRefreshBoundaryPresentationResult(
         cycle_result.refresh,
         present_state.shared_surface_attachment_ready,
     );
-    return .{
-        .present_result = presentResultFromRefreshOutcomeState(refresh_outcome, cycle_result.timing),
-    };
+    return presentResultFromRefreshOutcomeState(refresh_outcome, cycle_result.timing);
 }
 
 pub fn executeRefreshPresentFlow(
@@ -956,7 +952,7 @@ pub fn executeRefreshPresentFlow(
                 ctx.surface_update_plan,
             );
         }
-        pub fn runPresentation(ctx: RefreshCtx, cycle: TerminalPresentableRefreshExecutionResult) RefreshedPresentablePresentationResult {
+        pub fn runPresentation(ctx: RefreshCtx, cycle: TerminalPresentableRefreshExecutionResult) TerminalPresentResult {
             return runRefreshBoundaryPresentationResult(
                 ctx.self_widget,
                 ctx.renderer,
@@ -2079,12 +2075,10 @@ test "reuse outcome and present result expose paired leg and conjunction fields"
 }
 
 test "Refresh boundary folded result carries conjunction for host-facing transport" {
-    const result = RefreshedPresentablePresentationResult{
-        .present_result = .{
-            .shared_surface_attachment_ready = true,
-        },
+    const result = TerminalPresentResult{
+        .shared_surface_attachment_ready = true,
     };
-    try std.testing.expect(result.present_result.shared_surface_attachment_ready == true);
+    try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
 test "PresentationPresentState stores conjunction for reporting path" {
