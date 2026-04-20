@@ -200,12 +200,15 @@ that manages all semantic presentation logic:
 **Widget-retained integration layer** (`terminal_widget_presentation_runtime.zig`):
 The widget layer remains a thin facade that:
 - Gathers input/geometry/UI context from renderer/shell/view state
-- Calls terminal-owned entry points (`refreshPresentEntry`, `reusePresentEntry`, `directPresentEntry`) with primitive inputs
+- Calls terminal-owned entry points with primitive inputs:
+  - `refreshPresentEntry(refresh, attachment_ready, timing)` — refresh path
+  - `reuseEligibilityEntry(eligible, host_target, attachment_ready, timing)` — reuse path
+  - `directPresentEntry(updated, timing)` — direct path
 - Receives `TerminalPresentResult` directly; never constructs, manipulates, or exposes outcome-state types
 - Interprets results in renderer/shell context (timing, callbacks, viewport clipping)
 - Delegates all semantic classification, folding, and outcome coordination to terminal layer
 - Keeps no presentation logic, only integration and GPU operations
-- **Result-only boundary (CZH-B58):** Outcome-state structures (`RefreshOutcomeState`, `ReusePresentOutcomeState`, `DirectPresentOutcomeState`) are terminal-internal implementation details; not accessible to widget layer in production paths
+- **Result-only boundary (CZH-B58):** Outcome-state structures (`RefreshOutcomeState`, `ReusePresentOutcomeState`, `DirectPresentOutcomeState`) are terminal-internal implementation details; not accessible to widget layer in production paths; canonical entries own all outcome construction and validation
 
 **No re-derivation rule:** Widget layer never recomputes outcomes, folding, or orchestration decisions.
 All semantic logic is owned by terminal layer and called through defined interfaces.  
