@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B69` (in_progress, super-gate `CZH-GATE-123`). Sprint `CZH-S64` in progress.
+- Current active macro batch: `CZH-B70` (in_progress, super-gate `CZH-GATE-124`). Sprint `CZH-S65` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -27,6 +27,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S61` (`CZH-B66`, `CZH-GATE-120`). Checkpoint: `docs/todo/core/CZH_S61_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S62` (`CZH-B67`, `CZH-GATE-121`). Checkpoint: `docs/todo/core/CZH_S62_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S63` (`CZH-B68`, `CZH-GATE-122`). Checkpoint: `docs/todo/core/CZH_S63_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S64` (`CZH-B69`, `CZH-GATE-123`). Checkpoint: `docs/todo/core/CZH_S64_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S53` (`CZH-B58`, `CZH-GATE-112`). Checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`.
@@ -4728,7 +4729,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B69` Enforcement Surface Compaction with Lock Preservation (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B69` Enforcement Surface Compaction with Lock Preservation (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4749,5 +4750,30 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S64_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+### `CZH-B70` Enforcement Signal Compression with Verifiability Retention (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- compress enforcement signal surface while preserving explicit verifiability through compile/test lock bindings
+
+Acceptance:
+
+- enforcement signal representation is reduced without weakening lock guarantees
+- refresh/reuse/direct/shared signal compression preserves ownership clarity
+- regression + integration verification proves retained explicit verifiability
+- docs align with signal-compression vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-124`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S65_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
