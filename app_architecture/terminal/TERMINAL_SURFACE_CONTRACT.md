@@ -851,6 +851,144 @@ This makes layer coverage visible and prevents future drift.
 
 **Lock enforcement:** Future claim-to-lock updates must follow these 6 determinism criteria to prevent reviewer drift and maintain unambiguous mapping as codebase evolves.
 
+## Enforcement Matrix Drift-Guard Policies (CZH-S69)
+
+Authority policies to prevent drift from determinism rules during maintenance and future claim additions.
+
+**Drift-guard definition:** Explicit policies and code review gates that prevent violating determinism criteria (Criterion 1-6) when claims are added, updated, or modified.
+
+### Guard 1: New Claim Format Policy
+
+**Rule:** All new enforcement claims must follow 6 determinism criteria (naming, lock detail, layer coverage, test binding, cross-path grouping, layer explicitness) or require architect pre-approval.
+
+**Application:**
+- New claims must include: name (with variant notation if cross-path), lock detail (standardized format), explicit layer coverage, test binding (file:RANGE format), cross-path relationship (if applicable)
+- Claims missing any element require architect review before merge
+- Code review checklist: verify new claims have all 6 elements
+
+**Enforcement:** Code review gate; architect pre-approval required for non-conforming claims
+
+---
+
+### Guard 2: Lock Detail Immutability Policy
+
+**Rule:** Lock details must follow standardized format (artifact:line[property]) and cannot be changed without architect review and format verification.
+
+**Standardized format reminder:**
+- Compile-time: `ArtifactName[property]` (e.g., `foldRefreshOutcomeToPresent[private]`)
+- Runtime: `function_name():LINE` (e.g., `classifyRefreshOutcome():168`)
+- Type: `TypeName[guarantee]` (e.g., `TerminalPresentResult[field_set_frozen]`)
+- Uniqueness: `FunctionName[sole_implementer]`
+
+**Application:**
+- Lock detail changes require format verification against standardized patterns
+- Non-conforming lock details (e.g., missing line numbers when available) require architect pre-approval
+- Code review checklist: verify lock detail format against standardized patterns
+
+**Enforcement:** Code review gate; architect pre-approval for format deviations
+
+---
+
+### Guard 3: Test Binding Verifiability Policy
+
+**Rule:** All test bindings must be verifiable file:RANGE "test_name" format or reference explicitly defined category. Unverifiable citations require architect pre-approval.
+
+**Verifiable formats:**
+- Full citation: `test_file.zig:14-28 "test name"` (preferred; must correspond to actual test)
+- Defined category: citation references category defined once in authority document with examples
+
+**Application:**
+- Test citations must either (a) point to actual test file/line, or (b) reference defined category
+- Unverifiable citations (e.g., vague references without file/line or undefined categories) require architect approval
+- Code review checklist: validate test binding resolves to actual test function
+
+**Enforcement:** Code review gate + optional script validation; architect pre-approval for unverifiable citations
+
+---
+
+### Guard 4: Layer Explicitness Policy
+
+**Rule:** All claims must have explicit layer coverage (CT/RT/Test/CR documented or marked "not applicable"). Implicit layer coverage is prohibited.
+
+**Application:**
+- Every claim must have layer coverage table showing which of 4 layers apply (✓ or N/A per layer)
+- Implicit layer coverage (hidden in prose or ambiguous) requires architect pre-approval
+- Code review checklist: mandatory layer coverage table per claim
+
+**Enforcement:** Code review gate; architect pre-approval for implicit coverage
+
+---
+
+### Guard 5: Cross-Path Relationship Policy
+
+**Rule:** Any claim appearing in multiple paths must be explicitly labeled as 'variant of [principle]' or 'distinct principle [name]'. Relationships tracked in authority grouping table.
+
+**Application:**
+- Claims appearing in multiple paths (e.g., "outcome type freeze" in refresh, reuse, direct) must explicitly state relationship
+- Variant notation: "Outcome Type Freeze (Refresh variant: .updated_and_presented | .presented)"
+- Grouping table in authority: maps shared locks to all claims using them
+- Code review checklist: verify cross-path relationships are explicit and tracked in grouping table
+
+**Enforcement:** Code review gate; architect pre-approval for undefined relationships
+
+---
+
+### Guard 6: Authority-Per-Path Sync Policy
+
+**Rule:** Authority document and per-path enforcement docs must remain synchronized. Changes to determinism criteria require synchronized updates across all 4 per-path docs. Divergence requires architect pre-approval.
+
+**Application:**
+- Authority document changes (new criteria, updated policy) require corresponding updates in all per-path enforcement docs
+- Per-path doc changes (claim updates) require verification that they match authority definitions
+- Code review checklist: diff check authority vs. per-path docs (fail if claims don't match)
+- Gate: cannot merge authority changes without per-path sync verification
+
+**Enforcement:** Code review gate + diff verification; architect pre-approval for sync violations
+
+---
+
+### Guard 7: Cross-Reference Maintenance Policy
+
+**Rule:** Cross-reference tables (lock → claims mapping) are maintained in authority document. Any claim addition/rename/deletion requires cross-reference update.
+
+**Application:**
+- Authority document maintains cross-reference table mapping locks to all claims using them
+- Claim additions must be added to cross-reference table
+- Claim renames must update cross-reference table
+- Claim deletions must be removed from cross-reference table
+- Code review checklist: explicit cross-reference table verification before merge
+
+**Enforcement:** Code review gate; architect pre-approval for untracked cross-references
+
+---
+
+### Guard 8: Test Binding Staleness Policy
+
+**Rule:** Test bindings are point-in-time citations. When test function is renamed/moved, ALL documentation must be updated within same change. Stale citations require architect pre-approval.
+
+**Application:**
+- Test renames/moves require simultaneous documentation updates across all claim citations
+- Changes to test functions require verification that all citations are updated
+- Optional: script validation that test bindings resolve to actual functions (detect stale citations)
+- Code review checklist: verify test function changes include documentation updates
+
+**Enforcement:** Code review gate; architect pre-approval for stale test citations
+
+---
+
+**Drift-guard enforcement:**
+- **Code review gates:** Architect reviews all claims for drift-guard compliance (new claims, updates, cross-path changes)
+- **Mandatory checklists:** 8-point checklist per claim change (one per guard)
+- **Optional automation:** Script validation for test binding resolution, lock detail format
+- **Approval authority:** Architect pre-approval required for any drift-guard deviation
+
+**Drift-guard application:**
+- **CZH-S69 Phase 1 (CZH-1198):** Define policies (complete)
+- **CZH-S69 Phase 2 (CZH-1199..1202):** Implement per-path guards, add regression guards specific to each path
+- **CZH-S69 Phase 3 (CZH-1203):** Verify drift-guard coverage closes all 8 identified vectors
+
+**Maintenance contract:** No claim may be added or modified without code review against all 8 guards. Architect pre-approval required for any non-conformance.
+
 ## Evidence Format Reference (CZH-S66)
 
 Authority policy and format definitions for enforcement evidence artifacts (checkpoints, audits, verifications, implementations).
