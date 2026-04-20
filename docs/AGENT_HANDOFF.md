@@ -23,6 +23,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S63_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S64_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`
+- **Pending sprint checkpoint (review_gate):** `docs/todo/core/CZH_S66_CHECKPOINT.md` — awaiting architect board action for atomic-group exception (CZH-1175..1178 consolidated per CZH-B71-corrective). Technical work complete, board movement pending architect approval.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S50_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`

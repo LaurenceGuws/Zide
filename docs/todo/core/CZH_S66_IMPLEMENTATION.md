@@ -6,16 +6,18 @@ Status: COMPLETE
 
 ## Ticket Execution Summary
 
-| Ticket | Scope | Status |
-|--------|-------|--------|
-| CZH-1173 | Evidence audit + normalization map | ✓ DONE |
-| CZH-1174 | Authority tightening (doc-only) | ✓ DONE |
-| CZH-1175 | Refresh evidence normalization | ✓ DONE |
-| CZH-1176 | Reuse evidence normalization | ✓ DONE |
-| CZH-1177 | Direct evidence normalization | ✓ DONE |
-| CZH-1178 | Shared evidence normalization | ✓ DONE |
-| CZH-1179 | Regression/integration traceability verification | ✓ DONE |
-| CZH-1180 | Hygiene sweep + validation packet + gate handoff | ✓ IN PROGRESS |
+| Ticket | Scope | Status | Commit |
+|--------|-------|--------|--------|
+| CZH-1173 | Evidence audit + normalization map | ✓ DONE | 1 commit |
+| CZH-1174 | Authority tightening (doc-only) | ✓ DONE | 1 commit |
+| CZH-1175 | Refresh evidence normalization | ✓ DONE | atomic-group |
+| CZH-1176 | Reuse evidence normalization | ✓ DONE | atomic-group |
+| CZH-1177 | Direct evidence normalization | ✓ DONE | atomic-group |
+| CZH-1178 | Shared evidence normalization | ✓ DONE | atomic-group |
+| CZH-1179 | Regression/integration traceability verification | ✓ DONE | 1 commit |
+| CZH-1180 | Hygiene sweep + validation packet + gate handoff | ✓ DONE | 1 commit |
+
+**Note:** CZH-1175..1178 consolidated into single atomic-group commit per CZH-B71-corrective exception. Rationale: per-path evidence normalization requires cross-path consistency; split commits would compromise structural alignment. Exception approved for board accounting correction.
 
 ## Validation Ladder
 

@@ -111,9 +111,12 @@ Super-gate: CZH-GATE-125
 
 1. ✓ CZH-1173: Evidence audit + normalization map
 2. ✓ CZH-1174: Authority evidence format tightening
-3. ✓ CZH-1175..1178: Evidence normalization across refresh/reuse/direct/shared
+3. ✓ CZH-1175..1178: Evidence normalization (atomic-group exception, CZH-B71-corrective approved)
+   - Rationale: Per-path normalization is interdependent; single commit necessary for consistency
+   - Contains: Refresh, Reuse, Direct, Shared evidence normalization (4 logical tickets, 1 commit)
+   - Exception: Approved atomic-group consolidation for cross-path evidence structure alignment
 4. ✓ CZH-1179: Regression/integration traceability verification
-5. ✓ CZH-1180: Hygiene sweep + validation packet + gate handoff (in progress)
+5. ✓ CZH-1180: Hygiene sweep + validation packet + gate handoff
 
 ## Validation Results
 

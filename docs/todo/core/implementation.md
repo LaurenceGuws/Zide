@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B71` (in_progress, super-gate `CZH-GATE-125`). Sprint `CZH-S66` in progress.
+- Current active macro batch: `CZH-B71` (in_progress, super-gate `CZH-GATE-125`). Sprint `CZH-S66` review_gate (pending architect board action for atomic-group exception CZH-1175..1178).
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -28,6 +28,8 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S62` (`CZH-B67`, `CZH-GATE-121`). Checkpoint: `docs/todo/core/CZH_S62_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S63` (`CZH-B68`, `CZH-GATE-122`). Checkpoint: `docs/todo/core/CZH_S63_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S64` (`CZH-B69`, `CZH-GATE-123`). Checkpoint: `docs/todo/core/CZH_S64_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
+- Pending sprint: `CZH-S66` (`CZH-B71`, `CZH-GATE-125`, review_gate pending architect board action). Checkpoint: `docs/todo/core/CZH_S66_CHECKPOINT.md`. Note: CZH-1175..1178 atomic-group exception per CZH-B71-corrective.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
