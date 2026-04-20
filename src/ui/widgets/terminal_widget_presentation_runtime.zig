@@ -1372,7 +1372,7 @@ pub fn runPresentation(
         .note_present_ctx = note_present_ctx,
         .bg_color = bg_color,
     };
-    const fast = runFastPresentIfAvailable(
+    const fast = tryFastPresentExisting(
         &self.surface,
         renderer,
         plan,
@@ -1501,48 +1501,6 @@ pub fn tryFastPresentExisting(
         composing_hash,
     );
     return foldReuseAttemptResultToPresent(reuseSuccessOutcome(), .{});
-}
-
-pub fn runFastPresentIfAvailable(
-    surface_state: anytype,
-    renderer: anytype,
-    plan: TerminalPresentPlan,
-    terminal_view: view_state.TerminalViewModel,
-    draw_cursor: bool,
-    cursor: CursorPos,
-    cursor_style: terminal_types.CursorStyle,
-    hover_link_id: u32,
-    composing_active: bool,
-    composing_hash: u64,
-    bg_color: Color,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    view_geometry: TerminalViewGeometry,
-    note_present_ctx: anytype,
-    note_present: anytype,
-) TerminalPresentResult {
-    return tryFastPresentExisting(
-        surface_state,
-        renderer,
-        plan,
-        terminal_view,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        hover_link_id,
-        composing_active,
-        composing_hash,
-        bg_color,
-        x,
-        y,
-        width,
-        height,
-        view_geometry,
-        note_present_ctx,
-        note_present,
-    );
 }
 
 /// **Direct presentation:** terminal-owned eligibility check, widget executes if eligible.
