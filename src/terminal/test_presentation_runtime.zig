@@ -92,6 +92,51 @@ test "Direct present folding uses canonical helper" {
     try std.testing.expect(result.shared_surface_attachment_ready == false);
 }
 
+test "Refresh timing helper preserves cycle timing fields" {
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 4.25,
+        .glyph_ms = 1.5,
+        .kitty_ms = 0.75,
+    };
+    const refreshed = presentation_runtime.refreshedPresentationResultFromCycleTiming(timing);
+
+    try std.testing.expectEqual(refreshed.bg_ms, timing.background_ms);
+    try std.testing.expectEqual(refreshed.glyph_ms, timing.glyph_ms);
+    try std.testing.expectEqual(refreshed.kitty_ms, timing.kitty_ms);
+    try std.testing.expect(refreshed.shared_surface_attachment_ready == false);
+}
+
+test "Reuse fold helper preserves non-reused transport state" {
+    const attempt = presentation_runtime.ReusePresentOutcomeState{
+        .outcome = .skipped,
+        .cache_state_advanced = false,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 0.1,
+        .glyph_ms = 0.2,
+        .kitty_ms = 0.3,
+    };
+    const result = presentation_runtime.foldReuseAttemptOutcome(attempt, timing);
+
+    try std.testing.expectEqual(result.outcome, attempt.outcome);
+    try std.testing.expectEqual(result.cache_state_advanced, attempt.cache_state_advanced);
+    try std.testing.expectEqual(result.host_surface_target_available, attempt.host_surface_target_available);
+    try std.testing.expectEqual(result.shared_surface_attachment_ready, attempt.shared_surface_attachment_ready);
+    try std.testing.expectEqual(result.timing.background_ms, timing.background_ms);
+    try std.testing.expectEqual(result.timing.glyph_ms, timing.glyph_ms);
+    try std.testing.expectEqual(result.timing.kitty_ms, timing.kitty_ms);
+}
+
+test "Direct timing helper preserves explicit timing transport" {
+    const timing = presentation_runtime.directPresentTimingResult(2.0, 3.5, 1.25);
+
+    try std.testing.expectEqual(timing.background_ms, 2.0);
+    try std.testing.expectEqual(timing.glyph_ms, 3.5);
+    try std.testing.expectEqual(timing.kitty_ms, 1.25);
+}
+
 test "Reuse outcome folding preserves attachment state" {
     const outcome = presentation_runtime.reuseSuccessOutcome();
     const timing = renderer_presentable_host.TerminalPresentTiming{
