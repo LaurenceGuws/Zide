@@ -1,82 +1,136 @@
-# CZH-1145: Direct Path Sustained Enforcement
+# CZH-1145: Direct Path Sustained Enforcement (CZH-S68 Determinism Hardened)
 
-Date: 2026-04-20  
-Scope: Consolidated baseline + enforcement for direct path post-seal
+Date: 2026-04-20 (Determinism hardening: 2026-04-21 — CZH-S68)  
+Scope: Consolidated baseline + enforcement for direct path; determinism format standardized per CZH-S68 criteria
 
 ## Direct Path Surface (Locked by CZH-S59)
 
 ### Canonical Entry Point
-- **Function:** `directPresentEntry(updated, timing) → TerminalPresentResult` (line 229)
+- **Function:** `directPresentEntry(updated, timing) → TerminalPresentResult` (presentation_runtime.zig:229)
 - **Scope:** Single canonical entry for direct path, no alternate routes
-- **Fold Helper:** `foldDirectOutcomeToPresent` is private `fn` (not `pub fn`)
+- **Fold Helper:** `foldDirectOutcomeToPresent[private]` (fn not pub fn)
 - **Governance:** No secondary entry routes allowed
 
 ### Outcome Classification
-- **Function:** `classifyDirectPresentOutcome(updated)` (line 103)
+- **Function:** `classifyDirectPresentOutcome(updated)` (presentation_runtime.zig:103)
 - **Status:** Public (used by production + tests)
 - **Contract:** See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions" for outcome type set
 
 ### Eligibility Check
-- **Function:** `checkDirectPresentEligibility(input)` (line 523)
+- **Function:** `checkDirectPresentEligibility(input)` (presentation_runtime.zig:523)
 - **Status:** Production essential, public
 - **Governance:** No alternate eligibility checking allowed
 
-## Direct Path No-Bypass Invariant
+## Direct Path Enforcement Claims (CZH-S68 Determinism Format)
 
-**Core Rule:** Widget direct path flows through `directPresentEntry` only.
+Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Reference"
 
-### Compile-Time Enforcement
-- `foldDirectOutcomeToPresent` is `fn` not `pub fn`
-- Cannot be called from widget code; type checker prevents bypass
-- Status: ✓ ENFORCED
+**Direct path contains 3 enforcement claims. All determinism criteria met per CZH-S68.**
 
-### Outcome State Isolation
-- `DirectPresentOutcomeState` is internal structure never visible to widget
-- Widget never constructs or manipulates outcomes directly
-- Only canonical entry produces outcomes via `classifyDirectPresentOutcome()`
-- Status: ✓ ENFORCED
+### Claim 9: Updated Flag Determinism (Direct Variant)
 
-### No Alternate Classification
-- `classifyDirectPresentOutcome` is only outcome classification path
-- No alternate classification functions exist
-- Widget uses this via canonical entry only
-- Status: ✓ ENFORCED
+**Statement:** Outcome classification depends only on the `updated` boolean flag; no other state influences the classification.
 
-**No-bypass invariant locked:** ✓ VERIFIED
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Runtime | `classifyDirectPresentOutcome():103-115` | Pure function classification logic depends only on updated parameter |
+| Test | test_presentation_runtime.zig:30-39 | "Direct present outcome classification is pure" validates determinism |
 
-## Direct Path Enforcement Layers (CZH-S61 Verified)
+**Enforcement verification:** ✓ VERIFIED
+- Runtime: Classification function is pure (no state dependence)
+- Test: Purity test confirms classification determinism
+- Code-review: Logic changes must maintain purity property
 
-See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitions.
+**Ambiguity status:** ✓ NONE (2/4 layers: RT+Test)
 
-**Per-Path Verification:**
+---
 
-- **Compile-Time:** ✓ `foldDirectOutcomeToPresent` private (line 220, type system enforces)
-- **Runtime:** ✓ All 3 transport fields deterministically set (test: "classification pure", "folding uses canonical helper")
-- **Test:** ✓ Classification verified via `classifyDirectPresentOutcome()`; deterministic flow
-- **Code Review:** ✓ Architect approval gates for canonical entry changes
+### Claim 10: Field Guarantees (Direct Variant)
+
+**Statement:** Result fields `cache_state_advanced` (always true), `host_surface_target_available` (always true), `shared_surface_attachment_ready` (always false for direct path) are guaranteed to be present and correct in all outcomes.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `TerminalPresentResult[field_set]` | Result struct requires all 3 fields by type definition |
+| Runtime | `directTransportFromUpdated():140-165` | Field assignment logic deterministically computes all fields based on updated flag |
+| Test | test_presentation_runtime.zig:80-93 | "field preservation test validates all three" confirms field guarantees |
+
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Struct type requires all fields (compile error if missing)
+- Runtime: Transport mapping deterministically sets all fields with correct values
+- Test: Field preservation test validates all 3 fields present and correct
+- Code-review: Field mapping changes require validation
+
+**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+
+---
+
+### Claim 11: Outcome Type Freeze (Direct Variant)
+
+**Statement:** Direct outcome type set is frozen at compile-time to `.updated_and_presented | .presented`.
+
+**Lock Specification (Determinism Format):**
+| Layer | Artifact | Detail |
+|-------|----------|--------|
+| Compile-time | `DirectPresentOutcomeState[enum_frozen]` | Zig enum type definition (outcome variant set immutable) |
+| Test | test_presentation_runtime.zig:30-39 | "Direct present outcome classification is pure" validates outcome types |
+
+**Enforcement verification:** ✓ VERIFIED
+- Compile-time: Enum definition locked by type system
+- Test: Classification test confirms only valid types produced
+- Code-review: Type changes require architect approval
+
+**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+
+---
 
 ## Direct Path Regression Guards
 
-- **No Alternate Fold Routing:** `foldDirectOutcomeToPresent` private; ✓ No alternate routing
-- **Outcome Field Guarantees:** See authority transport field mapping reference; ✓ All fields guaranteed
-- **Classification Helper Safe:** Test-only usage; ✓ No production logic dependency
-- **No Outcome State Mutation:** Direct flow classify → fold → result; ✓ Verified
-- **Updated Flag Determinism:** Classification depends only on `updated` boolean; ✓ Deterministic
-- **Transport Field Construction:** See authority transport reference; ✓ Deterministic logic
+### Guard 1: No Alternate Fold Routing
+- **Risk:** Widget code bypasses canonical entry via alternate fold path
+- **Lock:** `foldDirectOutcomeToPresent[private]` (implicit from Claims 9-11)
+- **Verification:** ✓ No alternate routing detected
+
+### Guard 2: Updated Flag Determinism
+- **Risk:** Classification depends on state other than updated flag
+- **Lock:** `classifyDirectPresentOutcome()` purity (Claim 9)
+- **Verification:** ✓ Pure function verified
+
+### Guard 3: Field Guarantees Maintained
+- **Risk:** Some fields not computed or computed incorrectly
+- **Lock:** `TerminalPresentResult[field_set]` + `directTransportFromUpdated()` (Claim 10)
+- **Verification:** ✓ All fields always computed; values guaranteed correct
+
+### Guard 4: Outcome Type Uniqueness
+- **Risk:** Additional outcome types added, breaking field guarantees
+- **Lock:** `DirectPresentOutcomeState[enum_frozen]` (Claim 11)
+- **Verification:** ✓ Enum set locked
+
+### Guard 5: No Outcome State Mutation
+- **Risk:** Outcome state modified after classification
+- **Lock:** Type privacy + direct flow classify → fold → result (all claims)
+- **Verification:** ✓ Outcome immutable after classification
+
+### Guard 6: Eligibility Check Independence
+- **Risk:** Eligibility check results influence outcome type
+- **Lock:** Outcome classification depends only on updated flag (Claim 9)
+- **Verification:** ✓ No coupling to eligibility check logic
 
 ## Direct Path Change Control
 
 **What requires architect approval:**
 - New canonical entry for direct (prohibited)
-- Changes to field guarantees (cache, host target, attachment)
-- Changes to outcome type set (e.g., adding .deferred)
-- Changes to updated flag interpretation
+- Changes to field guarantees (Claim 10 guarantees)
+- Changes to outcome type set (Claim 11 freeze)
+- Changes to updated flag interpretation (Claim 9)
 - Changes to result field set in TerminalPresentResult
 - Fold helper exposure (prohibited)
 
 **What engineer can change (no approval needed):**
 - Private helper implementation (internal only)
-- Internal transport field computation (guarantees maintained)
+- Internal transport field computation (guarantees maintained, Claim 10)
 - Test-only assertions (new hardening allowed if isolated)
 - Comments and documentation
 
@@ -85,17 +139,19 @@ See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitio
 - ✓ Canonical entry locked (single route enforced)
 - ✓ Fold helper private (no external calls possible)
 - ✓ Outcome state internal (widget cannot construct)
-- ✓ No alternate classification (only path established)
-- ✓ Field guarantees maintained (all 3 fields always correct)
-- ✓ Updated flag determinism (classification depends only on boolean)
+- ✓ Classification pure (Claim 9: depends only on updated flag)
+- ✓ Field guarantees maintained (Claim 10: all 3 fields guaranteed)
+- ✓ Outcome type frozen (Claim 11: enum set immutable)
 - ✓ No outcome mutation possible (direct flow to result)
-- ✓ Transport deterministic (no conditional fields)
-- ✓ Eligibility check locked (no alternate eligibility paths)
-- ✓ Compile-time enforcement (type system)
-- ✓ Runtime enforcement (field guarantees)
-- ✓ Test enforcement (coverage)
-- ✓ Code review enforcement (architecture gates)
+- ✓ Transport deterministic (Claim 10: all fields always computed)
+- ✓ Eligibility check independent (Claim 9: outcome not coupled to eligibility)
+- ✓ Compile-time enforcement (Claim 10, 11: type system)
+- ✓ Runtime enforcement (Claims 9, 10: pure function + field logic)
+- ✓ Test enforcement (all 3 claims: coverage)
+- ✓ Code review enforcement (architecture gates for sealed boundaries)
 
 **Direct path sustained enforcement:** ✓ COMPLETE AND LOCKED
+**Determinism format:** ✓ APPLIED (3/3 claims standardized per CZH-S68)
+**Cross-references:** ✓ COMPLETE (all claims map to TERMINAL_SURFACE_CONTRACT authority)
 
-Status: Ready for integration with CZH-1146 shared simplifications
+Status: Ready for CZH-1194 (shared determinism rewrite)
