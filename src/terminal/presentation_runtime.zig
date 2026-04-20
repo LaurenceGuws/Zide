@@ -134,21 +134,10 @@ fn presentResultFromOutcomeState(
         .shared_surface_attachment_ready = fields.shared_surface_attachment_ready,
         .timing = timing,
     };
-    // Harden: transport fields thread correctly through generic fold
-    std.debug.assert(result.outcome == fields.outcome);
-    std.debug.assert(result.cache_state_advanced == fields.cache_state_advanced);
-    std.debug.assert(result.host_surface_target_available == fields.host_surface_target_available);
-    std.debug.assert(result.shared_surface_attachment_ready == fields.shared_surface_attachment_ready);
-    // Outcome-specific invariants
+    // Outcome-specific invariants: verify reused outcome has expected attachment readiness
     if (fields.outcome == .reused) {
         std.debug.assert(result.cache_state_advanced == true);
         std.debug.assert(result.shared_surface_attachment_ready == true);
-    }
-    // Direct outcome: cache always advanced, host target always available
-    if (fields.outcome == .updated_and_presented or fields.outcome == .presented) {
-        if (fields.cache_state_advanced and fields.host_surface_target_available) {
-            std.debug.assert(result.outcome == .updated_and_presented or result.outcome == .presented);
-        }
     }
     return result;
 }
