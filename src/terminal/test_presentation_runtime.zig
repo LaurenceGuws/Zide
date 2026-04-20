@@ -111,6 +111,25 @@ test "Refresh result helper preserves folded refresh transport fields" {
     try std.testing.expect(refreshed.present_result.shared_surface_attachment_ready == true);
 }
 
+test "Refresh result helper preserves followup fields for target_unavailable transport" {
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 0.9,
+        .glyph_ms = 0.4,
+        .kitty_ms = 0.0,
+    };
+    const refreshed = presentation_runtime.refreshedPresentationResultFromCycle(
+        .target_unavailable,
+        false,
+        timing,
+    );
+
+    try std.testing.expectEqual(refreshed.present_result.outcome, .presented);
+    try std.testing.expectEqual(refreshed.present_result.followup.required, true);
+    try std.testing.expectEqual(refreshed.present_result.followup.reason, .target_unavailable);
+    try std.testing.expectEqual(refreshed.present_result.host_surface_target_available, false);
+    try std.testing.expectEqual(refreshed.present_result.shared_surface_attachment_ready, false);
+}
+
 test "Reuse fold helper preserves non-reused transport state" {
     const attempt = presentation_runtime.ReusePresentOutcomeState{
         .outcome = .skipped,
@@ -134,6 +153,33 @@ test "Reuse fold helper preserves non-reused transport state" {
     try std.testing.expectEqual(result.timing.kitty_ms, timing.kitty_ms);
 }
 
+test "Reuse boundary helper forwards reused and non-reused transport consistently" {
+    const reused_attempt = presentation_runtime.reuseSuccessOutcome();
+    const non_reused_attempt = presentation_runtime.ReusePresentOutcomeState{
+        .outcome = .skipped,
+        .cache_state_advanced = false,
+        .host_surface_target_available = false,
+        .shared_surface_attachment_ready = false,
+    };
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 1.1,
+        .glyph_ms = 0.0,
+        .kitty_ms = 0.0,
+    };
+
+    const reused_result = presentation_runtime.foldReuseAttemptResultToPresent(reused_attempt, timing);
+    const non_reused_result = presentation_runtime.foldReuseAttemptResultToPresent(non_reused_attempt, timing);
+
+    try std.testing.expectEqual(reused_result.outcome, .reused);
+    try std.testing.expectEqual(reused_result.cache_state_advanced, true);
+    try std.testing.expectEqual(reused_result.shared_surface_attachment_ready, true);
+    try std.testing.expectEqual(non_reused_result.outcome, .skipped);
+    try std.testing.expectEqual(non_reused_result.cache_state_advanced, false);
+    try std.testing.expectEqual(non_reused_result.shared_surface_attachment_ready, false);
+    try std.testing.expectEqual(reused_result.timing.background_ms, timing.background_ms);
+    try std.testing.expectEqual(non_reused_result.timing.background_ms, timing.background_ms);
+}
+
 test "Direct timing helper preserves explicit timing transport" {
     const timing = presentation_runtime.directPresentTimingResult(2.0, 3.5, 1.25);
 
@@ -154,6 +200,31 @@ test "Reuse outcome folding preserves attachment state" {
     try std.testing.expect(result.outcome == .reused);
     try std.testing.expect(result.cache_state_advanced == true);
     try std.testing.expect(result.shared_surface_attachment_ready == true);
+}
+
+test "Reuse fold wrapper parity matches canonical reuse boundary helper" {
+    const attempt = presentation_runtime.ReusePresentOutcomeState{
+        .outcome = .skipped,
+        .cache_state_advanced = false,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 0.7,
+        .glyph_ms = 0.8,
+        .kitty_ms = 0.9,
+    };
+
+    const via_wrapper = presentation_runtime.presentResultFromReuseOutcomeState(attempt, timing);
+    const via_boundary = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
+
+    try std.testing.expectEqual(via_wrapper.outcome, via_boundary.outcome);
+    try std.testing.expectEqual(via_wrapper.cache_state_advanced, via_boundary.cache_state_advanced);
+    try std.testing.expectEqual(via_wrapper.host_surface_target_available, via_boundary.host_surface_target_available);
+    try std.testing.expectEqual(via_wrapper.shared_surface_attachment_ready, via_boundary.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_wrapper.timing.background_ms, via_boundary.timing.background_ms);
+    try std.testing.expectEqual(via_wrapper.timing.glyph_ms, via_boundary.timing.glyph_ms);
+    try std.testing.expectEqual(via_wrapper.timing.kitty_ms, via_boundary.timing.kitty_ms);
 }
 
 test "Geometry struct is defined and initializable" {
