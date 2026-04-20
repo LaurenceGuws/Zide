@@ -169,25 +169,16 @@ pub fn refreshPresentEntry(
     return result;
 }
 
-/// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
-/// Widget/runtime boundaries should call this helper when completing reuse attempt transport.
+/// **Canonical reuse boundary fold:** folds reuse-attempt result into host-facing transport.
+/// *Internal:* called only by `reuseEligibilityEntry`; widget does not call directly.
 /// *Hardening:* validates reuse success invariants; route-lock verified at classification.
-pub fn foldReuseOutcomeToPresent(
+fn foldReuseOutcomeToPresent(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertReuseOutcomeConsistency(outcome_state);
-    return presentResultFromOutcomeState(outcome_state.transport, timing);
-}
-
-/// **Canonical reuse fold entry:** fold reuse outcome to result in canonical route.
-/// Single entry point for widget layer; encapsulates outcome validation.
-pub fn reusePresentEntry(
-    outcome_state: ReusePresentOutcomeState,
-    timing: renderer_presentable_host.TerminalPresentTiming,
-) TerminalPresentResult {
-    const result = foldReuseOutcomeToPresent(outcome_state, timing);
-    // Invariant: reuse entry produces outcome that reflects input state
+    const result = presentResultFromOutcomeState(outcome_state.transport, timing);
+    // Invariant: reuse outcome that reflects input state
     if (outcome_state.transport.outcome == .reused) {
         std.debug.assert(result.outcome == .reused);
     }
@@ -195,6 +186,7 @@ pub fn reusePresentEntry(
 }
 
 /// **Canonical reuse eligibility entry:** construct outcome and fold based on eligibility decision.
+/// Single entry point for widget layer; encapsulates outcome construction and validation.
 /// Widget passes eligibility flag and attachment state; terminal owns outcome construction.
 pub fn reuseEligibilityEntry(
     eligible: bool,
@@ -213,7 +205,7 @@ pub fn reuseEligibilityEntry(
                 .shared_surface_attachment_ready = shared_surface_attachment_ready,
             },
         };
-    return reusePresentEntry(outcome, timing);
+    return foldReuseOutcomeToPresent(outcome, timing);
 }
 
 fn reuseTransportFromOutcome(
