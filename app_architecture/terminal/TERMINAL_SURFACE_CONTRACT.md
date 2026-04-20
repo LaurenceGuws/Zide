@@ -474,59 +474,26 @@ The presentation runtime contract is sealed when all of the following hold:
 
 The policy is enforced across four independent layers:
 
-1. **Compile-Time Enforcement** (Type System)
-   - Owner: Zig type system + module visibility
-   - Responsibility: Prevent invalid function calls at compile time
-   - Enforcement: Private fold helpers (`foldRefreshOutcomeToPresent`, `foldReuseOutcomeToPresent`, `foldDirectOutcomeToPresent`) cannot be imported/called externally
-   - Violation: Compile error; cannot proceed
+| Layer | Owner | Responsibility | Enforcement | Violation |
+|-------|-------|-----------------|--------------|-----------|
+| **Compile-Time** | Zig type system | Prevent invalid calls | Private fold helpers + outcome types | Compile error |
+| **Runtime** | Production assertions | Detect mutation/transition | Line 168 outcome assertion | Assertion fire |
+| **Test** | zig build test suite | Detect regression vectors | Test coverage on invariants | Test failure |
+| **Code Review** | Architect approval | Block contract violations | All canonical entry changes | Cannot merge |
 
-2. **Runtime Enforcement** (Assertions)
-   - Owner: Production assertions in canonical entries
-   - Responsibility: Detect outcome mutation, invalid state transitions
-   - Enforcement: Contract-critical assertion at canonical entry output (line 168 in presentation_runtime.zig)
-   - Violation: Assertion fire indicates contract violation; must review and fix
+**Escalation & Approval Matrix:**
 
-3. **Test Enforcement** (Test Coverage)
-   - Owner: Unit test suite (zig build test)
-   - Responsibility: Detect regression vectors in test execution
-   - Enforcement: Tests validate no-bypass invariants, test-only isolation, outcome immutability, attachment consistency
-   - Violation: Test failure indicates regression; must review and fix
-
-4. **Code Review Enforcement** (Architecture)
-   - Owner: Architect approval for contract-affecting changes
-   - Responsibility: Block new public functions, signature changes, exposure violations
-   - Enforcement: All changes touching canonical entries or production surface require architect approval
-   - Violation: Engineer cannot merge without architect approval
-
-**Escalation Criteria:**
-
-**Severity 1 (Critical):** Immediate halt + architect escalation
-- Compile error due to violated type constraints
-- Runtime assertion failure in production path
-- New public function added to presentation_runtime.zig without approval
-- Fold helper made public
-- Outcome state made constructible from widget
-- Test-only helper called from production code
-
-**Severity 2 (High):** Code review block + architect decision
-- Signature change to canonical entry
-- New production-callable function addition (without approval)
-- Outcome type set expansion
-- Result field addition/removal
-- Canonical entry routing change
-
-**Severity 3 (Medium):** Documentation update required
-- Private helper implementation change affecting behavior
-- New test-only assertion addition
-- Assertion content change (same behavior)
-- Comment-only changes to locked sections
+| Severity | Trigger | Response | Examples |
+|----------|---------|----------|----------|
+| **Critical** | Type violation, assertion fire, public function without approval | Immediate halt + escalate | Compile error, fold public, outcome constructible, test-only called from production |
+| **High** | Signature change, new function, field change | Code review block | Canonical entry signature, new production function, outcome type expansion, field removal, routing change |
+| **Medium** | Behavior change, test assertion, comment | Doc update | Private helper behavior, new test assertion, assertion content, locked section comment |
 
 **Approval Gates:**
-
-- **CZH-GATE-118 and later:** All changes to presentation_runtime.zig public surface require architect review
-- **New public functions:** Explicit architect approval required; must update TERMINAL_SURFACE_CONTRACT.md
-- **Assertion changes:** Architect approval required if contract-critical; engineer discretion if test-only
-- **Private helper changes:** Engineer discretion allowed (no approval needed)
+- CZH-GATE-118 and later: All public surface changes require architect review
+- New public functions: Explicit approval + TERMINAL_SURFACE_CONTRACT.md update
+- Assertion changes: Approval if contract-critical; discretion if test-only
+- Private helper changes: No approval needed
 
 **Drift Detection & Response:**
 
