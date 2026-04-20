@@ -21,7 +21,7 @@ This sprint remained behavior-neutral and preserved all hard constraints:
 
 | Ticket | Commit | Description |
 |--------|--------|-------------|
-| CZH-921 | `602e977e` | Carrier-flow audit + de-dup map |
+| CZH-921 | `0aaed36c` | Carrier-flow audit + de-dup map |
 | CZH-922 | `8c72dd32` | Authority tightening (doc-only) |
 | CZH-923 | `3627c76e` | Refresh outcome carrier simplification (inline conjunction carrier + folded path simplification) |
 | CZH-924 | `8c24955f` | Reuse outcome carrier simplification (removed redundant `reused` field transport; outcome enum is canonical) |

@@ -11,11 +11,12 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B43` (in_progress, super-gate `CZH-GATE-97`). Sprint `CZH-S38` in progress.
+- Current active macro batch: `CZH-B44` (in_progress, super-gate `CZH-GATE-98`). Sprint `CZH-S39` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
-- Active sprint: `CZH-S38`. Ticket source: `docs/todo/core/CZH_S38_TICKETS.md`.
+- Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
+- Active sprint: `CZH-S39`. Ticket source: `docs/todo/core/CZH_S39_TICKETS.md`.
 - Accepted sprint: `CZH-S35` (`CZH-B40`, `CZH-GATE-94`). Checkpoint: `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
 - Completed sprint: `CZH-S34` (accepted, with CZH-B39-corrective extraction). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md` and `docs/todo/core/CZH_B39_CORRECTIVE_CHECKPOINT.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
@@ -3627,7 +3628,7 @@ Owner docs:
 - Added invariants and integration tests locked reduced boundary contracts.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B43` Outcome Carrier Simplification and Boundary De-duplication (`review_gate`)
+### `CZH-B43` Outcome Carrier Simplification and Boundary De-duplication (`accepted`)
 
 Queue line (exact):
 
@@ -3664,11 +3665,39 @@ Acceptance:
   - direct path now uses canonical direct-fold helper `presentResultFromDirectPresentOutcomeState(...)` to remove duplicate fold transport at widget boundary
   - widget/runtime boundary glue duplicates were removed where outcome transport was previously re-threaded or documented as separate
   - helper and integration invariants were expanded to lock inline refresh carrier semantics and direct-fold parity
-- `Engineer commits reviewed:` `602e977e`, `8c72dd32`, `3627c76e`, `8c24955f`, `0fea268b`, `edd8ef1e`, `a1d756b1`, `24effe28`, `a46ac4dd`
+- `Engineer commits reviewed:` `0aaed36c`, `8c72dd32`, `3627c76e`, `8c24955f`, `0fea268b`, `edd8ef1e`, `a1d756b1`, `24effe28`, `a46ac4dd`, `017ade77`
 - `Residual risks / follow-ups:`
   - JIRA sprint board state transition (`in_progress` → `review_gate`) and sprint checkpoint file publication remain architect-owned acceptance actions
   - Android Java compile-only guard commands were not separately executed in this packet because deploy path remained green and launch/logcat smoke was clean
 - `Architect validation request:` validate behavior-neutral carrier simplification and boundary de-duplication against `CZH-GATE-97`; confirm ticket closure and move sprint artifacts to accepted state if approved.
+
+`Verdict: accepted`
+
+- Architect review confirmed ticket-accounting integrity (including `CZH-921`) and behavior-neutral carrier simplification across refresh/reuse/direct paths.
+- Boundary de-duplication remained within widget-facade constraints.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B44` Result Transport Flattening and Contract Locking (`in_progress`)
+
+Queue line (exact):
+
+- flatten remaining result transport indirections and lock terminal/widget contract edges with behavior-neutral tests
+
+Acceptance:
+
+- terminal-owned fold/result transport remains single-path and explicit
+- widget boundary avoids duplicated result transport helpers
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-98`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S39_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 Owner docs:
 
