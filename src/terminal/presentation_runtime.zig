@@ -397,6 +397,20 @@ pub const RefreshedPresentablePresentationResult = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
+/// **Build refreshed presentation result from cycle timing:** canonical helper for
+/// threading refresh-cycle timing into refreshed presentation result transport.
+/// *Flattening:* centralizes timing field mapping so refresh transport callsites
+/// avoid duplicating `{ bg_ms, glyph_ms, kitty_ms }` wiring.
+pub fn refreshedPresentationResultFromCycleTiming(
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) RefreshedPresentablePresentationResult {
+    return .{
+        .bg_ms = timing.background_ms,
+        .glyph_ms = timing.glyph_ms,
+        .kitty_ms = timing.kitty_ms,
+    };
+}
+
 /// **Presentation present state snapshot:** captures conjunction during refresh for operator reporting.
 /// Stores on transient snapshot; not report from result structs. Canonical carrier for conjunction field.
 pub const PresentationPresentState = struct {

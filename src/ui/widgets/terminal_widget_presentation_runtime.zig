@@ -821,11 +821,7 @@ pub fn runRefreshedPresentablePresentation(
     note_present_ctx: anytype,
     note_present: anytype,
 ) RefreshedPresentablePresentationResult {
-    const result = RefreshedPresentablePresentationResult{
-        .bg_ms = cycle_result.timing.background_ms,
-        .glyph_ms = cycle_result.timing.glyph_ms,
-        .kitty_ms = cycle_result.timing.kitty_ms,
-    };
+    const result = terminal_presentation_runtime.refreshedPresentationResultFromCycleTiming(cycle_result.timing);
     const view_cells_len = terminal_view.cells.len;
 
     const visible_w = surface_update_plan.geometry.visible_w;
@@ -891,6 +887,7 @@ pub fn runRefreshedPresentablePresentation(
             note_present,
         );
     }
+
     return .{
         .bg_ms = result.bg_ms,
         .glyph_ms = result.glyph_ms,
