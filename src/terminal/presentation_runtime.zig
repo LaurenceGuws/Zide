@@ -194,6 +194,28 @@ pub fn reusePresentEntry(
     return result;
 }
 
+/// **Canonical reuse eligibility entry:** construct outcome and fold based on eligibility decision.
+/// Widget passes eligibility flag and attachment state; terminal owns outcome construction.
+pub fn reuseEligibilityEntry(
+    eligible: bool,
+    host_surface_target_available: bool,
+    shared_surface_attachment_ready: bool,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    const outcome = if (eligible)
+        reuseSuccessOutcome()
+    else
+        ReusePresentOutcomeState{
+            .transport = .{
+                .outcome = .skipped,
+                .cache_state_advanced = false,
+                .host_surface_target_available = host_surface_target_available,
+                .shared_surface_attachment_ready = shared_surface_attachment_ready,
+            },
+        };
+    return reusePresentEntry(outcome, timing);
+}
+
 fn reuseTransportFromOutcome(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,

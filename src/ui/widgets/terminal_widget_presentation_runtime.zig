@@ -1388,7 +1388,6 @@ pub fn tryFastPresentExisting(
             .supports_reuse_without_sync = renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer),
         },
     );
-    var outcome: ReusePresentOutcomeState = undefined;
     if (eligible) {
         renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
         terminal_presentation_runtime.presentDraw(
@@ -1413,18 +1412,13 @@ pub fn tryFastPresentExisting(
             composing_active,
             composing_hash,
         );
-        outcome = reuseSuccessOutcome();
-    } else {
-        outcome = .{
-            .transport = .{
-                .outcome = .skipped,
-                .cache_state_advanced = false,
-                .host_surface_target_available = attachment_state.host_surface_target_available,
-                .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
-            },
-        };
     }
-    return terminal_presentation_runtime.reusePresentEntry(outcome, .{});
+    return terminal_presentation_runtime.reuseEligibilityEntry(
+        eligible,
+        attachment_state.host_surface_target_available,
+        attachment_state.shared_surface_attachment_ready,
+        .{},
+    );
 }
 
 /// **Direct presentation:** terminal-owned eligibility check, widget executes if eligible.
