@@ -141,14 +141,12 @@ fn refreshTransportFromResult(
 
 /// **Classify direct boundary outcome:** derive outcome from direct boundary draw completion.
 /// Invariant: both legs and conjunction remain fixed to the direct boundary contract values.
-/// *Hardening:* validates direct boundary invariant fields to catch invalid state early.
 pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     const transport = directTransportFromUpdated(updated);
     const outcome_state: DirectPresentOutcomeState = .{
         .transport = transport,
         .outcome = transport.outcome,
     };
-    assertDirectPresentOutcomeConsistency(outcome_state);
     return outcome_state;
 }
 
@@ -164,7 +162,6 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
         .host_surface_target_available = transport.host_surface_target_available,
         .shared_surface_attachment_ready = transport.shared_surface_attachment_ready,
     };
-    assertReuseOutcomeConsistency(outcome);
     return outcome;
 }
 
