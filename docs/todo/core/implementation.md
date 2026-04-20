@@ -11,13 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B53` (in_progress, super-gate `CZH-GATE-107`). Sprint `CZH-S48` in progress.
+- Current active macro batch: `CZH-B54` (in_progress, super-gate `CZH-GATE-108`). Sprint `CZH-S49` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S48`. Ticket source: `docs/todo/core/CZH_S48_TICKETS.md`.
+- Active sprint: `CZH-S49`. Ticket source: `docs/todo/core/CZH_S49_TICKETS.md`.
+- Accepted sprint: `CZH-S48` (`CZH-B53`, `CZH-GATE-107`). Checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S47` (`CZH-B52`, `CZH-GATE-106`). Checkpoint: `docs/todo/core/CZH_S47_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S46` (`CZH-B51`, `CZH-GATE-105`). Checkpoint: `docs/todo/core/CZH_S46_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S45` (`CZH-B50`, `CZH-GATE-104`). Checkpoint: `docs/todo/core/CZH_S45_CHECKPOINT.md`.
@@ -4196,7 +4197,7 @@ Owner docs:
 - Helper and integration invariants lock collapsed helper surface and canonical callsite routes.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B53` Canonical Fold-Entry Collapse + Boundary Field-Route Lock (`in_progress`)
+### `CZH-B53` Canonical Fold-Entry Collapse + Boundary Field-Route Lock (`accepted`)
 
 Queue line (exact):
 
@@ -4233,7 +4234,7 @@ Owner docs:
 #### `CZH-B53` super-gate packet (engineer → architect)
 
 - `Review chunk: CZH-B53`
-- `Verdict: review_gate`
+- `Verdict: accepted`
 - `Scope summary:` canonical fold-entry collapse + boundary field-route lock landed as behavior-neutral seam tightening:
   - `CZH-1021` added explicit fold-entry/field-route audit map and ordered cut plan (`docs/todo/core/CZH_1021_FOLD_ENTRY_FIELD_ROUTE_AUDIT_MAP.md`)
   - `CZH-1022` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to canonical fold-entry collapse and boundary route locks
@@ -4248,6 +4249,35 @@ Owner docs:
 - `Residual risks / follow-ups:`
   - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-107` review
 - `Architect validation request:` validate behavior-neutral canonical fold-entry collapse and boundary field-route lock against `CZH-GATE-107`; confirm sprint closure if accepted.
+
+`Verdict: accepted`
+
+- Architect review confirmed canonical fold-entry collapse and boundary field-route lock remained behavior-neutral and ABI-stable.
+- Helper and integration invariants lock collapsed fold-entry setup and mirrored route-lock behavior.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B54` Fold Transport Helper Collapse + Route-Lock Simplification (`in_progress`)
+
+Queue line (exact):
+
+- collapse remaining fold transport helper duplication and simplify route-lock checks to one canonical route per flow without behavior change
+
+Acceptance:
+
+- refresh/reuse/direct fold transport helper surface is canonical and minimal per flow
+- route-lock checks are simplified and canonical per flow
+- widget/runtime boundary contains no duplicate helper/route-lock glue
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-108`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S49_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 ## Response Contract
 
