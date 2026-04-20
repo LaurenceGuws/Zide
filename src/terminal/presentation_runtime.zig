@@ -134,8 +134,7 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
 /// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths**
 /// — all outcome-specific folds route through this function.
 /// *Consolidation:* central hub of fold path composition — `foldRefreshOutcomeToPresent`
-/// and `foldReuseOutcomeToPresent` call this with outcome-specific parameters, then apply
-/// outcome-type-specific fields via `applyOutcomeSpecificFields`.
+/// and `foldReuseOutcomeToPresent` call this with outcome-specific parameters.
 /// *Hardening:* validates output result consistency across all outcome types.
 pub fn presentResultFromOutcomeState(
     fields: FoldTransportFields,
@@ -166,7 +165,7 @@ pub fn presentResultFromOutcomeState(
 /// **Canonical outcome fold for refresh path:** uses conjunction carried in outcome state.
 /// *Simplification:* reads `shared_surface_attachment_ready` from outcome state, no separate parameter.
 /// *Hardening:* validates outcome -> result threading and followup propagation.
-/// *Consolidation:* routes refresh outcomes through generic fold with followup assignment.
+/// *Consolidation:* routes refresh outcomes through generic fold with inline followup assignment.
 pub fn foldRefreshOutcomeToPresent(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -181,7 +180,7 @@ pub fn foldRefreshOutcomeToPresent(
         },
         timing,
     );
-    applyOutcomeSpecificFields(&result, outcome_state.followup.required, outcome_state.followup.reason);
+    result.followup = outcome_state.followup;
     // Harden: verify followup propagates correctly through fold
     if (outcome_state.followup.required) {
         std.debug.assert(result.followup.required == true);
@@ -257,18 +256,6 @@ pub fn assertRefreshOutcomeConsistency(state: RefreshOutcomeState) void {
     } else {
         std.debug.assert(state.followup.reason == .none);
     }
-}
-
-/// **Consolidated fold composition pattern:** Two-step fold for outcome types with followup fields.
-/// Step 1: Call `presentResultFromOutcomeState` to construct base result from core outcome fields.
-/// Step 2: Call `applyOutcomeSpecificFields` to add outcome-type-specific fields (e.g., followup).
-pub fn applyOutcomeSpecificFields(
-    result: *TerminalPresentResult,
-    followup_required: bool,
-    followup_reason: TerminalPresentFollowupReason,
-) void {
-    result.followup.required = followup_required;
-    result.followup.reason = followup_reason;
 }
 
 /// **Consolidated attachment state computation:** derives host-target leg from renderer,

@@ -134,7 +134,6 @@ const reuseSuccessOutcome = terminal_presentation_runtime.reuseSuccessOutcome;
 const assertReuseOutcomeConsistency = terminal_presentation_runtime.assertReuseOutcomeConsistency;
 const assertDirectPresentOutcomeConsistency = terminal_presentation_runtime.assertDirectPresentOutcomeConsistency;
 const assertRefreshOutcomeConsistency = terminal_presentation_runtime.assertRefreshOutcomeConsistency;
-const applyOutcomeSpecificFields = terminal_presentation_runtime.applyOutcomeSpecificFields;
 const computeHostSurfaceAttachmentState = terminal_presentation_runtime.computeHostSurfaceAttachmentState;
 
 fn advancePresentationCache(
@@ -2185,25 +2184,25 @@ test "integration follow-through direct outcome folds correctly through generic 
     try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
 }
 
-test "consolidation helper unified fold composition pattern" {
-    // Verify that the consolidated fold composition helper correctly applies outcome-specific fields.
-    // This locks the consolidation pattern used by outcome-specific fold functions.
+test "refresh fold assigns followup fields from outcome carrier" {
+    // Verify that refresh fold transport assigns followup fields from refresh outcome carrier.
+    // This locks the narrowed refresh fold API surface without a separate helper call.
 
     var result = TerminalPresentResult{
         .outcome = .presented,
         .cache_state_advanced = false,
     };
 
-    // Test: applying followup fields through unified helper
-    applyOutcomeSpecificFields(&result, true, .target_unavailable);
+    // Test: assigning followup fields from outcome carrier shape
+    result.followup = .{ .required = true, .reason = .target_unavailable };
     try std.testing.expect(result.followup.required == true);
     try std.testing.expectEqual(result.followup.reason, .target_unavailable);
 
-    // Test: applying neutral followup fields
+    // Test: assigning neutral followup fields
     var result2 = TerminalPresentResult{
         .outcome = .presented,
     };
-    applyOutcomeSpecificFields(&result2, false, .none);
+    result2.followup = .{ .required = false, .reason = .none };
     try std.testing.expect(result2.followup.required == false);
     try std.testing.expectEqual(result2.followup.reason, .none);
 }
