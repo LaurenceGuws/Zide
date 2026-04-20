@@ -230,13 +230,6 @@ pub fn foldReuseOutcomeToPresent(
         std.debug.assert(outcome_state.host_surface_target_available == true);
         std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
     }
-    return foldReuseEntry(outcome_state, timing);
-}
-
-fn foldReuseEntry(
-    outcome_state: ReusePresentOutcomeState,
-    timing: renderer_presentable_host.TerminalPresentTiming,
-) TerminalPresentResult {
     return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
