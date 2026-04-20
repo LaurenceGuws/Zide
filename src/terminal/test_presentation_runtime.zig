@@ -11,16 +11,19 @@ const presentation_runtime = @import("./presentation_runtime.zig");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
 
 test "outcome classification from refresh cycle is pure" {
-    const outcome_refreshed = presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome_refreshed = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     try std.testing.expect(outcome_refreshed.outcome == .updated_and_presented);
     try std.testing.expect(outcome_refreshed.cache_state_advanced == true);
+    try std.testing.expect(outcome_refreshed.shared_surface_attachment_ready == true);
 
-    const outcome_presented = presentation_runtime.classifyRefreshOutcome(.presented);
+    const outcome_presented = presentation_runtime.classifyRefreshOutcome(.presented, false);
     try std.testing.expect(outcome_presented.outcome == .presented);
     try std.testing.expect(outcome_presented.cache_state_advanced == false);
+    try std.testing.expect(outcome_presented.shared_surface_attachment_ready == false);
 
-    const outcome_unsupported = presentation_runtime.classifyRefreshOutcome(.unsupported);
+    const outcome_unsupported = presentation_runtime.classifyRefreshOutcome(.unsupported, false);
     try std.testing.expect(outcome_unsupported.host_surface_target_available == false);
+    try std.testing.expect(outcome_unsupported.shared_surface_attachment_ready == false);
 }
 
 test "Direct present outcome classification is pure" {
@@ -44,13 +47,13 @@ test "Reuse success outcome invariants hold" {
 }
 
 test "Outcome folding produces consistent results" {
-    const outcome = presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 1.0,
         .glyph_ms = 2.0,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, true);
+    const result = presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
 
     try std.testing.expect(result.outcome == .updated_and_presented);
     try std.testing.expect(result.timing.background_ms == 1.0);
@@ -119,10 +122,11 @@ test "ReusePresentOutcomeState validates success coupling" {
 }
 
 test "Outcome functions produce consistent results across multiple calls" {
-    const refresh_1 = presentation_runtime.classifyRefreshOutcome(.refreshed);
-    const refresh_2 = presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const refresh_1 = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
+    const refresh_2 = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     try std.testing.expect(refresh_1.outcome == refresh_2.outcome);
     try std.testing.expect(refresh_1.cache_state_advanced == refresh_2.cache_state_advanced);
+    try std.testing.expect(refresh_1.shared_surface_attachment_ready == refresh_2.shared_surface_attachment_ready);
 
     const direct_1 = presentation_runtime.classifyDirectPresentOutcome(true);
     const direct_2 = presentation_runtime.classifyDirectPresentOutcome(true);
@@ -134,23 +138,24 @@ test "Outcome functions produce consistent results across multiple calls" {
 }
 
 test "Outcome classification remains idempotent across fold/unfold cycles" {
-    const outcome = presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 1.5,
         .glyph_ms = 2.5,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, true);
+    const result = presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
     try std.testing.expect(result.outcome == outcome.outcome);
     try std.testing.expect(result.cache_state_advanced == outcome.cache_state_advanced);
+    try std.testing.expect(result.shared_surface_attachment_ready == outcome.shared_surface_attachment_ready);
 }
 
 test "All outcome classification paths maintain invariants" {
     const outcomes = [_]presentation_runtime.RefreshOutcomeState{
-        presentation_runtime.classifyRefreshOutcome(.refreshed),
-        presentation_runtime.classifyRefreshOutcome(.presented),
-        presentation_runtime.classifyRefreshOutcome(.target_unavailable),
-        presentation_runtime.classifyRefreshOutcome(.unsupported),
+        presentation_runtime.classifyRefreshOutcome(.refreshed, true),
+        presentation_runtime.classifyRefreshOutcome(.presented, true),
+        presentation_runtime.classifyRefreshOutcome(.target_unavailable, false),
+        presentation_runtime.classifyRefreshOutcome(.unsupported, false),
     };
     for (outcomes) |outcome| {
         presentation_runtime.assertRefreshOutcomeConsistency(outcome);

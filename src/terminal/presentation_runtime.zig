@@ -39,10 +39,12 @@ const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
 const TerminalPresentableRefresh = renderer_presentable_host.TerminalPresentableRefresh;
 
 /// **Outcome snapshot from refresh cycle:** carries result and followup state.
+/// Simplified carrier: full attachment state carried inline, no separate conjunction parameter.
 pub const RefreshOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = false,
     host_surface_target_available: bool = false,
+    shared_surface_attachment_ready: bool = false,
     followup_required: bool = false,
     followup_reason: TerminalPresentFollowupReason = .none,
 };
@@ -73,13 +75,18 @@ pub const ReusePresentOutcomeState = struct {
 
 /// **Classify refresh cycle outcome:** derives outcome from refresh result.
 /// Maps `TerminalPresentableRefresh` enum to `RefreshOutcomeState` fields: outcome, cache advancement,
-/// host availability, and followup requirements.
+/// host availability, attachment conjunction, and followup requirements.
 /// *Hardening:* validates outcome consistency before returning.
-pub fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeState {
+/// *Simplification:* populates `shared_surface_attachment_ready` inline; caller threads it through outcome state.
+pub fn classifyRefreshOutcome(
+    refresh: TerminalPresentableRefresh,
+    shared_surface_attachment_ready: bool,
+) RefreshOutcomeState {
     const outcome_state: RefreshOutcomeState = .{
         .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
         .cache_state_advanced = refresh == .refreshed,
         .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
+        .shared_surface_attachment_ready = shared_surface_attachment_ready,
         .followup_required = refresh == .target_unavailable,
         .followup_reason = if (refresh == .target_unavailable) .target_unavailable else .none,
     };
@@ -150,13 +157,13 @@ pub fn presentResultFromOutcomeState(
     return result;
 }
 
-/// **Canonical outcome fold for refresh path:** uses conjunction computed in refresh cycle.
+/// **Canonical outcome fold for refresh path:** uses conjunction carried in outcome state.
+/// *Simplification:* reads `shared_surface_attachment_ready` from outcome state, no separate parameter.
 /// *Hardening:* validates outcome -> result threading and followup propagation.
 /// *Consolidation:* routes refresh outcomes through generic fold with followup assignment.
 pub fn presentResultFromRefreshOutcomeState(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
-    shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
     assertRefreshOutcomeConsistency(outcome_state);
     var result = presentResultFromOutcomeState(
@@ -164,7 +171,7 @@ pub fn presentResultFromRefreshOutcomeState(
         outcome_state.cache_state_advanced,
         outcome_state.host_surface_target_available,
         timing,
-        shared_surface_attachment_ready,
+        outcome_state.shared_surface_attachment_ready,
     );
     applyOutcomeSpecificFields(&result, outcome_state.followup_required, outcome_state.followup_reason);
     // Harden: verify followup propagates correctly through fold
@@ -521,6 +528,7 @@ pub fn checkDirectPresentEligibility(
 ///   `runPresentation(ctx, cycle: TerminalPresentableRefreshExecutionResult) -> RefreshedPresentablePresentationResult`
 ///
 /// Terminal owns orchestration and classification; widget owns execution via `Hooks`.
+/// *Simplification:* refresh outcome now carries conjunction inline; no separate parameter to fold.
 pub fn executeRefreshPresentFlow(
     rows: usize,
     cols: usize,
@@ -529,11 +537,11 @@ pub fn executeRefreshPresentFlow(
 ) TerminalPresentResult {
     if (rows == 0 or cols == 0) return .{};
     const cycle = Hooks.runCycle(ctx);
-    const outcome_state = classifyRefreshOutcome(cycle.refresh);
     const refreshed = Hooks.runPresentation(ctx, cycle);
+    const outcome_state = classifyRefreshOutcome(cycle.refresh, refreshed.shared_surface_attachment_ready);
     return presentResultFromRefreshOutcomeState(outcome_state, .{
         .background_ms = refreshed.bg_ms,
         .glyph_ms = refreshed.glyph_ms,
         .kitty_ms = refreshed.kitty_ms,
-    }, refreshed.shared_surface_attachment_ready);
+    });
 }
