@@ -139,6 +139,7 @@ that manages all semantic presentation logic:
 
 - **Outcome classification** (pure semantic): `classifyRefreshOutcome()`, `classifyDirectPresentOutcome()`, `reuseSuccessOutcome()`
   - Classify refresh cycle, direct present, and reuse results into outcome states with invariant fields
+  - Outcome carriers contract transport fields around canonical fold/result transport shape per flow
   - Refresh classification carries `shared_surface_attachment_ready` inline in `RefreshOutcomeState` (no separate conjunction transport parameter)
   - All hardening assertions validate semantic consistency (no behavior changes)
   
@@ -155,18 +156,18 @@ that manages all semantic presentation logic:
   - **Refresh path:** `runPresentableRefreshCycle()`, `executeRefreshPresentFlow()`
     - Drive refresh cycle outcome classification and result folding
     - Refresh boundary helper transport is single-path: widget execution supplies cycle output + conjunction once, terminal fold helper finalizes host-facing transport
-    - `classifyRefreshOutcome()` stores conjunction inline and `foldRefreshOutcomeToPresent()` performs refresh fold composition
+    - `classifyRefreshOutcome()` stores conjunction inline and `foldRefreshOutcomeToPresent()` performs refresh fold composition through contracted refresh outcome carrier
     - Refresh boundary exits carry `TerminalPresentResult` directly (no wrapper-only boundary result carrier)
     - No renderer/shell calls in terminal orchestration; widget retains execution/integration calls
   - **Reuse path:** `tryFastPresentExisting()`
     - Reuse eligibility decision based on generation pairing
-    - Reuse attempt transport folds through terminal-owned `foldReuseOutcomeToPresent()` canonical path
+    - Reuse attempt transport folds through terminal-owned `foldReuseOutcomeToPresent()` canonical path through contracted reuse outcome carrier
     - Reuse boundary exits carry `TerminalPresentResult` directly (no wrapper-only outcome carrier hop)
     - Canonical success signal remains `outcome == .reused`; no duplicate success transport flags
   - **Direct path:** `directPresent()`
     - Direct present path outcome classification and result folding
     - Direct execution returns canonical timing transport directly (no intermediate direct timing wrapper carrier)
-    - Host-facing direct result transport must terminate at `foldDirectOutcomeToPresent()` (no alternate direct fold composition path)
+    - Host-facing direct result transport must terminate at `foldDirectOutcomeToPresent()` through contracted direct outcome carrier (no alternate direct fold composition path)
   - **High-level coordination:** `runPresentation()`, `refreshPresentState()`, `planUpdate()`
     - Top-level orchestration that calls phase-specific helpers
     - Planning surface update modes based on presentation state
