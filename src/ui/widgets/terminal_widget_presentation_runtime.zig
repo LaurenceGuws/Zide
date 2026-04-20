@@ -120,9 +120,9 @@ pub const PresentationExecutionResult = struct {
 /// *Invariants:* `followup.required` and `followup.reason` are coupled — must both indicate unavailability
 /// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
 // Terminal-layer outcome structs re-exported for callers
-pub const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
-pub const DirectPresentOutcomeState = terminal_presentation_runtime.DirectPresentOutcomeState;
-pub const ReusePresentOutcomeState = terminal_presentation_runtime.ReusePresentOutcomeState;
+const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
+const DirectPresentOutcomeState = terminal_presentation_runtime.DirectPresentOutcomeState;
+const ReusePresentOutcomeState = terminal_presentation_runtime.ReusePresentOutcomeState;
 pub const ReuseEligibilityInput = terminal_presentation_runtime.ReuseEligibilityInput;
 pub const DirectPresentEligibilityInput = terminal_presentation_runtime.DirectPresentEligibilityInput;
 
