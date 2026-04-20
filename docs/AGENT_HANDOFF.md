@@ -8,6 +8,10 @@ Session entrypoint only. Keep this file short and current.
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
 - Active macro batch (`in_progress`, super-gate `CZH-GATE-127`): `CZH-B73` in
   `docs/todo/core/implementation.md`
+- Active sprint (review_gate, awaiting architect decision): `CZH-S68` (CZH-1189..1196)
+  - Checkpoint: `docs/todo/core/CZH_S68_CHECKPOINT.md`
+  - Focus: Enforcement matrix determinism hardening (6 criteria applied to 14 claims)
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S67_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`
