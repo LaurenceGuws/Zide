@@ -925,7 +925,7 @@ pub fn executeRefreshPresentFlow(
                 cycle.refresh,
                 present_state.shared_surface_attachment_ready,
             );
-            return terminal_presentation_runtime.presentResultFromRefreshOutcomeState(refresh_outcome, cycle.timing);
+            return terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_outcome, cycle.timing);
         }
     };
     const ctx = RefreshCtx{
@@ -2096,7 +2096,7 @@ test "integration lock consolidated outcome states fold correctly" {
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
     };
-    const refresh_result = terminal_presentation_runtime.presentResultFromRefreshOutcomeState(refresh_outcome, .{});
+    const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_outcome, .{});
     try std.testing.expectEqual(refresh_result.outcome, TerminalPresentOutcome.updated_and_presented);
     try std.testing.expect(refresh_result.shared_surface_attachment_ready == true);
 
@@ -2145,7 +2145,7 @@ test "integration hardening fold paths harden outcome consistency" {
         .followup_required = true,
         .followup_reason = .target_unavailable,
     };
-    const refresh_result = terminal_presentation_runtime.presentResultFromRefreshOutcomeState(refresh_unavailable, .{});
+    const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_unavailable, .{});
     try std.testing.expect(refresh_result.followup.required == true);
     try std.testing.expectEqual(refresh_result.followup.reason, .target_unavailable);
 }
@@ -2246,7 +2246,7 @@ test "integration consolidation all fold paths route through canonical generic f
         .followup_required = false,
         .followup_reason = .none,
     };
-    const refresh_result = terminal_presentation_runtime.presentResultFromRefreshOutcomeState(refresh_outcome, timing);
+    const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_outcome, timing);
     try std.testing.expectEqual(refresh_result.outcome, .updated_and_presented);
     try std.testing.expect(refresh_result.cache_state_advanced == true);
     try std.testing.expect(refresh_result.followup.required == false);

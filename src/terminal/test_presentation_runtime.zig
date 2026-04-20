@@ -53,7 +53,7 @@ test "Outcome folding produces consistent results" {
         .glyph_ms = 2.0,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
+    const result = presentation_runtime.foldRefreshOutcomeToPresent(outcome, timing);
 
     try std.testing.expect(result.outcome == .updated_and_presented);
     try std.testing.expect(result.timing.background_ms == 1.0);
@@ -98,7 +98,7 @@ test "Refresh result helper preserves folded refresh transport fields" {
         .glyph_ms = 1.5,
         .kitty_ms = 0.75,
     };
-    const refreshed = presentation_runtime.presentResultFromRefreshOutcomeState(
+    const refreshed = presentation_runtime.foldRefreshOutcomeToPresent(
         presentation_runtime.classifyRefreshOutcome(.refreshed, true),
         timing,
     );
@@ -116,7 +116,7 @@ test "Refresh result helper preserves followup fields for target_unavailable tra
         .glyph_ms = 0.4,
         .kitty_ms = 0.0,
     };
-    const refreshed = presentation_runtime.presentResultFromRefreshOutcomeState(
+    const refreshed = presentation_runtime.foldRefreshOutcomeToPresent(
         presentation_runtime.classifyRefreshOutcome(.target_unavailable, false),
         timing,
     );
@@ -200,7 +200,7 @@ test "Helper contraction keeps one canonical reuse fold helper declaration" {
 
 test "Helper contraction keeps collapsed refresh and direct transport surface" {
     comptime {
-        std.debug.assert(@hasDecl(presentation_runtime, "presentResultFromRefreshOutcomeState"));
+        std.debug.assert(@hasDecl(presentation_runtime, "foldRefreshOutcomeToPresent"));
         std.debug.assert(@hasDecl(presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
         std.debug.assert(!@hasDecl(presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(presentation_runtime, "directPresentTimingResult"));
@@ -213,7 +213,7 @@ test "Refresh boundary carrier narrows to TerminalPresentResult" {
         .glyph_ms = 0.3,
         .kitty_ms = 0.4,
     };
-    const result = presentation_runtime.presentResultFromRefreshOutcomeState(
+    const result = presentation_runtime.foldRefreshOutcomeToPresent(
         presentation_runtime.classifyRefreshOutcome(.presented, true),
         timing,
     );
@@ -266,13 +266,13 @@ test "Refresh boundary helper route matches canonical refresh folded result rout
         .glyph_ms = 0.6,
         .kitty_ms = 0.9,
     };
-    const via_boundary = presentation_runtime.presentResultFromRefreshOutcomeState(
+    const via_boundary = presentation_runtime.foldRefreshOutcomeToPresent(
         presentation_runtime.classifyRefreshOutcome(.refreshed, true),
         timing,
     );
 
     const outcome_state = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
-    const via_canonical_fold = presentation_runtime.presentResultFromRefreshOutcomeState(outcome_state, timing);
+    const via_canonical_fold = presentation_runtime.foldRefreshOutcomeToPresent(outcome_state, timing);
 
     try std.testing.expectEqual(via_boundary.outcome, via_canonical_fold.outcome);
     try std.testing.expectEqual(via_boundary.cache_state_advanced, via_canonical_fold.cache_state_advanced);
@@ -357,7 +357,7 @@ test "Outcome classification remains idempotent across fold/unfold cycles" {
         .glyph_ms = 2.5,
         .kitty_ms = 0.0,
     };
-    const result = presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
+    const result = presentation_runtime.foldRefreshOutcomeToPresent(outcome, timing);
     try std.testing.expect(result.outcome == outcome.outcome);
     try std.testing.expect(result.cache_state_advanced == outcome.cache_state_advanced);
     try std.testing.expect(result.shared_surface_attachment_ready == outcome.shared_surface_attachment_ready);

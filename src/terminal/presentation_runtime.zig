@@ -23,7 +23,7 @@
 //! - `reuseSuccessOutcome() -> ReusePresentOutcomeState`
 //!
 //! **Canonical fold routes:**
-//! - `presentResultFromRefreshOutcomeState(outcome, timing) -> TerminalPresentResult`
+//! - `foldRefreshOutcomeToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `foldReuseAttemptResultToPresent(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromDirectPresentOutcomeState(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromOutcomeState()` — generic fold used by all paths
@@ -123,7 +123,7 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
 /// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
 /// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths**
 /// — all outcome-specific folds route through this function.
-/// *Consolidation:* central hub of fold path composition — `presentResultFromRefreshOutcomeState`
+/// *Consolidation:* central hub of fold path composition — `foldRefreshOutcomeToPresent`
 /// and `foldReuseAttemptResultToPresent` call this with outcome-specific parameters, then apply
 /// outcome-type-specific fields via `applyOutcomeSpecificFields`.
 /// *Hardening:* validates output result consistency across all outcome types.
@@ -160,7 +160,7 @@ pub fn presentResultFromOutcomeState(
 /// *Simplification:* reads `shared_surface_attachment_ready` from outcome state, no separate parameter.
 /// *Hardening:* validates outcome -> result threading and followup propagation.
 /// *Consolidation:* routes refresh outcomes through generic fold with followup assignment.
-pub fn presentResultFromRefreshOutcomeState(
+pub fn foldRefreshOutcomeToPresent(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {

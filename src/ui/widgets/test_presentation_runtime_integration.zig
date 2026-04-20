@@ -57,7 +57,7 @@ test "Widget layer outcome validation uses terminal assertions" {
 test "Widget layer outcome folding uses terminal helpers" {
     const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, false);
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
+    const result = terminal_widget_presentation_runtime.foldRefreshOutcomeToPresent(outcome, timing);
     try std.testing.expect(result.outcome == .presented);
     try std.testing.expect(result.shared_surface_attachment_ready == outcome.shared_surface_attachment_ready);
 }
@@ -104,7 +104,7 @@ test "All outcome classification paths work in widget context" {
 test "Widget layer delegates outcome folding without re-derivation" {
     const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, false);
     const timing = .{ .background_ms = 1.5, .glyph_ms = 2.5, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
+    const result = terminal_widget_presentation_runtime.foldRefreshOutcomeToPresent(outcome, timing);
 
     try std.testing.expect(result.outcome == .updated_and_presented);
     try std.testing.expect(result.timing.background_ms == 1.5);
@@ -184,7 +184,7 @@ test "Integration boundary: outcome classification produces consistent results w
 test "Integration boundary: no outcome re-derivation in widget folding" {
     const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     const timing = .{ .background_ms = 1.0, .glyph_ms = 2.0, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
+    const result = terminal_widget_presentation_runtime.foldRefreshOutcomeToPresent(outcome, timing);
 
     // Verify that the result's outcome matches input outcome (no re-derivation)
     try std.testing.expect(result.outcome == outcome.outcome);
@@ -325,13 +325,13 @@ test "Integration invariant: direct folded-result route preserves canonical timi
 
 test "Integration invariant: narrowed refresh boundary helper naming keeps folded host-facing carrier parity" {
     const cycle_timing = .{ .background_ms = 3.25, .glyph_ms = 1.75, .kitty_ms = 0.5 };
-    const refreshed = terminal_presentation_runtime.presentResultFromRefreshOutcomeState(
+    const refreshed = terminal_presentation_runtime.foldRefreshOutcomeToPresent(
         terminal_presentation_runtime.classifyRefreshOutcome(.refreshed, true),
         cycle_timing,
     );
 
     const refresh_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
-    const folded_refresh = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(refresh_outcome, cycle_timing);
+    const folded_refresh = terminal_widget_presentation_runtime.foldRefreshOutcomeToPresent(refresh_outcome, cycle_timing);
 
     try std.testing.expectEqual(refreshed.timing.background_ms, cycle_timing.background_ms);
     try std.testing.expectEqual(refreshed.timing.glyph_ms, cycle_timing.glyph_ms);
@@ -349,7 +349,7 @@ test "Integration invariant: narrowed refresh boundary helper naming keeps folde
 
 test "Integration invariant: refresh boundary helper preserves unavailable followup host-facing transport" {
     const cycle_timing = .{ .background_ms = 0.5, .glyph_ms = 0.25, .kitty_ms = 0.0 };
-    const refreshed = terminal_presentation_runtime.presentResultFromRefreshOutcomeState(
+    const refreshed = terminal_presentation_runtime.foldRefreshOutcomeToPresent(
         terminal_presentation_runtime.classifyRefreshOutcome(.target_unavailable, false),
         cycle_timing,
     );
@@ -430,7 +430,7 @@ test "Integration hygiene: widget boundary removes wrapper-only refresh and reus
 
 test "Integration hygiene: terminal/runtime boundary exposes collapsed transport surface" {
     comptime {
-        std.debug.assert(@hasDecl(terminal_presentation_runtime, "presentResultFromRefreshOutcomeState"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldRefreshOutcomeToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseAttemptResultToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "refreshedPresentationResultFromCycle"));
@@ -443,8 +443,8 @@ test "Integration invariant: refresh inline carrier semantics are preserved thro
     const detached_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, false);
     const timing = .{ .background_ms = 0.25, .glyph_ms = 0.75, .kitty_ms = 0.0 };
 
-    const attached_result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(attached_outcome, timing);
-    const detached_result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(detached_outcome, timing);
+    const attached_result = terminal_widget_presentation_runtime.foldRefreshOutcomeToPresent(attached_outcome, timing);
+    const detached_result = terminal_widget_presentation_runtime.foldRefreshOutcomeToPresent(detached_outcome, timing);
 
     try std.testing.expect(attached_result.shared_surface_attachment_ready == true);
     try std.testing.expect(detached_result.shared_surface_attachment_ready == false);
