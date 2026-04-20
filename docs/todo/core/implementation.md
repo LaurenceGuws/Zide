@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B64` (in_progress, super-gate `CZH-GATE-118`). Sprint `CZH-S59` in progress.
+- Current active macro batch: `CZH-B65` (in_progress, super-gate `CZH-GATE-119`). Sprint `CZH-S60` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -22,6 +22,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S56` (`CZH-B61`, `CZH-GATE-115`). Checkpoint: `docs/todo/core/CZH_S56_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S57` (`CZH-B62`, `CZH-GATE-116`). Checkpoint: `docs/todo/core/CZH_S57_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S58` (`CZH-B63`, `CZH-GATE-117`). Checkpoint: `docs/todo/core/CZH_S58_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S59` (`CZH-B64`, `CZH-GATE-118`). Checkpoint: `docs/todo/core/CZH_S59_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S53` (`CZH-B58`, `CZH-GATE-112`). Checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`.
@@ -4582,7 +4583,7 @@ Owner docs:
 - Architect review confirmed entry contract compression/assertion trim remained behavior-neutral and ABI-stable.
 - Canonical no-bypass guarantees remained intact after assertion surface reduction.
 
-### `CZH-B64` Canonical Entry Contract Final Surface Seal (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B64` Canonical Entry Contract Final Surface Seal (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4603,6 +4604,36 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S59_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+`Verdict: accepted`
+
+- Architect review confirmed final surface seal remained behavior-neutral and ABI-stable.
+- Canonical entry contract remains sealed with no secondary production entry routes.
+
+### `CZH-B65` Post-Seal Contract Governance Baseline (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- establish post-seal governance baseline by tightening change-control checks, explicit extension criteria, and regression locks around the sealed contract surface
+
+Acceptance:
+
+- post-seal governance rules are explicit and test-anchored
+- extension/change criteria are documented and bounded to avoid contract drift
+- helper + integration locks cover sealed-surface regression scenarios
+- docs align with post-seal governance vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-119`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S60_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 

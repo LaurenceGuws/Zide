@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S59_TICKETS.md`
+3. `docs/todo/core/CZH_S60_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B64` — **`in_progress`** toward **`CZH-GATE-118`** (sprint `CZH-S59`):
-  canonical entry contract final surface seal: remove residual exposure edges and lock final no-bypass/parity guarantees.
-  Ticket source: `docs/todo/core/CZH_S59_TICKETS.md`.
+- `CZH-B65` — **`in_progress`** toward **`CZH-GATE-119`** (sprint `CZH-S60`):
+  post-seal contract governance baseline: lock change-control rules and regression guards around sealed surface.
+  Ticket source: `docs/todo/core/CZH_S60_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S59` tickets `CZH-1117`..`CZH-1124` are active; run to
-  **`CZH-GATE-118`** unless blocked.
+- Sprint `CZH-S60` tickets `CZH-1125`..`CZH-1132` are active; run to
+  **`CZH-GATE-119`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
