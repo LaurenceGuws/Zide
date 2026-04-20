@@ -11,13 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B60` (in_progress, super-gate `CZH-GATE-114`). Sprint `CZH-S55` in progress.
+- Current active macro batch: `CZH-B60` (architect_review_pending, super-gate `CZH-GATE-114`). Sprint `CZH-S55` completed and at review gate.
+- Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S55`. Ticket source: `docs/todo/core/CZH_S55_TICKETS.md`.
+- Accepted sprint: `CZH-S55` (`CZH-B60`, `CZH-GATE-114`). Checkpoint: `docs/todo/core/CZH_S55_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S53` (`CZH-B58`, `CZH-GATE-112`). Checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`.
