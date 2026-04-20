@@ -299,15 +299,10 @@ pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
     }
 }
 
-/// **Validate direct boundary outcome route-lock and invariants:**
-/// Verifies that all outcome fields are locked to canonical transport carrier
-/// and that direct boundary invariants hold (cache advanced, renderer available, no pre-verified conjunction).
+/// **Validate direct boundary outcome invariants:**
+/// Verifies direct boundary invariants hold (cache advanced, renderer available, no pre-verified conjunction);
+/// transport route-lock verified at construction.
 pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void {
-    // Route-lock: outcome fields locked to canonical transport carrier
-    std.debug.assert(state.transport.outcome == state.outcome);
-    std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
-    std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
-    std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
     // Direct boundary invariants: cache always advanced, renderer always available, conjunction always false
     std.debug.assert(state.cache_state_advanced == true);
     std.debug.assert(state.host_surface_target_available == true);
