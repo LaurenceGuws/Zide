@@ -59,6 +59,7 @@ Scope: Consolidated baseline + enforcement for refresh path post-seal
 - **Enforcement:** Contract-critical assertion at canonical entry output (line 168)
 - **Check:** `result.outcome == .updated_and_presented or result.outcome == .presented`
 - **Verification:** ✓ Assertion preserved; validates outcome contract
+- **Test Binding:** `test_presentation_runtime.zig:14-28` "outcome classification from refresh cycle is pure"
 - **Status:** ✓ LOCKED
 
 ### 3. Test Enforcement (Test Coverage)
@@ -67,6 +68,9 @@ Scope: Consolidated baseline + enforcement for refresh path post-seal
 - **Enforcement:** Tests validate no-bypass invariants, test-only isolation
 - **Check:** `assertRefreshOutcomeConsistency()` (line 259) isolated to tests
 - **Verification:** ✓ No production calls to test helper detected
+- **Test Binding:** `test_presentation_runtime.zig:64-78` "Refresh classification carries inline conjunction"
+- **Test Binding:** `test_presentation_runtime.zig:95-111` "Refresh result helper preserves transport fields"
+- **Test Binding:** `test_presentation_runtime.zig:113-129` "Refresh result helper preserves followup fields"
 - **Status:** ✓ LOCKED
 
 ### 4. Code Review Enforcement (Architecture)
