@@ -46,71 +46,23 @@ Scope: Consolidated baseline + enforcement for direct path post-seal
 
 ## Direct Path Enforcement Layers (CZH-S61 Verified)
 
-### 1. Compile-Time Enforcement (Type System)
-- **Owner:** Zig type system + module visibility
-- **Responsibility:** Prevent invalid function calls at compile time
-- **Enforcement:** Private fold helper and outcome isolation prevent bypass
-- **Verification:** ✓ `foldDirectOutcomeToPresent` remains private (line 220)
-- **Status:** ✓ LOCKED
+See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitions.
 
-### 2. Runtime Enforcement (Field Guarantees)
-- **Owner:** Transport field construction logic
-- **Responsibility:** Ensure field guarantees maintained
-- **Enforcement:** `directTransportFromUpdated()` logic (line 238) always sets all 3 fields
-- **Check:** cache_state_advanced=true, host_surface_target_available=true, shared_surface_attachment_ready=false
-- **Verification:** ✓ No conditional field logic; deterministic construction
-- **Test Binding:** `test_presentation_runtime.zig:30-39` "Direct present outcome classification is pure"
-- **Test Binding:** `test_presentation_runtime.zig:80-93` "Direct present folding uses canonical helper"
-- **Status:** ✓ LOCKED
+**Per-Path Verification:**
 
-### 3. Test Enforcement (Test Coverage)
-- **Owner:** Unit test suite (zig build test)
-- **Responsibility:** Detect regression vectors in test execution
-- **Enforcement:** Tests validate outcome classification, field guarantees
-- **Check:** Classification verified via test calls to `classifyDirectPresentOutcome()`
-- **Verification:** ✓ Deterministic flow; no test-only assertions needed
-- **Test Binding:** `test_presentation_runtime.zig:227-247` "Fold routes consume contracted transport carrier"
-- **Status:** ✓ LOCKED
-
-### 4. Code Review Enforcement (Architecture)
-- **Owner:** Architect approval for contract-affecting changes
-- **Responsibility:** Block new entry points, signature changes, exposure violations
-- **Enforcement:** Updated flag determinism; all changes require architect approval
-- **Check:** Outcome type depends only on boolean; no secondary data sources
-- **Verification:** ✓ Code review gates specified
-- **Status:** ✓ LOCKED
+- **Compile-Time:** ✓ `foldDirectOutcomeToPresent` private (line 220, type system enforces)
+- **Runtime:** ✓ All 3 transport fields deterministically set (test: "classification pure", "folding uses canonical helper")
+- **Test:** ✓ Classification verified via `classifyDirectPresentOutcome()`; deterministic flow
+- **Code Review:** ✓ Architect approval gates for canonical entry changes
 
 ## Direct Path Regression Guards
 
-### Guard 1: No Alternate Fold Routing
-- **Risk:** Widget code bypasses canonical entry via alternate fold path
-- **Enforcement:** `foldDirectOutcomeToPresent` private; code review + compile-time privacy
-- **Verification:** ✓ No alternate routing detected
-
-### Guard 2: Outcome Field Guarantees Maintained
-- **Risk:** Field guarantees removed or made conditional
-- **Enforcement:** Code review + invariant verification
-- **Verification:** ✓ All fields guaranteed: cache_state_advanced (true), host_surface_target_available (true), shared_surface_attachment_ready (false)
-
-### Guard 3: Classification Helper Availability
-- **Risk:** Production code improperly uses classification helper
-- **Enforcement:** Code review + test coverage
-- **Verification:** ✓ Helper available for test analysis; no production logic dependency
-
-### Guard 4: No Outcome State Mutation
-- **Risk:** Widget or helper code modifies outcome state after production
-- **Enforcement:** Code review + integration tests
-- **Verification:** ✓ Outcome flows directly: classify → fold → result
-
-### Guard 5: Updated Flag Determinism
-- **Risk:** `updated` flag evaluation changed to use alternate data source
-- **Enforcement:** Code review + outcome classification verification
-- **Verification:** ✓ Classification depends only on `updated` boolean; deterministic
-
-### Guard 6: Transport Field Construction
-- **Risk:** `directTransportFromUpdated` modified to make fields conditional
-- **Enforcement:** Code review + invariant verification
-- **Verification:** ✓ All three fields always assigned; no conditional logic
+- **No Alternate Fold Routing:** `foldDirectOutcomeToPresent` private; ✓ No alternate routing
+- **Outcome Field Guarantees:** All 3 fields guaranteed (cache=true, host=true, attach=false); ✓ Verified
+- **Classification Helper Safe:** Test-only usage; ✓ No production logic dependency
+- **No Outcome State Mutation:** Direct flow classify → fold → result; ✓ Verified
+- **Updated Flag Determinism:** Classification depends only on `updated` boolean; ✓ Deterministic
+- **Transport Field Construction:** All three fields always assigned; ✓ No conditional logic
 
 ## Direct Path Change Control
 
