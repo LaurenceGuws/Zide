@@ -11,13 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B56` (in_progress, super-gate `CZH-GATE-110`). Sprint `CZH-S51` in progress.
+- Current active macro batch: `CZH-B57` (in_progress, super-gate `CZH-GATE-111`). Sprint `CZH-S52` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S51`. Ticket source: `docs/todo/core/CZH_S51_TICKETS.md`.
+- Active sprint: `CZH-S52`. Ticket source: `docs/todo/core/CZH_S52_TICKETS.md`.
+- Accepted sprint: `CZH-S51` (`CZH-B56`, `CZH-GATE-110`). Checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S50` (`CZH-B55`, `CZH-GATE-109`). Checkpoint: `docs/todo/core/CZH_S50_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S49` (`CZH-B54`, `CZH-GATE-108`). Checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S48` (`CZH-B53`, `CZH-GATE-107`). Checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`.
@@ -4316,7 +4317,7 @@ Owner docs:
 - Helper and integration invariants lock collapsed assertion paths and simplified mapping checks.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B56` Fold Transport Route Pruning + Assertion-Surface Minimization (`in_progress`)
+### `CZH-B56` Fold Transport Route Pruning + Assertion-Surface Minimization (`accepted`)
 
 Queue line (exact):
 
@@ -4336,6 +4337,36 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S51_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+`Verdict: accepted`
+
+- Architect review confirmed route pruning and assertion-surface minimization remained behavior-neutral and ABI-stable.
+- Refresh/reuse/direct flows now use transport-only result carriers without duplicate top-level field mirrors.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green through `CZH-GATE-110`.
+
+### `CZH-B57` Outcome/Fold Surface Consolidation (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- remove remaining outcome/fold helper indirection by landing canonical per-flow folds and reducing widget/runtime boundary to one data-gather + one terminal call per flow
+
+Acceptance:
+
+- refresh/reuse/direct each expose one canonical fold entry in terminal runtime
+- widget runtime delegates per-flow fold decisions through one canonical terminal call path
+- boundary helper naming and docs reflect ownership without alias duplication
+- helper + integration invariants lock parity and prevent field-route drift
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-111`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S52_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
