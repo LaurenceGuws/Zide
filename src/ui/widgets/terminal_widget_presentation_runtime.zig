@@ -2077,14 +2077,13 @@ test "reuse outcome and present result expose paired leg and conjunction fields"
     }
 }
 
-test "RefreshedPresentablePresentationResult propagates conjunction for outcome fold" {
+test "Refresh boundary folded result carries conjunction for host-facing transport" {
     const result = RefreshedPresentablePresentationResult{
-        .bg_ms = 0.0,
-        .glyph_ms = 0.0,
-        .kitty_ms = 0.0,
-        .shared_surface_attachment_ready = true,
+        .present_result = .{
+            .shared_surface_attachment_ready = true,
+        },
     };
-    try std.testing.expect(result.shared_surface_attachment_ready == true);
+    try std.testing.expect(result.present_result.shared_surface_attachment_ready == true);
 }
 
 test "PresentationPresentState stores conjunction for reporting path" {
