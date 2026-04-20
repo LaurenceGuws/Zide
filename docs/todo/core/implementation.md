@@ -3979,6 +3979,36 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B49` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded smoke; startup banner observed; timeout exit expected for bounded run)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B49` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B49`
+- `Verdict: review_gate`
+- `Scope summary:` boundary fold-route unification + transport-field contraction landed as behavior-neutral seam tightening:
+  - `CZH-981` added explicit fold-route/field-contraction audit map and ordered cut plan (`docs/todo/core/CZH_981_FOLD_ROUTE_FIELD_CONTRACTION_AUDIT_MAP.md`)
+  - `CZH-982` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to unified fold-route vocabulary and contracted field story
+  - `CZH-983` unified refresh fold-route naming to canonical `foldRefreshOutcomeToPresent`
+  - `CZH-984` unified reuse fold-route naming to canonical `foldReuseOutcomeToPresent`
+  - `CZH-985` unified direct fold-route naming to canonical `foldDirectOutcomeToPresent`
+  - `CZH-986` contracted refresh followup transport fields into one nested `followup` carrier on `RefreshOutcomeState`
+  - `CZH-987` contracted reuse/direct fold transport threading through shared `FoldTransportFields` on canonical generic fold entry
+  - `CZH-988` added helper-level invariants locking unified fold-route declarations and shared fold transport carrier
+  - `CZH-989` added integration invariants + hygiene locks for unified fold surface and contracted refresh followup carrier
+- `Engineer commits reviewed:` `d419cd38`, `176a009b`, `3b6cb6aa`, `2938ac6c`, `d816426e`, `cf34a268`, `0a8c1033`, `b6e52330`, `eb180565`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-103` review
+- `Architect validation request:` validate behavior-neutral fold-route unification and transport-field contraction against `CZH-GATE-103`; confirm sprint closure if accepted.
+
 ## Response Contract
 
 Every batch update must include:
