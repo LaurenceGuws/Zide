@@ -1423,10 +1423,6 @@ pub fn tryFastPresentExisting(
                 .host_surface_target_available = attachment_state.host_surface_target_available,
                 .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
             },
-            .outcome = .skipped,
-            .cache_state_advanced = false,
-            .host_surface_target_available = attachment_state.host_surface_target_available,
-            .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
         };
     }
     return foldReuseOutcomeToPresent(outcome, .{});

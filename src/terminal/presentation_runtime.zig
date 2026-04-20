@@ -76,16 +76,10 @@ comptime {
     std.debug.assert(outcome_count == 1 and cache_count == 1 and host_count == 1 and attachment_count == 1);
 }
 
-/// **Outcome snapshot from reuse path:** carries result of the reuse attempt.
+/// **Outcome snapshot from reuse path:** carries transport result.
+/// Transport routes all outcome fields.
 pub const ReusePresentOutcomeState = struct {
     transport: FoldTransportFields = .{},
-    outcome: TerminalPresentOutcome = .skipped,
-    cache_state_advanced: bool = false,
-    /// **Leg only** — host drawable-target (renderer `terminalPresentableInfo`); not conjunction.
-    host_surface_target_available: bool = false,
-    /// **Full conjunction** — terminal presentable pipeline ∧ host target (from `notePresentableAvailability`).
-    /// *Canonical route:* must be populated by canonical helper, never hardcoded or re-derived.
-    shared_surface_attachment_ready: bool = false,
 };
 
 /// **Canonical fold transport fields:** shared host-facing transport payload used by
@@ -144,15 +138,9 @@ pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
 /// construct outcome state with all fields true (reuse succeeded, cache advanced, attachment ready).
 /// Invariant: outcome == .reused requires cache_state_advanced && host_surface_target_available && shared_surface_attachment_ready.
 pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
-    const transport = reuseTransportFromOutcome(.reused, true, true, true);
-    const outcome: ReusePresentOutcomeState = .{
-        .transport = transport,
-        .outcome = transport.outcome,
-        .cache_state_advanced = transport.cache_state_advanced,
-        .host_surface_target_available = transport.host_surface_target_available,
-        .shared_surface_attachment_ready = transport.shared_surface_attachment_ready,
+    return .{
+        .transport = reuseTransportFromOutcome(.reused, true, true, true),
     };
-    return outcome;
 }
 
 /// **Generic result fold:** construct host-facing `TerminalPresentResult` from outcome
@@ -255,13 +243,12 @@ fn directTransportFromUpdated(updated: bool) FoldTransportFields {
 }
 
 /// **Validate reuse outcome success invariant:**
-/// Verifies reuse success path maintains invariants; transport route-lock verified at construction.
+/// Verifies reuse success transport maintains invariants.
 pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
-    // Reuse success invariants: outcome==reused requires all legs and conjunction ready
-    if (state.outcome == .reused) {
-        std.debug.assert(state.cache_state_advanced == true);
-        std.debug.assert(state.host_surface_target_available == true);
-        std.debug.assert(state.shared_surface_attachment_ready == true);
+    if (state.transport.outcome == .reused) {
+        std.debug.assert(state.transport.cache_state_advanced == true);
+        std.debug.assert(state.transport.host_surface_target_available == true);
+        std.debug.assert(state.transport.shared_surface_attachment_ready == true);
     }
 }
 
