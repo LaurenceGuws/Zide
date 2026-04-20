@@ -76,12 +76,28 @@ Lines 2034, 2045, 2058, 2070, 2081, 2092, 2117, 2193, 2200, 2215 and others: All
 ## Execution cut map (`CZH-1070`..`CZH-1076`)
 
 1. `CZH-1070` — Authority tightening (doc-only).
-2. `CZH-1071` — Refresh boundary contraction.
-3. `CZH-1072` — Reuse boundary contraction.
-4. `CZH-1073` — Direct boundary contraction.
+2. `CZH-1071` — Refresh boundary contraction (already contracted in CZH-B57; verification).
+3. `CZH-1072` — Reuse boundary contraction (CZH-B57 canonical entry; widget outcome construction removal).
+4. `CZH-1073` — Direct boundary contraction (already contracted in CZH-B57; verification).
 5. `CZH-1074` — Internal helper surface pruning.
 6. `CZH-1075` — Helper/integration invariants lock.
 7. `CZH-1076` — Hygiene sweep + validation packet + gate handoff.
+
+## Status by path
+
+**Refresh path:** Already contracted in CZH-1063 (refreshPresentEntry canonical entry)
+- Production: uses refreshPresentEntry(refresh, attachment_ready, timing) → TerminalPresentResult
+- No RefreshOutcomeState construction in production
+- CZH-1071 verifies boundary is clean
+
+**Direct path:** Already contracted in CZH-1065 (directPresentEntry canonical entry)
+- Production: uses directPresentEntry(updated, timing) → TerminalPresentResult
+- No DirectPresentOutcomeState construction in production
+- CZH-1073 verifies boundary is clean
+
+**Reuse path:** Partially contracted in CZH-1064 (reusePresentEntry canonical entry)
+- Widget still constructs ReusePresentOutcomeState (line 1391) before passing to reusePresentEntry
+- CZH-1072 moves outcome construction to terminal layer
 
 ## Non-goals
 
