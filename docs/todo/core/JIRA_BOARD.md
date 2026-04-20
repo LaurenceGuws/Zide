@@ -23,7 +23,7 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S67` (in_progress)
+- Sprint ID: `CZH-S67` (review_gate at `CZH-GATE-126`)
 - Previous Sprint: `CZH-S66` (accepted)
 - Super-gate: `CZH-GATE-126` (CZH-B72, in_progress)
 
@@ -40,9 +40,9 @@ This file is the canonical ticket board for active core execution.
 
 ## Current State
 
-- `in_progress`: `CZH-1181`
-- `todo`: `CZH-1182`, `CZH-1183`, `CZH-1184`, `CZH-1185`, `CZH-1186`, `CZH-1187`, `CZH-1188`
-- `review_gate`: none
+- `in_progress`: none
+- `todo`: none
+- `review_gate`: `CZH-S67` (CZH-1181, CZH-1182, CZH-1183..1186, CZH-1187, CZH-1188) at `CZH-GATE-126`
 - `blocked`: none
 - `changes_required`: `CZH-B35` at `CZH-GATE-89`
 
