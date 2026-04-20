@@ -171,15 +171,7 @@ pub fn foldRefreshOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertRefreshOutcomeConsistency(outcome_state);
-    var result = presentResultFromOutcomeState(
-        .{
-            .outcome = outcome_state.outcome,
-            .cache_state_advanced = outcome_state.cache_state_advanced,
-            .host_surface_target_available = outcome_state.host_surface_target_available,
-            .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
-        },
-        timing,
-    );
+    var result = presentResultFromOutcomeState(foldFieldsFromRefreshOutcome(outcome_state), timing);
     result.followup = outcome_state.followup;
     // Harden: verify followup propagates correctly through fold
     if (outcome_state.followup.required) {
@@ -187,6 +179,15 @@ pub fn foldRefreshOutcomeToPresent(
         std.debug.assert(result.followup.reason != .none);
     }
     return result;
+}
+
+fn foldFieldsFromRefreshOutcome(outcome_state: RefreshOutcomeState) FoldTransportFields {
+    return .{
+        .outcome = outcome_state.outcome,
+        .cache_state_advanced = outcome_state.cache_state_advanced,
+        .host_surface_target_available = outcome_state.host_surface_target_available,
+        .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
+    };
 }
 
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
