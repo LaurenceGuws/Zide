@@ -148,6 +148,7 @@ that manages all semantic presentation logic:
   - Reuse folded result routes through `foldReuseOutcomeToPresent()` for both reused and non-reused attempts
   - Direct folded result must route through `foldDirectOutcomeToPresent()` as the canonical host-facing direct result path
   - Shared fold transport fields route through one canonical transport carrier before host-facing result assembly
+  - Terminal/widget integration surface uses only canonical per-flow fold routes; generic fold composition helpers remain terminal-runtime internals
   - Attachment-readiness transport remains part of canonical folded result fields
   
 - **Orchestration coordination** (pure except for integration seams):
