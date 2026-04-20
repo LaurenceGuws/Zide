@@ -59,6 +59,8 @@ Scope: Consolidated baseline + enforcement for direct path post-seal
 - **Enforcement:** `directTransportFromUpdated()` logic (line 238) always sets all 3 fields
 - **Check:** cache_state_advanced=true, host_surface_target_available=true, shared_surface_attachment_ready=false
 - **Verification:** ✓ No conditional field logic; deterministic construction
+- **Test Binding:** `test_presentation_runtime.zig:30-39` "Direct present outcome classification is pure"
+- **Test Binding:** `test_presentation_runtime.zig:80-93` "Direct present folding uses canonical helper"
 - **Status:** ✓ LOCKED
 
 ### 3. Test Enforcement (Test Coverage)
@@ -67,6 +69,7 @@ Scope: Consolidated baseline + enforcement for direct path post-seal
 - **Enforcement:** Tests validate outcome classification, field guarantees
 - **Check:** Classification verified via test calls to `classifyDirectPresentOutcome()`
 - **Verification:** ✓ Deterministic flow; no test-only assertions needed
+- **Test Binding:** `test_presentation_runtime.zig:227-247` "Fold routes consume contracted transport carrier"
 - **Status:** ✓ LOCKED
 
 ### 4. Code Review Enforcement (Architecture)
