@@ -59,6 +59,7 @@ Scope: Consolidated baseline + enforcement for reuse path post-seal
 - **Enforcement:** Outcome constructed deterministically in `reuseEligibilityEntry` (line 182)
 - **Check:** `reuseSuccessOutcome()` called per eligibility decision
 - **Verification:** ✓ No assertion needed; construction logic guarantees outcome validity
+- **Test Binding:** `test_presentation_runtime.zig:41-47` "Reuse success outcome invariants hold"
 - **Status:** ✓ LOCKED
 
 ### 3. Test Enforcement (Test Coverage)
@@ -67,6 +68,9 @@ Scope: Consolidated baseline + enforcement for reuse path post-seal
 - **Enforcement:** Tests validate outcome consistency, field guarantees
 - **Check:** `assertReuseOutcomeConsistency()` (line 249) isolated to tests
 - **Verification:** ✓ No production calls to test helper detected
+- **Test Binding:** `test_presentation_runtime.zig:131-152` "Reuse fold helper preserves non-reused transport"
+- **Test Binding:** `test_presentation_runtime.zig:154-179` "Reuse boundary helper forwards reused/non-reused consistently"
+- **Test Binding:** `test_presentation_runtime.zig:227-247` "Fold routes consume contracted transport carrier"
 - **Status:** ✓ LOCKED
 
 ### 4. Code Review Enforcement (Architecture)
