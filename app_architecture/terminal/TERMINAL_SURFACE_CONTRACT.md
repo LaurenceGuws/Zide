@@ -510,6 +510,75 @@ The presentation runtime surface is sealed when:
 - Assertion Compression: CZH-1109, CZH-S58
 - Final Sealing: CZH-1117, CZH-S59
 
+## Post-Seal Contract Governance (CZH-S60)
+
+**Authority:** Governance baseline and regression guards for sealed contract.
+
+**Governance Objective:**
+After contract seal (CZH-S59), ensure no-bypass invariants remain enforced and no regression vectors (test leaks, outcome mutation, widget bypass, attachment drift) cause divergence. CZH-S60 establishes governance checks and documentation baseline for post-seal maintenance.
+
+**Change-Vector Governance:**
+
+### Extension Vectors (Already Locked by CZH-S59 Seal)
+- New canonical entries: Architect approval required (no new entry points allowed)
+- New production functions: Architect approval required (all 11 verified essential)
+- Assertion changes: Architect approval required (contract-critical + test hardening frozen)
+- Fold helper exposure: Prohibited (private enforcement remains)
+
+### Regression Vectors (Requires CZH-S60 Guards)
+
+1. **No-Bypass Invariant Drift**
+   - Risk: Widget code bypassing canonical entries via fold helpers or direct outcome construction
+   - Guard: Per-path verification (CZH-1127, CZH-1128, CZH-1129) ensures no alternate routes exist
+   - Enforcement: Code review + compile-time privacy
+
+2. **Test-Only Surface Leak**
+   - Risk: Production code calling test assertions or outcome classification helpers
+   - Guard: Test-surface isolation guard (CZH-1131) prevents production calls to test helpers
+   - Enforcement: Code review + test coverage
+
+3. **Outcome State Mutation**
+   - Risk: Production code modifying outcome state after canonical entry returns
+   - Guard: Outcome immutability verification (CZH-1131) ensures no post-production mutation
+   - Enforcement: Code review + invariant verification
+
+4. **Attachment State Drift**
+   - Risk: Widget recomputing attachment state instead of using canonical path
+   - Guard: Attachment consistency check (CZH-1130) verifies single-path computation
+   - Enforcement: Code review + state consistency guard
+
+**Governance Baseline (CZH-S60 Checklist):**
+
+- ✓ CZH-1125: Change vectors mapped, lock points identified
+- ✓ CZH-1126: Authority updated with post-seal governance policy
+- CZH-1127: Refresh path governance lock baseline
+- CZH-1128: Reuse path governance lock baseline
+- CZH-1129: Direct path governance lock baseline
+- CZH-1130: Shared governance lock baseline
+- CZH-1131: Regression/integration governance locks
+- CZH-1132: Hygiene sweep + validation + gate handoff
+
+**Post-Seal Maintenance Rules:**
+
+1. **No public function removal without architect approval** (caller migration required)
+2. **No canonical entry modification without architect approval** (affects contract)
+3. **No test-only helper calls in production code** (isolation enforced)
+4. **No private fold helper exposure** (type system + code review enforces)
+5. **No outcome state construction outside canonical entries** (type system enforces)
+6. **All assertion changes require architect approval** (keep contract-critical only)
+
+**Architect Review Gates:**
+- CZH-GATE-118: Contract seal (CZH-S59) accepted
+- CZH-GATE-119: Governance baseline (CZH-S60) ready for review
+- Future: Post-seal drift detection at each sprint
+
+**Related Governance Documents:**
+- Change vectors: `CZH_S60_GOVERNANCE_AUDIT.md`
+- Per-path locks: `CZH_S60_REFRESH/REUSE/DIRECT_GOVERNANCE.md`
+- Shared locks: `CZH_S60_SHARED_GOVERNANCE.md`
+- Regression locks: `CZH_S60_REGRESSION_LOCKS.md`
+- Final checkpoint: `CZH_S60_CHECKPOINT.md`
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
