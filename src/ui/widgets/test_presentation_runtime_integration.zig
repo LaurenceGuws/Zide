@@ -428,6 +428,16 @@ test "Integration hygiene: widget boundary removes wrapper-only refresh and reus
     }
 }
 
+test "Integration hygiene: terminal/runtime boundary exposes collapsed transport surface" {
+    comptime {
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "presentResultFromRefreshOutcomeState"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseAttemptResultToPresent"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "refreshedPresentationResultFromCycle"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "directPresentTimingResult"));
+    }
+}
+
 test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
     const attached_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, true);
     const detached_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, false);
