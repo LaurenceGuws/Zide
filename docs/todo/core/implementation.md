@@ -4159,6 +4159,36 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B52` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded smoke; startup banner observed; timeout exit expected for bounded run)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B52` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B52`
+- `Verdict: review_gate`
+- `Scope summary:` outcome/transport helper collapse + boundary callsite canonicalization landed as behavior-neutral seam tightening:
+  - `CZH-1011` added explicit helper/callsite collapse audit map and ordered cut plan (`docs/todo/core/CZH_1011_HELPER_CALLSITE_COLLAPSE_AUDIT_MAP.md`)
+  - `CZH-1012` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to collapsed helper surface and canonicalized boundary callsites
+  - `CZH-1013` collapsed refresh helper duplication via canonical refresh transport helper route in refresh outcome classification
+  - `CZH-1014` collapsed reuse helper duplication via canonical reuse transport helper route in reuse outcome/fold composition
+  - `CZH-1015` collapsed direct helper duplication via canonical direct transport helper route in direct outcome/fold composition
+  - `CZH-1016` canonicalized widget boundary callsites to one local route per outcome/fold helper set
+  - `CZH-1017` canonicalized terminal fold callsites to one transport-carrier route per flow
+  - `CZH-1018` added helper-level invariants locking collapsed helper surface and transport-carrier fold usage
+  - `CZH-1019` added integration invariants + hygiene locks for collapsed helper exposure and canonicalized callsites
+- `Engineer commits reviewed:` `a039f202`, `f4265482`, `001d85d5`, `9ba0eb43`, `fb9f502d`, `8019fb38`, `cda7351b`, `e6266e13`, `116b8ee9`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-106` review
+- `Architect validation request:` validate behavior-neutral outcome/transport helper collapse and boundary callsite canonicalization against `CZH-GATE-106`; confirm sprint closure if accepted.
+
 ## Response Contract
 
 Every batch update must include:
