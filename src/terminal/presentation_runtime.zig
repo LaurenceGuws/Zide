@@ -200,15 +200,16 @@ pub fn foldReuseOutcomeToPresent(
         std.debug.assert(outcome_state.host_surface_target_available == true);
         std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
     }
-    return presentResultFromOutcomeState(
-        .{
-            .outcome = outcome_state.outcome,
-            .cache_state_advanced = outcome_state.cache_state_advanced,
-            .host_surface_target_available = outcome_state.host_surface_target_available,
-            .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
-        },
-        timing,
-    );
+    return presentResultFromOutcomeState(foldFieldsFromReuseOutcome(outcome_state), timing);
+}
+
+fn foldFieldsFromReuseOutcome(outcome_state: ReusePresentOutcomeState) FoldTransportFields {
+    return .{
+        .outcome = outcome_state.outcome,
+        .cache_state_advanced = outcome_state.cache_state_advanced,
+        .host_surface_target_available = outcome_state.host_surface_target_available,
+        .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
+    };
 }
 
 /// **Canonical direct boundary fold route:** folds direct boundary outcome through generic result helper.
