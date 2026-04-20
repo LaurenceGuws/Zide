@@ -3785,7 +3785,7 @@ Owner docs:
 - Helper and integration invariants locked the consolidated boundary semantics.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B46` Boundary Alias Pruning and Surface Contract Narrowing (`in_progress`)
+### `CZH-B46` Boundary Alias Pruning and Surface Contract Narrowing (`review_gate`)
 
 Queue line (exact):
 
@@ -3800,17 +3800,39 @@ Acceptance:
 - source comments remain present-tense ownership/invariant statements only
 - Linux and connected Android validation stay green through `CZH-GATE-100`
 
+#### `CZH-B46` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded startup smoke; process exited by timeout after startup banner)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B46` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B46`
+- `Verdict: architect_review_pending`
+- `Scope summary:` boundary alias pruning + surface contract narrowing landed as behavior-neutral seam hardening:
+  - `CZH-951` added alias/vocabulary audit map and canonical replacement dictionary for boundary transport terms
+  - `CZH-952` tightened architecture authority to canonical transport vocabulary and narrowed refresh/reuse wording
+  - `CZH-953` pruned refresh-side alias terms (`runRefreshedPresentablePresentation` -> `runRefreshBoundaryPresentationResult`) and aligned refresh boundary commentary
+  - `CZH-954` pruned reuse-side alias terms and exposed canonical reuse alias export (`presentResultFromReuseOutcomeState`) mapped to `foldReuseAttemptResultToPresent`
+  - `CZH-955` pruned direct/fold alias language toward canonical direct boundary folded-result vocabulary
+  - `CZH-956` cleaned stale widget/runtime alias glue in local boundary tests
+  - `CZH-957` and `CZH-958` added helper/integration invariants locking canonical vocabulary routes and behavior parity
+  - `CZH-959` completed hygiene sweep with no residual probe/debug lineage in touched seams
+- `Engineer commits reviewed:` `10b4bf7f`, `7100815b`, `49055d7d`, `dbe07a5e`, `8874e740`, `fbb2d606`, `9cc7d2a9`, `efccb67a`, `baf51942`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-100` review
+- `Architect validation request:` validate behavior-neutral alias pruning and contract vocabulary narrowing against `CZH-GATE-100`; confirm sprint closure if accepted.
+
 Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S41_TICKETS.md`
-- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
-- `docs/AGENT_HANDOFF.md`
-
-Owner docs:
-
-- `docs/todo/core/JIRA_BOARD.md`
-- `docs/todo/core/CZH_S40_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
