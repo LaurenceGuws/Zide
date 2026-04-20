@@ -917,11 +917,11 @@ pub fn executeRefreshPresentFlow(
                 );
             }
 
-            const refresh_outcome = classifyRefreshOutcome(
+            return terminal_presentation_runtime.refreshPresentEntry(
                 cycle.refresh,
                 present_state.shared_surface_attachment_ready,
+                cycle.timing,
             );
-            return foldRefreshOutcomeToPresent(refresh_outcome, cycle.timing);
         }
     };
     const ctx = RefreshCtx{

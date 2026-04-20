@@ -155,6 +155,17 @@ pub fn foldRefreshOutcomeToPresent(
     return result;
 }
 
+/// **Canonical refresh fold entry:** classify refresh and fold to result in one canonical route.
+/// Single entry point for widget layer; encapsulates outcome state construction.
+pub fn refreshPresentEntry(
+    refresh: TerminalPresentableRefresh,
+    shared_surface_attachment_ready: bool,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    const outcome = classifyRefreshOutcome(refresh, shared_surface_attachment_ready);
+    return foldRefreshOutcomeToPresent(outcome, timing);
+}
+
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
 /// Widget/runtime boundaries should call this helper when completing reuse attempt transport.
 /// *Hardening:* validates reuse success invariants; route-lock verified at classification.
