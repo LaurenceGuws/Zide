@@ -116,10 +116,10 @@ test "Widget layer delegates outcome folding without re-derivation" {
     try std.testing.expect(result.timing.background_ms == 1.5);
 }
 
-test "Widget layer reuse delegation preserves outcome semantics" {
+test "Widget layer reuse boundary helper preserves outcome semantics" {
     const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(reuse, timing);
+    const result = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse, timing);
 
     try std.testing.expect(result.outcome == .reused);
     try std.testing.expect(result.shared_surface_attachment_ready == true);
@@ -249,7 +249,7 @@ test "Callback contract: direct eligibility check integrates with GPU execution 
     }
 }
 
-test "Callback contract: outcome folding preserves attachment state through callback" {
+test "Callback contract: reuse boundary helper preserves attachment state through callback" {
     // Simulate reuse callback contract
     const eligible = true; // Widget eligibility check returned true
 
@@ -258,8 +258,8 @@ test "Callback contract: outcome folding preserves attachment state through call
         const outcome = terminal_widget_presentation_runtime.reuseSuccessOutcome();
         const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
 
-        // Widget folds outcome via terminal helper
-        const result = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(outcome, timing);
+        // Widget folds reuse attempt via canonical reuse boundary helper
+        const result = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(outcome, timing);
 
         // Verify attachment state preserved through fold
         try std.testing.expect(result.shared_surface_attachment_ready == true);
@@ -374,7 +374,7 @@ test "Integration invariant: reuse fold helper preserves flattened reuse transpo
     try std.testing.expectEqual(result.timing.kitty_ms, timing.kitty_ms);
 }
 
-test "Integration invariant: widget alias and terminal reuse boundary helper stay transport-equivalent" {
+test "Integration invariant: widget and terminal reuse boundary helpers stay transport-equivalent" {
     const reuse_attempt = terminal_widget_presentation_runtime.ReusePresentOutcomeState{
         .outcome = .skipped,
         .cache_state_advanced = false,
@@ -383,16 +383,16 @@ test "Integration invariant: widget alias and terminal reuse boundary helper sta
     };
     const timing = .{ .background_ms = 0.125, .glyph_ms = 0.25, .kitty_ms = 0.375 };
 
-    const via_widget_alias = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(reuse_attempt, timing);
+    const via_widget_boundary_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
     const via_terminal_boundary_helper = terminal_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
 
-    try std.testing.expectEqual(via_widget_alias.outcome, via_terminal_boundary_helper.outcome);
-    try std.testing.expectEqual(via_widget_alias.cache_state_advanced, via_terminal_boundary_helper.cache_state_advanced);
-    try std.testing.expectEqual(via_widget_alias.host_surface_target_available, via_terminal_boundary_helper.host_surface_target_available);
-    try std.testing.expectEqual(via_widget_alias.shared_surface_attachment_ready, via_terminal_boundary_helper.shared_surface_attachment_ready);
-    try std.testing.expectEqual(via_widget_alias.timing.background_ms, via_terminal_boundary_helper.timing.background_ms);
-    try std.testing.expectEqual(via_widget_alias.timing.glyph_ms, via_terminal_boundary_helper.timing.glyph_ms);
-    try std.testing.expectEqual(via_widget_alias.timing.kitty_ms, via_terminal_boundary_helper.timing.kitty_ms);
+    try std.testing.expectEqual(via_widget_boundary_helper.outcome, via_terminal_boundary_helper.outcome);
+    try std.testing.expectEqual(via_widget_boundary_helper.cache_state_advanced, via_terminal_boundary_helper.cache_state_advanced);
+    try std.testing.expectEqual(via_widget_boundary_helper.host_surface_target_available, via_terminal_boundary_helper.host_surface_target_available);
+    try std.testing.expectEqual(via_widget_boundary_helper.shared_surface_attachment_ready, via_terminal_boundary_helper.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_widget_boundary_helper.timing.background_ms, via_terminal_boundary_helper.timing.background_ms);
+    try std.testing.expectEqual(via_widget_boundary_helper.timing.glyph_ms, via_terminal_boundary_helper.timing.glyph_ms);
+    try std.testing.expectEqual(via_widget_boundary_helper.timing.kitty_ms, via_terminal_boundary_helper.timing.kitty_ms);
 }
 
 test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
