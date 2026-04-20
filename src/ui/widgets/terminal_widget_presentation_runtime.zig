@@ -1523,7 +1523,7 @@ pub fn runFastPresentIfAvailable(
     note_present_ctx: anytype,
     note_present: anytype,
 ) TerminalPresentResult {
-    return terminal_presentation_runtime.presentResultFromReuseOutcomeState(
+    return terminal_presentation_runtime.foldReuseAttemptResultToPresent(
         tryFastPresentExisting(
             surface_state,
             renderer,
