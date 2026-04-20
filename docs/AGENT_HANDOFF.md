@@ -6,8 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-103`): `CZH-B49` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-104`): `CZH-B50` in
   `docs/todo/core/implementation.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S44_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S43_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S42_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S41_CHECKPOINT.md`
@@ -51,7 +52,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S44_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S45_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Connected Android device for this checkpoint: `RF8M74JDWEK`.
@@ -78,9 +79,9 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch status (`CZH-B49`, in progress toward `CZH-GATE-103`):
+Current batch status (`CZH-B50`, in progress toward `CZH-GATE-104`):
 
-- target: unify remaining boundary fold routes and contract duplicated transport fields to one canonical shape per flow
+- target: narrow terminal/widget fold APIs and lock canonical field shapes so transport semantics stay single-path
 - keep boundary contracts explicit and test-locked at helper + integration levels
 - preserve behavior and host ABI while tightening runtime boundary contracts
 
@@ -89,7 +90,7 @@ Current batch status (`CZH-B49`, in progress toward `CZH-GATE-103`):
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 2. `docs/todo/core/implementation.md`
 3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/CZH_S44_TICKETS.md`
+4. `docs/todo/core/CZH_S45_TICKETS.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
@@ -101,7 +102,7 @@ Current batch status (`CZH-B49`, in progress toward `CZH-GATE-103`):
 - Execute only the active macro batch marked in `docs/todo/core/implementation.md`
   (`in_progress` or `architect_review_pending` per batch state).
 - Engineer executes the current sprint tickets in `docs/todo/core/JIRA_BOARD.md`
-  and `docs/todo/core/CZH_S44_TICKETS.md` in listed order.
+  and `docs/todo/core/CZH_S45_TICKETS.md` in listed order.
 - Engineer batching target: **8–14 validated commits** per macro batch unless a
   real hard stop occurs.
 - Architect review cadence: avoid interim review loops; review once at the

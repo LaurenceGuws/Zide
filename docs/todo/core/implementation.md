@@ -11,13 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B49` (in_progress, super-gate `CZH-GATE-103`). Sprint `CZH-S44` in progress.
+- Current active macro batch: `CZH-B50` (in_progress, super-gate `CZH-GATE-104`). Sprint `CZH-S45` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S44`. Ticket source: `docs/todo/core/CZH_S44_TICKETS.md`.
+- Active sprint: `CZH-S45`. Ticket source: `docs/todo/core/CZH_S45_TICKETS.md`.
+- Accepted sprint: `CZH-S44` (`CZH-B49`, `CZH-GATE-103`). Checkpoint: `docs/todo/core/CZH_S44_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S43` (`CZH-B48`, `CZH-GATE-102`). Checkpoint: `docs/todo/core/CZH_S43_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S42` (`CZH-B47`, `CZH-GATE-101`). Checkpoint: `docs/todo/core/CZH_S42_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S41` (`CZH-B46`, `CZH-GATE-100`). Checkpoint: `docs/todo/core/CZH_S41_CHECKPOINT.md`.
@@ -3956,7 +3957,7 @@ Owner docs:
 - Helper and integration invariants lock the contracted transport/helper routes post-collapse.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B49` Boundary Fold-Route Unification + Transport-Field Contraction (`in_progress`)
+### `CZH-B49` Boundary Fold-Route Unification + Transport-Field Contraction (`accepted`)
 
 Queue line (exact):
 
@@ -3993,7 +3994,7 @@ Owner docs:
 #### `CZH-B49` super-gate packet (engineer → architect)
 
 - `Review chunk: CZH-B49`
-- `Verdict: review_gate`
+- `Verdict: accepted`
 - `Scope summary:` boundary fold-route unification + transport-field contraction landed as behavior-neutral seam tightening:
   - `CZH-981` added explicit fold-route/field-contraction audit map and ordered cut plan (`docs/todo/core/CZH_981_FOLD_ROUTE_FIELD_CONTRACTION_AUDIT_MAP.md`)
   - `CZH-982` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to unified fold-route vocabulary and contracted field story
@@ -4008,6 +4009,35 @@ Owner docs:
 - `Residual risks / follow-ups:`
   - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-103` review
 - `Architect validation request:` validate behavior-neutral fold-route unification and transport-field contraction against `CZH-GATE-103`; confirm sprint closure if accepted.
+
+`Verdict: accepted`
+
+- Architect review confirmed fold-route unification and transport-field contraction remained behavior-neutral and ABI-stable.
+- Helper and integration invariants lock canonical fold routes and contracted field shapes post-unification.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B50` Fold API Narrowing + Field-Shape Lock (`in_progress`)
+
+Queue line (exact):
+
+- narrow terminal/widget fold APIs and lock canonical field shapes so transport semantics stay single-path without behavior change
+
+Acceptance:
+
+- refresh/reuse/direct fold APIs expose one canonical route per flow
+- fold/result field shapes are canonical and locked for transport semantics
+- widget/runtime boundary contains no duplicate API/field mapping glue
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-104`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S45_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 ## Response Contract
 
