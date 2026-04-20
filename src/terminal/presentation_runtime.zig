@@ -181,13 +181,15 @@ pub fn presentResultFromRefreshOutcomeState(
     return result;
 }
 
-/// **Canonical outcome fold for reuse path:** validates input consistency before folding.
-/// *Consolidation:* routes reuse outcomes through generic fold with input validation.
-pub fn presentResultFromReuseOutcomeState(
+/// **Fold reuse-attempt outcome into host-facing result:** single-path helper for
+/// both success and non-success reuse attempts.
+/// *Flattening:* keeps reuse-attempt fold transport centralized and removes callsite
+/// branching duplication around `.reused` checks.
+/// *Hardening:* validates reused-path invariants before folding.
+pub fn foldReuseAttemptOutcome(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
-    // Harden: validate input state before folding
     if (outcome_state.outcome == .reused) {
         std.debug.assert(outcome_state.cache_state_advanced == true);
         std.debug.assert(outcome_state.host_surface_target_available == true);
@@ -200,6 +202,15 @@ pub fn presentResultFromReuseOutcomeState(
         timing,
         outcome_state.shared_surface_attachment_ready,
     );
+}
+
+/// **Canonical outcome fold for reuse path:** delegates to reuse-attempt fold helper.
+/// *Consolidation:* preserves canonical entrypoint while sharing single reuse-attempt fold route.
+pub fn presentResultFromReuseOutcomeState(
+    outcome_state: ReusePresentOutcomeState,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    return foldReuseAttemptOutcome(outcome_state, timing);
 }
 
 /// **Canonical outcome fold for direct-present path:** folds direct outcome through generic result helper.

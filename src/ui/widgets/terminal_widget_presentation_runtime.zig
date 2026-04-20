@@ -1524,28 +1524,29 @@ pub fn runFastPresentIfAvailable(
     note_present_ctx: anytype,
     note_present: anytype,
 ) TerminalPresentResult {
-    const outcome_state = tryFastPresentExisting(
-        surface_state,
-        renderer,
-        plan,
-        terminal_view,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        hover_link_id,
-        composing_active,
-        composing_hash,
-        bg_color,
-        x,
-        y,
-        width,
-        height,
-        view_geometry,
-        note_present_ctx,
-        note_present,
+    return terminal_presentation_runtime.presentResultFromReuseOutcomeState(
+        tryFastPresentExisting(
+            surface_state,
+            renderer,
+            plan,
+            terminal_view,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            hover_link_id,
+            composing_active,
+            composing_hash,
+            bg_color,
+            x,
+            y,
+            width,
+            height,
+            view_geometry,
+            note_present_ctx,
+            note_present,
+        ),
+        .{},
     );
-    if (outcome_state.outcome != .reused) return .{};
-    return presentResultFromReuseOutcomeState(outcome_state, .{});
 }
 
 /// **Direct presentation:** terminal-owned eligibility check, widget executes if eligible.
