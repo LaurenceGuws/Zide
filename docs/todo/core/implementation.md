@@ -11,13 +11,13 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B45` (in_progress, super-gate `CZH-GATE-99`). Sprint `CZH-S40` in progress.
+- Current active macro batch: `CZH-B46` (in_progress, super-gate `CZH-GATE-100`). Sprint `CZH-S41` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S40`. Ticket source: `docs/todo/core/CZH_S40_TICKETS.md`.
+- Active sprint: `CZH-S41`. Ticket source: `docs/todo/core/CZH_S41_TICKETS.md`.
 - Accepted sprint: `CZH-S35` (`CZH-B40`, `CZH-GATE-94`). Checkpoint: `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
 - Completed sprint: `CZH-S34` (accepted, with CZH-B39-corrective extraction). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md` and `docs/todo/core/CZH_B39_CORRECTIVE_CHECKPOINT.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
@@ -3728,7 +3728,7 @@ Acceptance:
 - Helper/integration invariants locked flattened transport behavior.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B45` Refresh/Reuse Transport Boundary Consolidation (`review_gate`)
+### `CZH-B45` Refresh/Reuse Transport Boundary Consolidation (`accepted`)
 
 Queue line (exact):
 
@@ -3778,6 +3778,34 @@ Owner docs:
 - `Residual risks / follow-ups:`
   - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-99` review
 - `Architect validation request:` validate behavior-neutral refresh/reuse transport boundary consolidation against `CZH-GATE-99`; confirm sprint closure if accepted.
+
+`Verdict: accepted`
+
+- Architect review confirmed refresh/reuse transport boundary consolidation remained behavior-neutral and preserved canonical terminal-owned fold/result paths.
+- Helper and integration invariants locked the consolidated boundary semantics.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B46` Boundary Alias Pruning and Surface Contract Narrowing (`in_progress`)
+
+Queue line (exact):
+
+- prune remaining boundary aliases and narrow surface contract vocabulary to canonical transport terms without behavior change
+
+Acceptance:
+
+- terminal-owned transport/fold vocabulary remains canonical and single-path
+- widget/runtime boundary no longer carries redundant alias terms
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-100`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S41_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 Owner docs:
 
