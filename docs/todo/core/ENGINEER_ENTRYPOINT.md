@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B70` — **`in_progress`** toward **`CZH-GATE-124`** (sprint `CZH-S65`):
-  enforcement signal compression: reduce signal surface while preserving explicit verifiability through lock bindings.
-  Ticket source: `docs/todo/core/CZH_S65_TICKETS.md`.
+- `CZH-B71` — **`in_progress`** toward **`CZH-GATE-125`** (sprint `CZH-S66`):
+  enforcement evidence normalization: reduce duplication while preserving explicit traceability to lock/test bindings.
+  Ticket source: `docs/todo/core/CZH_S66_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S65` tickets `CZH-1165`..`CZH-1172` are active; run to
-  **`CZH-GATE-124`** unless blocked.
+- Sprint `CZH-S66` tickets `CZH-1173`..`CZH-1180` are active; run to
+  **`CZH-GATE-125`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-124`): `CZH-B70` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-125`): `CZH-B71` in
   `docs/todo/core/implementation.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`
@@ -22,6 +22,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S62_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S63_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S64_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S50_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`
@@ -72,7 +73,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S65_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S66_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Connected Android device for this checkpoint: `RF8M74JDWEK`.
@@ -99,11 +100,11 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch status (`CZH-B70`, in progress toward `CZH-GATE-124`):
+Current batch status (`CZH-B71`, in progress toward `CZH-GATE-125`):
 
-- target: compress enforcement signal representation while retaining explicit verifiability
+- target: normalize enforcement evidence representation while preserving explicit traceability
 - preserve sealed canonical surface and no-bypass guarantees
-- preserve behavior and host ABI while reducing signal duplication
+- preserve behavior and host ABI while reducing evidence duplication
 
 ## First Read Order
 
