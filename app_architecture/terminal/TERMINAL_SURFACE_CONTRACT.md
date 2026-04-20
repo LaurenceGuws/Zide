@@ -543,6 +543,36 @@ If regression vector detected (test failure, assertion fire, or code review find
 - Preventing legitimate optimization or refactoring within sealed contract
 - Enforcing specific code style or organization
 
+**Runtime-to-Test Binding Policy (CZH-S63):**
+
+All runtime enforcement claims are bound to explicit compile-time locks or test coverage:
+
+**Compile-Time Bindings (Type System):**
+- `foldRefreshOutcomeToPresent` private → type system prevents external calls
+- `foldReuseOutcomeToPresent` private → type system prevents external calls
+- `foldDirectOutcomeToPresent` private → type system prevents external calls
+- `presentResultFromOutcomeState` private → type system prevents widget access
+- Outcome types internal (RefreshOutcomeState, ReusePresentOutcomeState, DirectPresentOutcomeState) → type system prevents widget construction
+
+**Runtime-to-Test Bindings:**
+1. **Refresh outcome classification contract** (line 168 assertion) → test: "outcome classification from refresh cycle is pure"
+2. **Reuse success outcome fields** (cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready) → test: "Reuse success outcome invariants hold"
+3. **Direct field guarantees** (cache_state_advanced=true, host_surface_target_available=true) → test: "Direct present outcome classification is pure"
+4. **Outcome folding consistency** (transport field preservation) → test: "Outcome folding produces consistent results"
+5. **Refresh conjunction transport** (shared_surface_attachment_ready inline) → test: "Refresh classification carries inline conjunction"
+6. **Reuse transport immutability** (fields preserved through fold) → test: "Reuse fold helper preserves non-reused transport"
+7. **Direct folding helper** (canonical routing) → test: "Direct present folding uses canonical helper"
+8. **Transport carrier routing** (all paths route through transport) → test: "Fold routes consume contracted transport carrier"
+
+**Design-Level Enforcement (Code Review Only):**
+- Test-only surface isolation (assertRefreshOutcomeConsistency, assertReuseOutcomeConsistency not called from production)
+- No-bypass invariant (all canonical entries called from verified widget sites)
+- Attachment state single-path computation (computeHostSurfaceAttachmentState only path)
+
+**Known Binding Gaps (CZH-S63):**
+- ⚠️ Attachment state consistency: requires explicit test validating re-derivation prevention
+- ⚠️ No-bypass call-site verification: integration tests exist; requires explicit binding documentation
+
 **Related Governance Documents:**
 
 Core enforcement:
