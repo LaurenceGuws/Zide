@@ -209,7 +209,7 @@ pub fn foldRefreshOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertRefreshOutcomeConsistency(outcome_state);
-    var result = presentResultFromOutcomeState(outcome_state.transport, timing);
+    var result = foldRefreshEntry(outcome_state, timing);
     result.followup = outcome_state.followup;
     // Harden: verify followup propagates correctly through fold
     if (outcome_state.followup.required) {
@@ -217,6 +217,13 @@ pub fn foldRefreshOutcomeToPresent(
         std.debug.assert(result.followup.reason != .none);
     }
     return result;
+}
+
+fn foldRefreshEntry(
+    outcome_state: RefreshOutcomeState,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
