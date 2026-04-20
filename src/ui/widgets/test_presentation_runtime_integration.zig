@@ -329,7 +329,7 @@ test "Integration invariant: direct folded-result route preserves canonical timi
     try std.testing.expect(direct_result.timing.kitty_ms == timing.kitty_ms);
 }
 
-test "Integration invariant: refresh boundary helper folds cycle result into host-facing carrier" {
+test "Integration invariant: narrowed refresh boundary helper naming keeps folded host-facing carrier parity" {
     const cycle_timing = .{ .background_ms = 3.25, .glyph_ms = 1.75, .kitty_ms = 0.5 };
     const refreshed = terminal_presentation_runtime.refreshedPresentationResultFromCycle(
         .refreshed,
@@ -337,11 +337,21 @@ test "Integration invariant: refresh boundary helper folds cycle result into hos
         cycle_timing,
     );
 
+    const refresh_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
+    const folded_refresh = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(refresh_outcome, cycle_timing);
+
     try std.testing.expectEqual(refreshed.present_result.timing.background_ms, cycle_timing.background_ms);
     try std.testing.expectEqual(refreshed.present_result.timing.glyph_ms, cycle_timing.glyph_ms);
     try std.testing.expectEqual(refreshed.present_result.timing.kitty_ms, cycle_timing.kitty_ms);
     try std.testing.expect(refreshed.present_result.shared_surface_attachment_ready == true);
     try std.testing.expectEqual(refreshed.present_result.outcome, .updated_and_presented);
+
+    try std.testing.expectEqual(refreshed.present_result.outcome, folded_refresh.outcome);
+    try std.testing.expectEqual(refreshed.present_result.cache_state_advanced, folded_refresh.cache_state_advanced);
+    try std.testing.expectEqual(refreshed.present_result.host_surface_target_available, folded_refresh.host_surface_target_available);
+    try std.testing.expectEqual(refreshed.present_result.shared_surface_attachment_ready, folded_refresh.shared_surface_attachment_ready);
+    try std.testing.expectEqual(refreshed.present_result.followup.required, folded_refresh.followup.required);
+    try std.testing.expectEqual(refreshed.present_result.followup.reason, folded_refresh.followup.reason);
 }
 
 test "Integration invariant: refresh boundary helper preserves unavailable followup host-facing transport" {
@@ -381,7 +391,7 @@ test "Integration invariant: reuse fold helper preserves flattened reuse transpo
     try std.testing.expectEqual(result.timing.kitty_ms, timing.kitty_ms);
 }
 
-test "Integration invariant: widget reuse canonical alias export and boundary helper stay transport-equivalent" {
+test "Integration invariant: reuse canonical alias route parity stays equivalent to widget and terminal boundary helpers" {
     const reuse_attempt = terminal_widget_presentation_runtime.ReusePresentOutcomeState{
         .outcome = .skipped,
         .cache_state_advanced = false,
@@ -401,6 +411,14 @@ test "Integration invariant: widget reuse canonical alias export and boundary he
     try std.testing.expectEqual(via_widget_alias_export.timing.background_ms, via_widget_boundary_helper.timing.background_ms);
     try std.testing.expectEqual(via_widget_alias_export.timing.glyph_ms, via_widget_boundary_helper.timing.glyph_ms);
     try std.testing.expectEqual(via_widget_alias_export.timing.kitty_ms, via_widget_boundary_helper.timing.kitty_ms);
+
+    try std.testing.expectEqual(via_widget_alias_export.outcome, via_terminal_boundary_helper.outcome);
+    try std.testing.expectEqual(via_widget_alias_export.cache_state_advanced, via_terminal_boundary_helper.cache_state_advanced);
+    try std.testing.expectEqual(via_widget_alias_export.host_surface_target_available, via_terminal_boundary_helper.host_surface_target_available);
+    try std.testing.expectEqual(via_widget_alias_export.shared_surface_attachment_ready, via_terminal_boundary_helper.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_widget_alias_export.timing.background_ms, via_terminal_boundary_helper.timing.background_ms);
+    try std.testing.expectEqual(via_widget_alias_export.timing.glyph_ms, via_terminal_boundary_helper.timing.glyph_ms);
+    try std.testing.expectEqual(via_widget_alias_export.timing.kitty_ms, via_terminal_boundary_helper.timing.kitty_ms);
 
     try std.testing.expectEqual(via_widget_boundary_helper.outcome, via_terminal_boundary_helper.outcome);
     try std.testing.expectEqual(via_widget_boundary_helper.cache_state_advanced, via_terminal_boundary_helper.cache_state_advanced);
