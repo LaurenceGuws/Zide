@@ -3919,6 +3919,36 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B48` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded smoke; startup banner observed; timeout exit expected for bounded run)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B48` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B48`
+- `Verdict: review_gate`
+- `Scope summary:` boundary result transport collapse + helper surface narrowing landed as behavior-neutral seam tightening:
+  - `CZH-971` added explicit transport-collapse audit map and ordered cut plan (`docs/todo/core/CZH_971_TRANSPORT_COLLAPSE_AUDIT_MAP.md`)
+  - `CZH-972` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to collapsed transport and narrowed helper surfaces
+  - `CZH-973` collapsed refresh transport wrapper hop by inlining refresh boundary transport into the canonical refresh-flow hook return path
+  - `CZH-974` collapsed reuse transport flow to one folded-result exit over a single canonical outcome route
+  - `CZH-975` collapsed direct-present transport by removing intermediate direct timing wrapper struct hop in widget direct execution
+  - `CZH-976` narrowed helper surface by removing terminal direct timing helper aliasing and keeping direct timing transport literal at callsites
+  - `CZH-977` cleaned widget/runtime boundary glue by removing local fold aliases and routing calls directly to terminal-owned fold helpers
+  - `CZH-978` added helper-level invariants locking collapsed refresh/direct helper surface and removed wrapper declarations
+  - `CZH-979` added integration invariants locking collapsed boundary surface across widget/terminal and no-wrapper helper exposure
+- `Engineer commits reviewed:` `f280a91b`, `14408aed`, `2e728524`, `dacfbdbb`, `2aff0e27`, `8fea1a71`, `b71b2f49`, `5b4e8c3a`, `0cb40960`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-102` review
+- `Architect validation request:` validate behavior-neutral boundary transport collapse and helper-surface narrowing against `CZH-GATE-102`; confirm sprint closure if accepted.
+
 ## Response Contract
 
 Every batch update must include:
