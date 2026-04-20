@@ -247,4 +247,19 @@ See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitio
 
 All 5 regression vectors + 4 extension vectors protected by enforcement stack.
 
+## Shared Path Drift-Guard Summary (CZH-S69)
+
+**Guards preventing drift from determinism rules:**
+
+- **Guard 1 (New Claims):** Any new shared claim requires 6 determinism criteria or architect pre-approval
+- **Guard 2 (Lock Detail):** Shared lock details must follow standardized format (artifact:line[property]); changes require architect review
+- **Guard 3 (Test Binding):** All shared test bindings must be verifiable file:RANGE or defined category; unverifiable citations require architect pre-approval
+- **Guard 4 (Layer Explicitness):** All 3 shared claims must have explicit layer coverage table (CT/RT/Test/CR); implicit coverage prohibited
+- **Guard 5 (Cross-Path):** Shared claims (outcome production, attachment consistency, transport routing) cross-reference with per-path claims in authority; variant notation must be maintained
+- **Guard 6 (Authority Sync):** Shared claims must remain synchronized with authority definitions; divergence requires architect pre-approval
+- **Guard 7 (Cross-Refs):** Shared claims in per-path lock mappings (outcome freeze variants in refresh/reuse/direct, transport routing in all paths) must be updated when shared claims change
+- **Guard 8 (Test Staleness):** Test function changes require simultaneous documentation updates across all per-path claims that reference shared helpers
+
+**Maintenance gate:** Code review checklist (8 guards) required before any shared claim addition/modification.
+
 Status: Ready for CZH-1195 (regression/integration determinism verification)
