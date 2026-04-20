@@ -163,10 +163,6 @@ pub fn foldRefreshOutcomeToPresent(
     assertRefreshOutcomeConsistency(outcome_state);
     var result = presentResultFromOutcomeState(outcome_state.transport, timing);
     result.followup = outcome_state.followup;
-    if (outcome_state.followup.required) {
-        std.debug.assert(result.followup.required == true);
-        std.debug.assert(result.followup.reason != .none);
-    }
     return result;
 }
 
