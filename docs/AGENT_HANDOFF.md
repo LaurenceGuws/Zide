@@ -27,6 +27,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S64_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S66_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S67_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S50_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`
