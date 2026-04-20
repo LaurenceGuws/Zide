@@ -11,7 +11,8 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B72` (in_progress, super-gate `CZH-GATE-126`). Sprint `CZH-S67` in progress.
+- Current active macro batch: `CZH-B72` (in_progress, super-gate `CZH-GATE-126`). Sprint `CZH-S67` review_gate (awaiting architect decision).
+  - **Governance note:** CZH-1183..1186 consolidated as architect-approved atomic-group exception (rationale: per-path hardening requires cross-path consistency verification). Board status marked; sprint review_gate pending architect decision on exception acceptance.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.

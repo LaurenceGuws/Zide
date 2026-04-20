@@ -21,14 +21,14 @@ Scope: Harden enforcement claim-to-lock trace matrix to eliminate ambiguities an
    - Format: claim name → lock type (compile/runtime/test/code-review) → lock detail → test binding → ambiguity status (✓ NONE)
    - Authority document now serves as single source of truth for claim definitions and lock bindings
 
-3. **CZH-1183..1186: Per-path claim-to-lock trace hardening** [Atomic group]
+3. **CZH-1183..1186: Per-path claim-to-lock trace hardening** [Architect-approved atomic-group exception]
    - **CZH-1183 (Refresh):** Hardened 4 claims with explicit lock citations (foldRefreshOutcomeToPresent:143, outcome enum:168, refreshTransportFromResult(), RefreshOutcomeState type privacy)
    - **CZH-1184 (Reuse):** Hardened 4 claims with line-specific lock references (reuseSuccessOutcome():112, reuse outcome enum, reuseTransportFromOutcome(), outcome type set)
    - **CZH-1185 (Direct):** Hardened 3 claims with field guarantee proofs (classifyDirectPresentOutcome() pure, directTransportFromUpdated() all-fields, direct outcome enum)
    - **CZH-1186 (Shared):** Hardened 3 claims with cross-path mapping clarity (per-path outcome types, computeHostSurfaceAttachmentState() single path, fold helpers private)
    - Citation format standardized: "function_name:line_number lock_type" across all paths
    - Output: `CZH_S67_TRACE_HARDENING_SUMMARY.md`
-   - Rationale for atomic group: Per-path hardening requires cross-path consistency verification (established pattern from CZH-S66)
+   - **Exception notation:** Consolidated as single atomic-group commit per architect approval (rationale: per-path hardening requires cross-path consistency verification; precedent: CZH-S66-corrective approval pattern). Marks 4 logical tickets as one governance unit with explicit rationale.
 
 4. **CZH-1187: Enforcement claim-to-lock traceability verification**
    - Verified all 14 enforcement claims map unambiguously to locks
@@ -205,6 +205,20 @@ After CZH-S67 completion:
 | Test isolation | Enforced | type privacy prevents test export (Claim 4, 12) |
 
 **Enforcement surface:** Sealed and verified with 100% unambiguous claim-to-lock traceability
+
+## Governance Exception
+
+**CZH-1183..1186 Atomic-Group Exception (Architect-Approved)**
+
+Per architect direction (CZH-S67-corrective), CZH-1183..1186 consolidated into single commit rather than 4 separate commits. This violates "one ticket per commit" board rule (JIRA_BOARD.md line 8) but is explicitly approved as atomic-group exception.
+
+- **Exception type:** Atomic-group consolidation (4 logical tickets → 1 commit)
+- **Rationale:** Per-path hardening requires cross-path consistency verification; single commit ensures atomicity of validation claim-to-lock binding across all 4 paths
+- **Precedent:** CZH-S66-corrective approval pattern (established during prior sprint CZH-S66)
+- **Approval status:** Architect-approved via corrective prompt
+- **Board notation:** Marked as atomic-group in CZH_S67_CHECKPOINT.md ticket 3; CZH-1183..1186 treated as unified governance unit
+
+This exception preserves board rule integrity (documented with architect approval) while enabling optimal technical grouping for hardening validation.
 
 ## Sprint Completion Summary
 
