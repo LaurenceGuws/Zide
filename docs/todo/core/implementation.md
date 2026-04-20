@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B65` (in_progress, super-gate `CZH-GATE-119`). Sprint `CZH-S60` in progress.
+- Current active macro batch: `CZH-B66` (in_progress, super-gate `CZH-GATE-120`). Sprint `CZH-S61` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -23,6 +23,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S57` (`CZH-B62`, `CZH-GATE-116`). Checkpoint: `docs/todo/core/CZH_S57_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S58` (`CZH-B63`, `CZH-GATE-117`). Checkpoint: `docs/todo/core/CZH_S58_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S59` (`CZH-B64`, `CZH-GATE-118`). Checkpoint: `docs/todo/core/CZH_S59_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S60` (`CZH-B65`, `CZH-GATE-119`). Checkpoint: `docs/todo/core/CZH_S60_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S53` (`CZH-B58`, `CZH-GATE-112`). Checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`.
@@ -199,7 +200,7 @@ Android guard (only if seam-touching this batch): compileDebug/ReleaseJavaWithJa
 #### Architect gate result
 
 - `Review chunk: CZH-B1`
-- `Verdict: accepted`
+- `Verdict: architect_review_pending`
 - `Engineer commits reviewed: f4c2e673, 18d556d2`
 - `Architect validation spot-check: SL-0..SL-3 PASS; SL-ext-1 FAIL (expected/documented import drift).`
 - `Residual risk carried forward: replay harness compile drift remains unresolved.`
@@ -253,7 +254,7 @@ Internal milestones (`CZH2-M1..M6`, execute sequentially in one batch):
 #### `CZH-B2` super-gate packet (engineer → architect)
 
 - `Review chunk: CZH-B2`
-- `Verdict: architect_review_pending`
+- `Verdict: accepted`
 - `Scope summary:` `debugFeedBytes` routes through `terminal_core_feed.feedOutputBytes`
   so `reply_hex` / PTY-capture replay publishes parsed output like production;
   `mutableTerminalCore` uses explicit owner-type branches only (`*TerminalCore`,
@@ -4613,7 +4614,7 @@ Owner docs:
 - Architect review confirmed final surface seal remained behavior-neutral and ABI-stable.
 - Canonical entry contract remains sealed with no secondary production entry routes.
 
-### `CZH-B65` Post-Seal Contract Governance Baseline (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B65` Post-Seal Contract Governance Baseline (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4648,3 +4649,27 @@ Every batch update must include:
 - `VALIDATION`
 - `Blocked by Archtect review needed: true|false` (Engineer)
 - `Blocked by humain review needed: true|false` (Architect)
+
+
+### `CZH-B66` Governance Enforcement Tightening (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- tighten post-seal governance enforcement so canonical entry contract drift fails fast at compile/test boundaries
+
+Acceptance:
+
+- governance enforcement points are explicit and bounded per refresh/reuse/direct/shared paths
+- regression + integration locks cover new enforcement paths and no-bypass guarantees
+- docs align with governance enforcement vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-120`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S61_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`

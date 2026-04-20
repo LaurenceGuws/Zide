@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B65` — **`in_progress`** toward **`CZH-GATE-119`** (sprint `CZH-S60`):
-  post-seal contract governance baseline: lock change-control rules and regression guards around sealed surface.
-  Ticket source: `docs/todo/core/CZH_S60_TICKETS.md`.
+- `CZH-B66` — **`in_progress`** toward **`CZH-GATE-120`** (sprint `CZH-S61`):
+  governance enforcement tightening: harden compile/test/runtime guardrails around the sealed canonical-entry contract.
+  Ticket source: `docs/todo/core/CZH_S61_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S60` tickets `CZH-1125`..`CZH-1132` are active; run to
-  **`CZH-GATE-119`** unless blocked.
+- Sprint `CZH-S61` tickets `CZH-1133`..`CZH-1140` are active; run to
+  **`CZH-GATE-120`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
