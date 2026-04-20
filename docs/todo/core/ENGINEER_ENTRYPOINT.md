@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S45_TICKETS.md`
+3. `docs/todo/core/CZH_S46_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B50` — **`in_progress`** toward **`CZH-GATE-104`** (sprint `CZH-S45`):
-  terminal/widget fold API narrowing and field-shape lock after `CZH-B49` acceptance.
-  Ticket source: `docs/todo/core/CZH_S45_TICKETS.md`.
+- `CZH-B51` — **`in_progress`** toward **`CZH-GATE-105`** (sprint `CZH-S46`):
+  fold/result struct contraction and boundary callsite collapse after `CZH-B50` acceptance.
+  Ticket source: `docs/todo/core/CZH_S46_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S45` tickets `CZH-991`..`CZH-1000` are active; run to
-  **`CZH-GATE-104`** unless blocked.
+- Sprint `CZH-S46` tickets `CZH-1001`..`CZH-1010` are active; run to
+  **`CZH-GATE-105`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
