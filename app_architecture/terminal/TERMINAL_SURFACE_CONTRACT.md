@@ -155,6 +155,8 @@ that manages all semantic presentation logic:
   - Route-lock simplification: outcome structs lock all field access to canonical transport carrier; boundary checks maintain single-path routes
   - Fold-route assertion collapse: consolidated assertions verify transport routing without redundant field checks
   - Transport mapping simplification: outcome field access streamlined to canonical transport carrier routes
+  - Transport route pruning: unnecessary intermediate steps removed; direct field mapping without loss of invariant verification
+  - Assertion-surface minimization: only essential outcome-type invariants retained; construction-guaranteed checks removed
   - Terminal/widget integration surface uses only canonical per-flow fold routes; generic fold composition helpers remain terminal-runtime internals
   - Attachment-readiness transport remains part of canonical folded result fields
   
