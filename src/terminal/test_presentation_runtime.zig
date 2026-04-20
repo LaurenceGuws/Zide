@@ -9,6 +9,7 @@
 const std = @import("std");
 const presentation_runtime = @import("./presentation_runtime.zig");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
+const presentable_contract = @import("../ui/renderer/presentable_contract.zig");
 
 test "outcome classification from refresh cycle is pure" {
     const outcome_refreshed = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
@@ -58,6 +59,21 @@ test "Outcome folding produces consistent results" {
     try std.testing.expect(result.timing.background_ms == 1.0);
     try std.testing.expect(result.timing.glyph_ms == 2.0);
     try std.testing.expect(result.shared_surface_attachment_ready == true);
+}
+
+test "Direct present folding uses canonical helper" {
+    const outcome = presentation_runtime.classifyDirectPresentOutcome(true);
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 0.25,
+        .glyph_ms = 0.75,
+        .kitty_ms = 0.0,
+    };
+    const result = presentation_runtime.presentResultFromDirectPresentOutcomeState(outcome, timing);
+
+    try std.testing.expect(result.outcome == .updated_and_presented);
+    try std.testing.expect(result.cache_state_advanced == true);
+    try std.testing.expect(result.host_surface_target_available == true);
+    try std.testing.expect(result.shared_surface_attachment_ready == false);
 }
 
 test "Reuse outcome folding preserves attachment state" {
@@ -170,6 +186,17 @@ test "Direct present outcome paths maintain host availability coupling" {
 
     try std.testing.expect(updated.cache_state_advanced == true);
     try std.testing.expect(not_updated.cache_state_advanced == true);
+}
+
+test "Direct present canonical fold preserves classification fields" {
+    const direct_updated = presentation_runtime.classifyDirectPresentOutcome(true);
+    const timing = renderer_presentable_host.TerminalPresentTiming{};
+    const result = presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_updated, timing);
+
+    try std.testing.expect(result.outcome == direct_updated.outcome);
+    try std.testing.expect(result.cache_state_advanced == direct_updated.cache_state_advanced);
+    try std.testing.expect(result.host_surface_target_available == direct_updated.host_surface_target_available);
+    try std.testing.expect(result.shared_surface_attachment_ready == direct_updated.shared_surface_attachment_ready);
 }
 
 test "Reuse eligibility decision is pure and deterministic" {

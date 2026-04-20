@@ -1295,12 +1295,9 @@ pub fn runPresentation(
                 Local,
             );
             const outcome_state = classifyDirectPresentOutcome(direct.updated);
-            return presentResultFromOutcomeState(
-                outcome_state.outcome,
-                outcome_state.cache_state_advanced,
-                outcome_state.host_surface_target_available,
+            return terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+                outcome_state,
                 direct.timing,
-                outcome_state.shared_surface_attachment_ready,
             );
         }
 
@@ -2283,18 +2280,15 @@ test "integration follow-through direct outcome folds correctly through generic 
 
     const direct_updated = classifyDirectPresentOutcome(true);
     const timing = renderer_presentable_host.TerminalPresentTiming{};
-    const result = presentResultFromOutcomeState(
-        direct_updated.outcome,
-        direct_updated.cache_state_advanced,
-        direct_updated.host_surface_target_available,
+    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+        direct_updated,
         timing,
-        direct_updated.shared_surface_attachment_ready,
     );
 
-    try std.testing.expectEqual(result.outcome, .updated_and_presented);
-    try std.testing.expect(result.cache_state_advanced == true);
-    try std.testing.expect(result.host_surface_target_available == true);
-    try std.testing.expect(result.shared_surface_attachment_ready == false);
+    try std.testing.expectEqual(direct_result.outcome, .updated_and_presented);
+    try std.testing.expect(direct_result.cache_state_advanced == true);
+    try std.testing.expect(direct_result.host_surface_target_available == true);
+    try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
 }
 
 test "consolidation helper unified fold composition pattern" {
@@ -2371,12 +2365,9 @@ test "integration consolidation all fold paths route through canonical generic f
 
     // Direct path: uses generic fold directly without wrapper
     const direct_outcome = classifyDirectPresentOutcome(false);
-    const direct_result = presentResultFromOutcomeState(
-        direct_outcome.outcome,
-        direct_outcome.cache_state_advanced,
-        direct_outcome.host_surface_target_available,
+    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(
+        direct_outcome,
         timing,
-        direct_outcome.shared_surface_attachment_ready,
     );
     try std.testing.expectEqual(direct_result.outcome, .presented);
     try std.testing.expect(direct_result.cache_state_advanced == true);

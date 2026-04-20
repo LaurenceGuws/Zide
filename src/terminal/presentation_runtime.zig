@@ -25,6 +25,7 @@
 //! **Canonical fold routes:**
 //! - `presentResultFromRefreshOutcomeState(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromReuseOutcomeState(outcome, timing) -> TerminalPresentResult`
+//! - `presentResultFromDirectPresentOutcomeState(outcome, timing) -> TerminalPresentResult`
 //! - `presentResultFromOutcomeState()` — generic fold used by all paths
 
 const std = @import("std");
@@ -192,6 +193,23 @@ pub fn presentResultFromReuseOutcomeState(
         std.debug.assert(outcome_state.host_surface_target_available == true);
         std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
     }
+    return presentResultFromOutcomeState(
+        outcome_state.outcome,
+        outcome_state.cache_state_advanced,
+        outcome_state.host_surface_target_available,
+        timing,
+        outcome_state.shared_surface_attachment_ready,
+    );
+}
+
+/// **Canonical outcome fold for direct-present path:** folds direct outcome through generic result helper.
+/// *Simplification:* collapses direct outcome transport hop at callsites.
+/// *Hardening:* validates direct invariants before folding.
+pub fn presentResultFromDirectPresentOutcomeState(
+    outcome_state: DirectPresentOutcomeState,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    assertDirectPresentOutcomeConsistency(outcome_state);
     return presentResultFromOutcomeState(
         outcome_state.outcome,
         outcome_state.cache_state_advanced,
