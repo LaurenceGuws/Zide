@@ -153,6 +153,8 @@ that manages all semantic presentation logic:
   - Fold entry shaping is canonicalized to one route per flow before generic fold dispatch
   - Transport helper wrapper collapse: no intermediate helper functions between outcome-specific fold paths and generic fold dispatch
   - Route-lock simplification: outcome structs lock all field access to canonical transport carrier; boundary checks maintain single-path routes
+  - Fold-route assertion collapse: consolidated assertions verify transport routing without redundant field checks
+  - Transport mapping simplification: outcome field access streamlined to canonical transport carrier routes
   - Terminal/widget integration surface uses only canonical per-flow fold routes; generic fold composition helpers remain terminal-runtime internals
   - Attachment-readiness transport remains part of canonical folded result fields
   
