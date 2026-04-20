@@ -11,13 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B54` (in_progress, super-gate `CZH-GATE-108`). Sprint `CZH-S49` in progress.
+- Current active macro batch: `CZH-B55` (in_progress, super-gate `CZH-GATE-109`). Sprint `CZH-S50` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S49`. Ticket source: `docs/todo/core/CZH_S49_TICKETS.md`.
+- Active sprint: `CZH-S50`. Ticket source: `docs/todo/core/CZH_S50_TICKETS.md`.
+- Accepted sprint: `CZH-S49` (`CZH-B54`, `CZH-GATE-108`). Checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S48` (`CZH-B53`, `CZH-GATE-107`). Checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S47` (`CZH-B52`, `CZH-GATE-106`). Checkpoint: `docs/todo/core/CZH_S47_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S46` (`CZH-B51`, `CZH-GATE-105`). Checkpoint: `docs/todo/core/CZH_S46_CHECKPOINT.md`.
@@ -4256,7 +4257,7 @@ Owner docs:
 - Helper and integration invariants lock collapsed fold-entry setup and mirrored route-lock behavior.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B54` Fold Transport Helper Collapse + Route-Lock Simplification (`in_progress`)
+### `CZH-B54` Fold Transport Helper Collapse + Route-Lock Simplification (`accepted`)
 
 Queue line (exact):
 
@@ -4276,6 +4277,35 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S49_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+`Verdict: accepted`
+
+- Architect review confirmed fold transport helper collapse and route-lock simplification remained behavior-neutral and ABI-stable.
+- Helper and integration invariants lock simplified route-lock checks and collapsed helper surface.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B55` Fold-Route Assertion Collapse + Transport Mapping Simplification (`in_progress`)
+
+Queue line (exact):
+
+- collapse remaining fold-route assertion duplication and simplify transport mapping checks to one canonical route per flow without behavior change
+
+Acceptance:
+
+- refresh/reuse/direct fold-route assertions are collapsed and canonical per flow
+- transport mapping checks are simplified and canonical per flow
+- widget/runtime boundary contains no duplicate assertion/mapping glue
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-109`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S50_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
