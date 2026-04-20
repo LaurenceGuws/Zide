@@ -198,6 +198,15 @@ test "Helper contraction keeps one canonical reuse fold helper declaration" {
     }
 }
 
+test "Helper contraction keeps collapsed refresh and direct transport surface" {
+    comptime {
+        std.debug.assert(@hasDecl(presentation_runtime, "presentResultFromRefreshOutcomeState"));
+        std.debug.assert(@hasDecl(presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "refreshedPresentationResultFromCycle"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "directPresentTimingResult"));
+    }
+}
+
 test "Refresh boundary carrier narrows to TerminalPresentResult" {
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 0.2,
