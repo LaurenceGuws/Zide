@@ -98,11 +98,12 @@ test "Refresh result helper preserves folded refresh transport fields" {
         .glyph_ms = 1.5,
         .kitty_ms = 0.75,
     };
-    const refreshed = presentation_runtime.refreshedPresentationResultFromCycle(
-        .refreshed,
-        true,
-        timing,
-    );
+    const refreshed = presentation_runtime.RefreshedPresentablePresentationResult{
+        .present_result = presentation_runtime.presentResultFromRefreshOutcomeState(
+            presentation_runtime.classifyRefreshOutcome(.refreshed, true),
+            timing,
+        ),
+    };
 
     try std.testing.expectEqual(refreshed.present_result.outcome, .updated_and_presented);
     try std.testing.expectEqual(refreshed.present_result.timing.background_ms, timing.background_ms);
@@ -117,11 +118,12 @@ test "Refresh result helper preserves followup fields for target_unavailable tra
         .glyph_ms = 0.4,
         .kitty_ms = 0.0,
     };
-    const refreshed = presentation_runtime.refreshedPresentationResultFromCycle(
-        .target_unavailable,
-        false,
-        timing,
-    );
+    const refreshed = presentation_runtime.RefreshedPresentablePresentationResult{
+        .present_result = presentation_runtime.presentResultFromRefreshOutcomeState(
+            presentation_runtime.classifyRefreshOutcome(.target_unavailable, false),
+            timing,
+        ),
+    };
 
     try std.testing.expectEqual(refreshed.present_result.outcome, .presented);
     try std.testing.expectEqual(refreshed.present_result.followup.required, true);
@@ -233,11 +235,12 @@ test "Refresh boundary helper route matches canonical refresh folded result rout
         .glyph_ms = 0.6,
         .kitty_ms = 0.9,
     };
-    const via_boundary = presentation_runtime.refreshedPresentationResultFromCycle(
-        .refreshed,
-        true,
-        timing,
-    );
+    const via_boundary = presentation_runtime.RefreshedPresentablePresentationResult{
+        .present_result = presentation_runtime.presentResultFromRefreshOutcomeState(
+            presentation_runtime.classifyRefreshOutcome(.refreshed, true),
+            timing,
+        ),
+    };
 
     const outcome_state = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     const via_canonical_fold = presentation_runtime.presentResultFromRefreshOutcomeState(outcome_state, timing);

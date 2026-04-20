@@ -429,21 +429,6 @@ pub const RefreshedPresentablePresentationResult = struct {
     present_result: TerminalPresentResult = .{},
 };
 
-/// **Build refresh boundary folded result from cycle outcome + timing:** canonical
-/// refresh boundary helper that classifies and folds into host-facing result transport.
-/// *Consolidation:* refresh boundary transport is single-path at the terminal-owned
-/// fold route, avoiding split timing/conjunction assembly at callsites.
-pub fn refreshedPresentationResultFromCycle(
-    refresh: TerminalPresentableRefresh,
-    shared_surface_attachment_ready: bool,
-    timing: renderer_presentable_host.TerminalPresentTiming,
-) RefreshedPresentablePresentationResult {
-    const outcome_state = classifyRefreshOutcome(refresh, shared_surface_attachment_ready);
-    return .{
-        .present_result = presentResultFromRefreshOutcomeState(outcome_state, timing),
-    };
-}
-
 /// **Presentation present state snapshot:** captures conjunction during refresh for operator reporting.
 /// Stores on transient snapshot; not report from result structs. Canonical carrier for conjunction field.
 pub const PresentationPresentState = struct {

@@ -889,11 +889,13 @@ pub fn runRefreshBoundaryPresentationResult(
         );
     }
 
-    return terminal_presentation_runtime.refreshedPresentationResultFromCycle(
+    const refresh_outcome = classifyRefreshOutcome(
         cycle_result.refresh,
         present_state.shared_surface_attachment_ready,
-        cycle_result.timing,
     );
+    return .{
+        .present_result = presentResultFromRefreshOutcomeState(refresh_outcome, cycle_result.timing),
+    };
 }
 
 pub fn executeRefreshPresentFlow(

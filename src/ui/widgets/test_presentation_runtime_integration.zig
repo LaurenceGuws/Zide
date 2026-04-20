@@ -331,11 +331,12 @@ test "Integration invariant: direct folded-result route preserves canonical timi
 
 test "Integration invariant: narrowed refresh boundary helper naming keeps folded host-facing carrier parity" {
     const cycle_timing = .{ .background_ms = 3.25, .glyph_ms = 1.75, .kitty_ms = 0.5 };
-    const refreshed = terminal_presentation_runtime.refreshedPresentationResultFromCycle(
-        .refreshed,
-        true,
-        cycle_timing,
-    );
+    const refreshed = terminal_presentation_runtime.RefreshedPresentablePresentationResult{
+        .present_result = terminal_presentation_runtime.presentResultFromRefreshOutcomeState(
+            terminal_presentation_runtime.classifyRefreshOutcome(.refreshed, true),
+            cycle_timing,
+        ),
+    };
 
     const refresh_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     const folded_refresh = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(refresh_outcome, cycle_timing);
@@ -356,11 +357,12 @@ test "Integration invariant: narrowed refresh boundary helper naming keeps folde
 
 test "Integration invariant: refresh boundary helper preserves unavailable followup host-facing transport" {
     const cycle_timing = .{ .background_ms = 0.5, .glyph_ms = 0.25, .kitty_ms = 0.0 };
-    const refreshed = terminal_presentation_runtime.refreshedPresentationResultFromCycle(
-        .target_unavailable,
-        false,
-        cycle_timing,
-    );
+    const refreshed = terminal_presentation_runtime.RefreshedPresentablePresentationResult{
+        .present_result = terminal_presentation_runtime.presentResultFromRefreshOutcomeState(
+            terminal_presentation_runtime.classifyRefreshOutcome(.target_unavailable, false),
+            cycle_timing,
+        ),
+    };
 
     try std.testing.expectEqual(refreshed.present_result.outcome, .presented);
     try std.testing.expectEqual(refreshed.present_result.followup.required, true);
