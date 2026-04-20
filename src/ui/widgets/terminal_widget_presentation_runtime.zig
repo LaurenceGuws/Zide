@@ -118,23 +118,11 @@ pub const PresentationExecutionResult = struct {
 /// **Refresh outcome snapshot:** classifies refresh cycle result (updated or not).
 /// Carries conjunction inline via `shared_surface_attachment_ready`; fold reads the field directly.
 /// *Invariants:* `followup.required` and `followup.reason` are coupled — must both indicate unavailability
-/// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
-// Terminal-layer outcome structs re-exported for callers
-const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
-const DirectPresentOutcomeState = terminal_presentation_runtime.DirectPresentOutcomeState;
-const ReusePresentOutcomeState = terminal_presentation_runtime.ReusePresentOutcomeState;
+/// or both be in neutral state. Hardening assertions validate this coupling in `terminal_presentation_runtime.classifyRefreshOutcome()`.
 pub const ReuseEligibilityInput = terminal_presentation_runtime.ReuseEligibilityInput;
 pub const DirectPresentEligibilityInput = terminal_presentation_runtime.DirectPresentEligibilityInput;
 
-// Terminal-layer fold and classification helpers
-
 const computeHostSurfaceAttachmentState = terminal_presentation_runtime.computeHostSurfaceAttachmentState;
-const classifyRefreshOutcome = terminal_presentation_runtime.classifyRefreshOutcome;
-const classifyDirectPresentOutcome = terminal_presentation_runtime.classifyDirectPresentOutcome;
-const reuseSuccessOutcome = terminal_presentation_runtime.reuseSuccessOutcome;
-const foldRefreshOutcomeToPresent = terminal_presentation_runtime.foldRefreshOutcomeToPresent;
-const foldReuseOutcomeToPresent = terminal_presentation_runtime.foldReuseOutcomeToPresent;
-const foldDirectOutcomeToPresent = terminal_presentation_runtime.foldDirectOutcomeToPresent;
 
 fn advancePresentationCache(
     surface_state: anytype,
@@ -1888,7 +1876,7 @@ test "TerminalPresentResult exposes host-target and full-attachment carriers" {
 
 test "reuse outcome aligns with present result attachment field names" {
     comptime {
-        const r_fields = @typeInfo(ReusePresentOutcomeState).@"struct".fields;
+        const r_fields = @typeInfo(terminal_presentation_runtime.ReusePresentOutcomeState).@"struct".fields;
         var reuse_host: usize = 0;
         var reuse_shared: usize = 0;
         for (r_fields) |f| {
@@ -1931,7 +1919,7 @@ test "reuse outcome and present result expose paired leg and conjunction fields"
         {
             var host: usize = 0;
             var conj: usize = 0;
-            for (@typeInfo(ReusePresentOutcomeState).@"struct".fields) |f| {
+            for (@typeInfo(terminal_presentation_runtime.ReusePresentOutcomeState).@"struct".fields) |f| {
                 if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
                 if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) conj += 1;
             }
@@ -1963,8 +1951,8 @@ test "PresentationPresentState stores conjunction for reporting path" {
     try std.testing.expect(state.shared_surface_attachment_ready == true);
 }
 
-test "ReusePresentOutcomeState conjunction field role matches TerminalPresentResult" {
-    const outcome = ReusePresentOutcomeState{
+test "terminal_presentation_runtime.ReusePresentOutcomeState conjunction field role matches TerminalPresentResult" {
+    const outcome = terminal_presentation_runtime.ReusePresentOutcomeState{
         .shared_surface_attachment_ready = true,
         .host_surface_target_available = false,
     };
@@ -1979,7 +1967,7 @@ test "ReusePresentOutcomeState conjunction field role matches TerminalPresentRes
 test "helper consolidation reuseSuccessOutcome constructs correct outcome state" {
     // Verify the consolidation helper produces the expected outcome state for successful reuse.
     // This locks the pattern: successful reuse always has both legs and conjunction true.
-    const outcome = reuseSuccessOutcome();
+    const outcome = terminal_presentation_runtime.reuseSuccessOutcome();
     try std.testing.expectEqual(outcome.transport.outcome, TerminalPresentOutcome.reused);
     try std.testing.expect(outcome.transport.cache_state_advanced == true);
     try std.testing.expect(outcome.transport.host_surface_target_available == true);
@@ -1989,12 +1977,12 @@ test "helper consolidation reuseSuccessOutcome constructs correct outcome state"
 test "helper hardening reuse outcome assertion validates consistency" {
     // Verify that the reuse outcome hardening assertion accepts valid reuse states and would
     // catch invalid states in debug builds. This locks the hardening invariant.
-    const valid_outcome = reuseSuccessOutcome();
+    const valid_outcome = terminal_presentation_runtime.reuseSuccessOutcome();
     // If assertReuseOutcomeConsistency didn't catch inconsistency, this would pass
     terminal_presentation_runtime.assertReuseOutcomeConsistency(valid_outcome);
 
     // Non-reused state should not trigger assertions
-    const non_reused: ReusePresentOutcomeState = .{
+    const non_reused: terminal_presentation_runtime.ReusePresentOutcomeState = .{
         .transport = .{
             .outcome = .skipped,
             .cache_state_advanced = false,
@@ -2008,12 +1996,12 @@ test "helper hardening reuse outcome assertion validates consistency" {
 test "helper hardening direct outcome validates invariant fields" {
     // Verify that classifyDirectPresentOutcome produces correct invariant fields.
     // Direct draws always advance cache, have renderer available, and do not pre-verify conjunction.
-    const valid_direct = classifyDirectPresentOutcome(true);
+    const valid_direct = terminal_presentation_runtime.classifyDirectPresentOutcome(true);
     try std.testing.expect(valid_direct.transport.cache_state_advanced == true);
     try std.testing.expect(valid_direct.transport.host_surface_target_available == true);
     try std.testing.expect(valid_direct.transport.shared_surface_attachment_ready == false);
 
-    const direct_not_updated = classifyDirectPresentOutcome(false);
+    const direct_not_updated = terminal_presentation_runtime.classifyDirectPresentOutcome(false);
     try std.testing.expect(direct_not_updated.transport.cache_state_advanced == true);
     try std.testing.expectEqual(direct_not_updated.transport.outcome, .presented);
 }
@@ -2025,7 +2013,7 @@ test "integration lock PresentationPresentState conjunction equals outcome conju
         .visible = true,
         .present = true,
     };
-    const outcome = ReusePresentOutcomeState{
+    const outcome = terminal_presentation_runtime.ReusePresentOutcomeState{
         .shared_surface_attachment_ready = true,
         .host_surface_target_available = true,
     };
@@ -2036,20 +2024,20 @@ test "integration lock PresentationPresentState conjunction equals outcome conju
 }
 
 test "integration lock result fold preserves outcome conjunction" {
-    const outcome = ReusePresentOutcomeState{
+    const outcome = terminal_presentation_runtime.ReusePresentOutcomeState{
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
     };
     const timing = renderer_presentable_host.TerminalPresentTiming{};
-    const result = foldReuseOutcomeToPresent(outcome, timing);
+    const result = terminal_presentation_runtime.foldReuseOutcomeToPresent(outcome, timing);
     try std.testing.expectEqual(result.shared_surface_attachment_ready, outcome.shared_surface_attachment_ready);
     try std.testing.expectEqual(result.outcome, outcome.outcome);
 }
 
 test "integration lock direct present outcome has correct leg/conjunction separation" {
-    const outcome = DirectPresentOutcomeState{
+    const outcome = terminal_presentation_runtime.DirectPresentOutcomeState{
         .outcome = .presented,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
@@ -2060,36 +2048,36 @@ test "integration lock direct present outcome has correct leg/conjunction separa
 test "integration lock consolidated outcome states fold correctly" {
     // Verify that all three outcome state types produce consistent results when folded.
 
-    // RefreshOutcomeState: conjunction carried inline
-    const refresh_outcome = RefreshOutcomeState{
+    // terminal_presentation_runtime.RefreshOutcomeState: conjunction carried inline
+    const refresh_outcome = terminal_presentation_runtime.RefreshOutcomeState{
         .outcome = .updated_and_presented,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
     };
-    const refresh_result = foldRefreshOutcomeToPresent(refresh_outcome, .{});
+    const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_outcome, .{});
     try std.testing.expectEqual(refresh_result.outcome, TerminalPresentOutcome.updated_and_presented);
     try std.testing.expect(refresh_result.shared_surface_attachment_ready == true);
 
-    // ReusePresentOutcomeState: conjunction as field
-    const reuse_outcome = ReusePresentOutcomeState{
+    // terminal_presentation_runtime.ReusePresentOutcomeState: conjunction as field
+    const reuse_outcome = terminal_presentation_runtime.ReusePresentOutcomeState{
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
     };
-    const reuse_result = foldReuseOutcomeToPresent(reuse_outcome, .{});
+    const reuse_result = terminal_presentation_runtime.foldReuseOutcomeToPresent(reuse_outcome, .{});
     try std.testing.expectEqual(reuse_result.outcome, TerminalPresentOutcome.reused);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
-    // DirectPresentOutcomeState: canonical direct fold helper threads direct-path invariants.
-    const direct_outcome = DirectPresentOutcomeState{
+    // terminal_presentation_runtime.DirectPresentOutcomeState: canonical direct fold helper threads direct-path invariants.
+    const direct_outcome = terminal_presentation_runtime.DirectPresentOutcomeState{
         .outcome = .presented,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = false,
     };
-    const direct_result = foldDirectOutcomeToPresent(
+    const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_outcome,
         .{},
     );
@@ -2101,21 +2089,21 @@ test "integration hardening fold paths harden outcome consistency" {
     // Verify that fold functions validate outcome state consistency and propagate to result.
 
     // Test: successful reuse outcome produces result with all fields true
-    const reuse_success = reuseSuccessOutcome();
-    const reuse_result = foldReuseOutcomeToPresent(reuse_success, .{});
+    const reuse_success = terminal_presentation_runtime.reuseSuccessOutcome();
+    const reuse_result = terminal_presentation_runtime.foldReuseOutcomeToPresent(reuse_success, .{});
     try std.testing.expectEqual(reuse_result.outcome, .reused);
     try std.testing.expect(reuse_result.cache_state_advanced == true);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
     // Test: refresh with target unavailable sets followup correctly
-    const refresh_unavailable = RefreshOutcomeState{
+    const refresh_unavailable = terminal_presentation_runtime.RefreshOutcomeState{
         .outcome = .presented,
         .cache_state_advanced = false,
         .host_surface_target_available = false,
         .shared_surface_attachment_ready = false,
         .followup = .{ .required = true, .reason = .target_unavailable },
     };
-    const refresh_result = foldRefreshOutcomeToPresent(refresh_unavailable, .{});
+    const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_unavailable, .{});
     try std.testing.expect(refresh_result.followup.required == true);
     try std.testing.expectEqual(refresh_result.followup.reason, .target_unavailable);
 }
@@ -2125,16 +2113,16 @@ test "integration follow-through refresh classification validates followup coupl
     // When followup.required is true, followup.reason must be non-.none.
 
     // Test: unavailable refresh sets both followup.required and followup.reason
-    const refresh_with_followup = classifyRefreshOutcome(.target_unavailable, false);
+    const refresh_with_followup = terminal_presentation_runtime.classifyRefreshOutcome(.target_unavailable, false);
     try std.testing.expect(refresh_with_followup.followup.required == true);
     try std.testing.expect(refresh_with_followup.followup.reason != .none);
 
     // Test: successful/presented refresh has both followup fields neutral
-    const refresh_success = classifyRefreshOutcome(.refreshed, true);
+    const refresh_success = terminal_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     try std.testing.expect(refresh_success.followup.required == false);
     try std.testing.expectEqual(refresh_success.followup.reason, .none);
 
-    const refresh_presented = classifyRefreshOutcome(.presented, true);
+    const refresh_presented = terminal_presentation_runtime.classifyRefreshOutcome(.presented, true);
     try std.testing.expect(refresh_presented.followup.required == false);
     try std.testing.expectEqual(refresh_presented.followup.reason, .none);
 }
@@ -2143,9 +2131,9 @@ test "integration follow-through direct outcome folds correctly through generic 
     // Verify that direct present outcomes compose correctly through the canonical direct fold helper.
     // Direct draws have both legs true and conjunction false (not pre-verified).
 
-    const direct_updated = classifyDirectPresentOutcome(true);
+    const direct_updated = terminal_presentation_runtime.classifyDirectPresentOutcome(true);
     const timing = renderer_presentable_host.TerminalPresentTiming{};
-    const direct_result = foldDirectOutcomeToPresent(
+    const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_updated,
         timing,
     );
@@ -2184,14 +2172,14 @@ test "consolidation helper refresh outcome assertion unified pattern" {
     // followup coupling invariants. This locks the consolidation pattern.
 
     // Test: valid state with followup required and reason set
-    const valid_with_followup = RefreshOutcomeState{
+    const valid_with_followup = terminal_presentation_runtime.RefreshOutcomeState{
         .outcome = .presented,
         .followup = .{ .required = true, .reason = .target_unavailable },
     };
     terminal_presentation_runtime.assertRefreshOutcomeConsistency(valid_with_followup);
 
     // Test: valid state with followup neutral
-    const valid_neutral = RefreshOutcomeState{
+    const valid_neutral = terminal_presentation_runtime.RefreshOutcomeState{
         .outcome = .presented,
         .followup = .{ .required = false, .reason = .none },
     };
@@ -2206,28 +2194,28 @@ test "integration consolidation all fold paths route through canonical generic f
     const timing = renderer_presentable_host.TerminalPresentTiming{};
 
     // Refresh path: uses generic fold + followup wrapper
-    const refresh_outcome = RefreshOutcomeState{
+    const refresh_outcome = terminal_presentation_runtime.RefreshOutcomeState{
         .outcome = .updated_and_presented,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
         .shared_surface_attachment_ready = true,
         .followup = .{ .required = false, .reason = .none },
     };
-    const refresh_result = foldRefreshOutcomeToPresent(refresh_outcome, timing);
+    const refresh_result = terminal_presentation_runtime.foldRefreshOutcomeToPresent(refresh_outcome, timing);
     try std.testing.expectEqual(refresh_result.outcome, .updated_and_presented);
     try std.testing.expect(refresh_result.cache_state_advanced == true);
     try std.testing.expect(refresh_result.followup.required == false);
 
     // Reuse path: uses generic fold with input validation
-    const reuse_outcome = reuseSuccessOutcome();
-    const reuse_result = foldReuseOutcomeToPresent(reuse_outcome, timing);
+    const reuse_outcome = terminal_presentation_runtime.reuseSuccessOutcome();
+    const reuse_result = terminal_presentation_runtime.foldReuseOutcomeToPresent(reuse_outcome, timing);
     try std.testing.expectEqual(reuse_result.outcome, .reused);
     try std.testing.expect(reuse_result.cache_state_advanced == true);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
     // Direct path: uses canonical direct fold helper
-    const direct_outcome = classifyDirectPresentOutcome(false);
-    const direct_result = foldDirectOutcomeToPresent(
+    const direct_outcome = terminal_presentation_runtime.classifyDirectPresentOutcome(false);
+    const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_outcome,
         timing,
     );
