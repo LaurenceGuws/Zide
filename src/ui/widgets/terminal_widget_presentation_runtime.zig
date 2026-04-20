@@ -118,7 +118,7 @@ pub const PresentationExecutionResult = struct {
 /// **Refresh outcome snapshot:** classifies refresh cycle result (updated or not).
 /// Carries conjunction inline via `shared_surface_attachment_ready`; fold reads the field directly.
 /// *Invariants:* `followup.required` and `followup.reason` are coupled — must both indicate unavailability
-/// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
+/// or both be in neutral state. Hardening assertions validate this coupling in `terminal_presentation_runtime.classifyRefreshOutcome()`.
 // Terminal-layer outcome structs re-exported for callers
 pub const RefreshOutcomeState = terminal_presentation_runtime.RefreshOutcomeState;
 pub const DirectPresentOutcomeState = terminal_presentation_runtime.DirectPresentOutcomeState;
@@ -128,12 +128,6 @@ pub const DirectPresentEligibilityInput = terminal_presentation_runtime.DirectPr
 
 // Terminal-layer fold and classification helpers
 
-const classifyRefreshOutcome = terminal_presentation_runtime.classifyRefreshOutcome;
-const classifyDirectPresentOutcome = terminal_presentation_runtime.classifyDirectPresentOutcome;
-const reuseSuccessOutcome = terminal_presentation_runtime.reuseSuccessOutcome;
-const assertReuseOutcomeConsistency = terminal_presentation_runtime.assertReuseOutcomeConsistency;
-const assertDirectPresentOutcomeConsistency = terminal_presentation_runtime.assertDirectPresentOutcomeConsistency;
-const assertRefreshOutcomeConsistency = terminal_presentation_runtime.assertRefreshOutcomeConsistency;
 const computeHostSurfaceAttachmentState = terminal_presentation_runtime.computeHostSurfaceAttachmentState;
 
 fn advancePresentationCache(
@@ -920,7 +914,7 @@ pub fn executeRefreshPresentFlow(
                 );
             }
 
-            const refresh_outcome = classifyRefreshOutcome(
+            const refresh_outcome = terminal_presentation_runtime.classifyRefreshOutcome(
                 cycle.refresh,
                 present_state.shared_surface_attachment_ready,
             );
@@ -1235,7 +1229,7 @@ pub fn runPresentation(
                 direct_ctx,
                 Local,
             );
-            const outcome_state = classifyDirectPresentOutcome(direct.updated);
+            const outcome_state = terminal_presentation_runtime.classifyDirectPresentOutcome(direct.updated);
             return terminal_presentation_runtime.foldDirectOutcomeToPresent(
                 outcome_state,
                 direct.timing,
@@ -1447,7 +1441,7 @@ pub fn tryFastPresentExisting(
             composing_active,
             composing_hash,
         );
-        outcome = reuseSuccessOutcome();
+        outcome = terminal_presentation_runtime.reuseSuccessOutcome();
     }
     return terminal_presentation_runtime.foldReuseOutcomeToPresent(outcome, .{});
 }
@@ -2010,7 +2004,7 @@ test "ReusePresentOutcomeState conjunction field role matches TerminalPresentRes
 test "helper consolidation reuseSuccessOutcome constructs correct outcome state" {
     // Verify the consolidation helper produces the expected outcome state for successful reuse.
     // This locks the pattern: successful reuse always has both legs and conjunction true.
-    const outcome = reuseSuccessOutcome();
+    const outcome = terminal_presentation_runtime.reuseSuccessOutcome();
     try std.testing.expectEqual(outcome.outcome, TerminalPresentOutcome.reused);
     try std.testing.expect(outcome.cache_state_advanced == true);
     try std.testing.expect(outcome.host_surface_target_available == true);
@@ -2020,28 +2014,28 @@ test "helper consolidation reuseSuccessOutcome constructs correct outcome state"
 test "helper hardening reuse outcome assertion validates consistency" {
     // Verify that the reuse outcome hardening assertion accepts valid reuse states and would
     // catch invalid states in debug builds. This locks the hardening invariant.
-    const valid_outcome = reuseSuccessOutcome();
+    const valid_outcome = terminal_presentation_runtime.reuseSuccessOutcome();
     // If assertReuseOutcomeConsistency didn't catch inconsistency, this would pass
-    assertReuseOutcomeConsistency(valid_outcome);
+    terminal_presentation_runtime.assertReuseOutcomeConsistency(valid_outcome);
 
     // Non-reused state should not trigger assertions
     const non_reused: ReusePresentOutcomeState = .{
         .outcome = .skipped,
     };
-    assertReuseOutcomeConsistency(non_reused);
+    terminal_presentation_runtime.assertReuseOutcomeConsistency(non_reused);
 }
 
 test "helper hardening direct outcome assertion validates invariants" {
     // Verify that the direct outcome hardening assertion validates invariant fields.
     // Direct draws always advance cache, have renderer available, and do not pre-verify conjunction.
-    const valid_direct = classifyDirectPresentOutcome(true);
-    assertDirectPresentOutcomeConsistency(valid_direct);
+    const valid_direct = terminal_presentation_runtime.classifyDirectPresentOutcome(true);
+    terminal_presentation_runtime.assertDirectPresentOutcomeConsistency(valid_direct);
     try std.testing.expect(valid_direct.cache_state_advanced == true);
     try std.testing.expect(valid_direct.host_surface_target_available == true);
     try std.testing.expect(valid_direct.shared_surface_attachment_ready == false);
 
-    const direct_not_updated = classifyDirectPresentOutcome(false);
-    assertDirectPresentOutcomeConsistency(direct_not_updated);
+    const direct_not_updated = terminal_presentation_runtime.classifyDirectPresentOutcome(false);
+    terminal_presentation_runtime.assertDirectPresentOutcomeConsistency(direct_not_updated);
     try std.testing.expect(direct_not_updated.cache_state_advanced == true);
     try std.testing.expectEqual(direct_not_updated.outcome, .presented);
 }
@@ -2129,7 +2123,7 @@ test "integration hardening fold paths harden outcome consistency" {
     // Verify that fold functions validate outcome state consistency and propagate to result.
 
     // Test: successful reuse outcome produces result with all fields true
-    const reuse_success = reuseSuccessOutcome();
+    const reuse_success = terminal_presentation_runtime.reuseSuccessOutcome();
     const reuse_result = terminal_presentation_runtime.foldReuseOutcomeToPresent(reuse_success, .{});
     try std.testing.expectEqual(reuse_result.outcome, .reused);
     try std.testing.expect(reuse_result.cache_state_advanced == true);
@@ -2153,16 +2147,16 @@ test "integration follow-through refresh classification validates followup coupl
     // When followup.required is true, followup.reason must be non-.none.
 
     // Test: unavailable refresh sets both followup.required and followup.reason
-    const refresh_with_followup = classifyRefreshOutcome(.target_unavailable, false);
+    const refresh_with_followup = terminal_presentation_runtime.classifyRefreshOutcome(.target_unavailable, false);
     try std.testing.expect(refresh_with_followup.followup.required == true);
     try std.testing.expect(refresh_with_followup.followup.reason != .none);
 
     // Test: successful/presented refresh has both followup fields neutral
-    const refresh_success = classifyRefreshOutcome(.refreshed, true);
+    const refresh_success = terminal_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     try std.testing.expect(refresh_success.followup.required == false);
     try std.testing.expectEqual(refresh_success.followup.reason, .none);
 
-    const refresh_presented = classifyRefreshOutcome(.presented, true);
+    const refresh_presented = terminal_presentation_runtime.classifyRefreshOutcome(.presented, true);
     try std.testing.expect(refresh_presented.followup.required == false);
     try std.testing.expectEqual(refresh_presented.followup.reason, .none);
 }
@@ -2171,7 +2165,7 @@ test "integration follow-through direct outcome folds correctly through generic 
     // Verify that direct present outcomes compose correctly through the canonical direct fold helper.
     // Direct draws have both legs true and conjunction false (not pre-verified).
 
-    const direct_updated = classifyDirectPresentOutcome(true);
+    const direct_updated = terminal_presentation_runtime.classifyDirectPresentOutcome(true);
     const timing = renderer_presentable_host.TerminalPresentTiming{};
     const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_updated,
@@ -2216,14 +2210,14 @@ test "consolidation helper refresh outcome assertion unified pattern" {
         .outcome = .presented,
         .followup = .{ .required = true, .reason = .target_unavailable },
     };
-    assertRefreshOutcomeConsistency(valid_with_followup);
+    terminal_presentation_runtime.assertRefreshOutcomeConsistency(valid_with_followup);
 
     // Test: valid state with followup neutral
     const valid_neutral = RefreshOutcomeState{
         .outcome = .presented,
         .followup = .{ .required = false, .reason = .none },
     };
-    assertRefreshOutcomeConsistency(valid_neutral);
+    terminal_presentation_runtime.assertRefreshOutcomeConsistency(valid_neutral);
 }
 
 test "integration consolidation all fold paths route through canonical generic fold" {
@@ -2247,14 +2241,14 @@ test "integration consolidation all fold paths route through canonical generic f
     try std.testing.expect(refresh_result.followup.required == false);
 
     // Reuse path: uses generic fold with input validation
-    const reuse_outcome = reuseSuccessOutcome();
+    const reuse_outcome = terminal_presentation_runtime.reuseSuccessOutcome();
     const reuse_result = terminal_presentation_runtime.foldReuseOutcomeToPresent(reuse_outcome, timing);
     try std.testing.expectEqual(reuse_result.outcome, .reused);
     try std.testing.expect(reuse_result.cache_state_advanced == true);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
     // Direct path: uses canonical direct fold helper
-    const direct_outcome = classifyDirectPresentOutcome(false);
+    const direct_outcome = terminal_presentation_runtime.classifyDirectPresentOutcome(false);
     const direct_result = terminal_presentation_runtime.foldDirectOutcomeToPresent(
         direct_outcome,
         timing,
