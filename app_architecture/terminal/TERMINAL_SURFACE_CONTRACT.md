@@ -1,6 +1,6 @@
 # Terminal Surface Contract (host-agnostic)
 
-Date: 2026-04-20 (authority locked 2026-04-20 — `CZH-S57`; expanded 2026-04-20 — `CZH-S56`; corrected 2026-04-19 — `CZH-B6-corrective`)
+Date: 2026-04-20 (assertion policy 2026-04-20 — `CZH-S58`; locked 2026-04-20 — `CZH-S57`; expanded 2026-04-20 — `CZH-S56`; corrected 2026-04-19 — `CZH-B6-corrective`)
 
 Purpose: freeze the **terminal surface** contract for **shared GPU presentation**
 of terminal frames: what the host supplies, what Zide owns, and what stays in
@@ -369,6 +369,53 @@ These execute GPU and flow operations:
 - Documentation: Authority specified in TERMINAL_SURFACE_CONTRACT.md (this document)
 
 **Lock status:** ✓ LOCKED — No additional production-callable functions allowed without architect approval
+
+## Assertion Surface Policy (CZH-S58)
+
+**Authority:** Compressed assertion surface for presentation runtime contract.
+
+**Assertion Philosophy:**
+- Contract-critical invariants: PRESERVED (canonical entry outcome validation)
+- Implementation detail checks: REMOVED (guaranteed by logic structure)
+- Test hardening assertions: CONSOLIDATED (unified per outcome type)
+
+**Single Contract-Critical Assertion:**
+1. `refreshPresentEntry` outcome invariant — ensures refresh path always produces valid outcome type
+   - Location: `refreshPresentEntry`, line 168
+   - Check: `result.outcome == .updated_and_presented or result.outcome == .presented`
+   - Rationale: Multiple outcome types possible; cannot be inferred from logic alone
+
+**Removed Implementation Detail Assertions:**
+1. `classifyDirectPresentOutcome` field validation (lines 138-139, 245-247)
+   - Why removed: Fields are guaranteed by classification logic; redundant check
+   - No contract impact: Classification invariants enforced elsewhere
+
+2. `foldReuseOutcomeToPresent` outcome type validation (line 183)
+   - Why removed: Outcome type mapping is deterministic; redundant check
+   - No contract impact: Transport routing enforced at canonical entry
+
+**Consolidated Test-Only Assertions:**
+1. Reuse outcome consistency (from `assertReuseOutcomeConsistency`)
+   - Consolidated: Field validation unified per outcome state
+   
+2. Refresh outcome consistency (from `assertRefreshOutcomeConsistency`)
+   - Consolidated: Followup field validation unified per outcome variant
+
+**Compression Results:**
+- Before: 11 total assertions
+- After: 3 assertions (1 contract + 2 consolidated test)
+- Reduction: 73% assertion surface trimmed
+- Contract coverage: MAINTAINED — no contract assertions removed
+
+**Enforcement:**
+- Compile-time: Type system ensures outcome types valid
+- Runtime: Single contract assertion validates outcome production
+- Tests: Consolidated assertions verify hardening requirements
+
+**Future assertion additions:**
+- New assertions require architect approval
+- Must be contract-critical; implementation details must be inferred
+- Keep assertion surface minimal and focused on invariants
 
 ## Android mapping (example, not definition)
 
