@@ -186,6 +186,28 @@ test "Direct boundary timing carrier preserves explicit timing transport" {
     try std.testing.expectEqual(timing.kitty_ms, 1.25);
 }
 
+test "Helper contraction keeps one canonical reuse fold helper declaration" {
+    comptime {
+        std.debug.assert(@hasDecl(presentation_runtime, "foldReuseAttemptResultToPresent"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "foldReuseAttemptOutcome"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "presentResultFromReuseOutcomeState"));
+    }
+}
+
+test "Refresh boundary carrier narrows to TerminalPresentResult" {
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 0.2,
+        .glyph_ms = 0.3,
+        .kitty_ms = 0.4,
+    };
+    const result = presentation_runtime.presentResultFromRefreshOutcomeState(
+        presentation_runtime.classifyRefreshOutcome(.presented, true),
+        timing,
+    );
+    try std.testing.expect(@TypeOf(result) == renderer_presentable_host.TerminalPresentResult);
+    try std.testing.expectEqual(result.timing.background_ms, timing.background_ms);
+}
+
 test "Reuse outcome folding preserves attachment state" {
     const outcome = presentation_runtime.reuseSuccessOutcome();
     const timing = renderer_presentable_host.TerminalPresentTiming{
