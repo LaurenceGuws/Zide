@@ -108,6 +108,7 @@ Scope: Consolidated governance + enforcement + integration for all shared helper
 - **Responsibility:** Prevent invalid function calls at compile time
 - **Enforcement:** Private fold helpers and generic composition prevent widget from calling
 - **Verification:** ✓ `presentResultFromOutcomeState()` private; all fold helpers private
+- **Test Binding:** `test_presentation_runtime.zig:193-211` "Helper contraction keeps canonical declarations"
 - **Status:** ✓ LOCKED
 
 ### 2. Runtime Enforcement (Field Guarantees)
@@ -115,6 +116,8 @@ Scope: Consolidated governance + enforcement + integration for all shared helper
 - **Responsibility:** Ensure transport fields deterministic and immutable
 - **Enforcement:** All fields set deterministically; no post-production mutations
 - **Verification:** ✓ Transport fields immutable; no conditional logic
+- **Test Binding:** `test_presentation_runtime.zig:49-62` "Outcome folding produces consistent results"
+- **Test Binding:** `test_presentation_runtime.zig:227-247` "Fold routes consume contracted transport carrier"
 - **Status:** ✓ LOCKED
 
 ### 3. Test Enforcement (Test Coverage)
@@ -122,6 +125,7 @@ Scope: Consolidated governance + enforcement + integration for all shared helper
 - **Responsibility:** Detect shared helper regressions and test surface isolation
 - **Enforcement:** Tests verify path-specific isolation, no shared test surface
 - **Verification:** ✓ Test assertions path-specific; no production calls to test surface
+- **Test Binding:** `test_presentation_runtime.zig:200-225` "Helper contraction keeps collapsed transport surface"
 - **Status:** ✓ LOCKED
 
 ### 4. Code Review Enforcement (Architecture)
