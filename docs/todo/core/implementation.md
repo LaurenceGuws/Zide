@@ -4039,6 +4039,36 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B50` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded smoke; startup banner observed; timeout exit expected for bounded run)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B50` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B50`
+- `Verdict: review_gate`
+- `Scope summary:` terminal/widget fold API narrowing + field-shape lock landed as behavior-neutral seam tightening:
+  - `CZH-991` added explicit fold API/field-shape audit map and ordered cut plan (`docs/todo/core/CZH_991_FOLD_API_FIELD_SHAPE_AUDIT_MAP.md`)
+  - `CZH-992` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to narrowed fold API surface and canonical field-shape lock
+  - `CZH-993` narrowed refresh fold API by removing separate generic followup-field helper route and keeping inline refresh fold followup assignment
+  - `CZH-994` narrowed reuse fold API by routing reuse fold mapping through one dedicated reuse field-mapping helper
+  - `CZH-995` narrowed direct fold API by routing direct fold mapping through one dedicated direct field-mapping helper
+  - `CZH-996` locked refresh/reuse field shape routing by adding canonical refresh fold field-mapping helper path
+  - `CZH-997` locked direct field shape with direct outcome carrier compile-time field-shape assertion
+  - `CZH-998` added helper-level invariants locking narrowed fold API surface and canonical field-shape declarations
+  - `CZH-999` added integration invariants + hygiene locks for narrowed fold API surface and canonical transport field-shape exposure
+- `Engineer commits reviewed:` `9a548329`, `63085e2e`, `0e0d4a36`, `1075b5eb`, `79c59c22`, `b6187044`, `da5e6022`, `f84c000d`, `9139742a`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-104` review
+- `Architect validation request:` validate behavior-neutral fold API narrowing and field-shape lock against `CZH-GATE-104`; confirm sprint closure if accepted.
+
 ## Response Contract
 
 Every batch update must include:
