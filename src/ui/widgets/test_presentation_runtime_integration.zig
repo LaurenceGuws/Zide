@@ -312,6 +312,35 @@ test "Integration invariant: direct fold helper parity with direct classificatio
     try std.testing.expect(direct_result.timing.glyph_ms == timing.glyph_ms);
 }
 
+test "Integration invariant: refresh timing helper parity with refresh cycle timing transport" {
+    const cycle_timing = .{ .background_ms = 3.25, .glyph_ms = 1.75, .kitty_ms = 0.5 };
+    const refreshed = terminal_presentation_runtime.refreshedPresentationResultFromCycleTiming(cycle_timing);
+
+    try std.testing.expectEqual(refreshed.bg_ms, cycle_timing.background_ms);
+    try std.testing.expectEqual(refreshed.glyph_ms, cycle_timing.glyph_ms);
+    try std.testing.expectEqual(refreshed.kitty_ms, cycle_timing.kitty_ms);
+    try std.testing.expect(refreshed.shared_surface_attachment_ready == false);
+}
+
+test "Integration invariant: reuse fold helper preserves flattened reuse transport" {
+    const reuse_attempt = terminal_widget_presentation_runtime.ReusePresentOutcomeState{
+        .outcome = .skipped,
+        .cache_state_advanced = false,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
+    const timing = .{ .background_ms = 0.4, .glyph_ms = 0.6, .kitty_ms = 0.2 };
+    const result = terminal_presentation_runtime.foldReuseAttemptOutcome(reuse_attempt, timing);
+
+    try std.testing.expect(result.outcome == reuse_attempt.outcome);
+    try std.testing.expect(result.cache_state_advanced == reuse_attempt.cache_state_advanced);
+    try std.testing.expect(result.host_surface_target_available == reuse_attempt.host_surface_target_available);
+    try std.testing.expect(result.shared_surface_attachment_ready == reuse_attempt.shared_surface_attachment_ready);
+    try std.testing.expectEqual(result.timing.background_ms, timing.background_ms);
+    try std.testing.expectEqual(result.timing.glyph_ms, timing.glyph_ms);
+    try std.testing.expectEqual(result.timing.kitty_ms, timing.kitty_ms);
+}
+
 test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
     const attached_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, true);
     const detached_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, false);
