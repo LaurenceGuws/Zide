@@ -1232,9 +1232,8 @@ pub fn runPresentation(
                 direct_ctx,
                 Local,
             );
-            const outcome_state = classifyDirectPresentOutcome(direct.updated);
-            return foldDirectOutcomeToPresent(
-                outcome_state,
+            return terminal_presentation_runtime.directPresentEntry(
+                direct.updated,
                 direct.timing,
             );
         }

@@ -210,6 +210,16 @@ pub fn foldDirectOutcomeToPresent(
     return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
+/// **Canonical direct fold entry:** classify direct and fold to result in one canonical route.
+/// Single entry point for widget layer; encapsulates outcome state construction.
+pub fn directPresentEntry(
+    updated: bool,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    const outcome = classifyDirectPresentOutcome(updated);
+    return foldDirectOutcomeToPresent(outcome, timing);
+}
+
 fn directTransportFromUpdated(updated: bool) FoldTransportFields {
     return .{
         .outcome = if (updated) .updated_and_presented else .presented,
