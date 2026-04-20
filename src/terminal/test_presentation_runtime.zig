@@ -61,6 +61,22 @@ test "Outcome folding produces consistent results" {
     try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
+test "Refresh classification carries inline conjunction coupling" {
+    const attached = presentation_runtime.classifyRefreshOutcome(.presented, true);
+    try std.testing.expect(attached.shared_surface_attachment_ready == true);
+    try std.testing.expect(attached.host_surface_target_available == true);
+
+    const detached = presentation_runtime.classifyRefreshOutcome(.presented, false);
+    try std.testing.expect(detached.shared_surface_attachment_ready == false);
+    try std.testing.expect(detached.host_surface_target_available == true);
+
+    const unavailable = presentation_runtime.classifyRefreshOutcome(.target_unavailable, false);
+    try std.testing.expect(unavailable.shared_surface_attachment_ready == false);
+    try std.testing.expect(unavailable.host_surface_target_available == false);
+    try std.testing.expect(unavailable.followup_required == true);
+    try std.testing.expectEqual(unavailable.followup_reason, .target_unavailable);
+}
+
 test "Direct present folding uses canonical helper" {
     const outcome = presentation_runtime.classifyDirectPresentOutcome(true);
     const timing = renderer_presentable_host.TerminalPresentTiming{
@@ -190,13 +206,19 @@ test "Direct present outcome paths maintain host availability coupling" {
 
 test "Direct present canonical fold preserves classification fields" {
     const direct_updated = presentation_runtime.classifyDirectPresentOutcome(true);
-    const timing = renderer_presentable_host.TerminalPresentTiming{};
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 3.0,
+        .glyph_ms = 1.0,
+        .kitty_ms = 0.0,
+    };
     const result = presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_updated, timing);
 
     try std.testing.expect(result.outcome == direct_updated.outcome);
     try std.testing.expect(result.cache_state_advanced == direct_updated.cache_state_advanced);
     try std.testing.expect(result.host_surface_target_available == direct_updated.host_surface_target_available);
     try std.testing.expect(result.shared_surface_attachment_ready == direct_updated.shared_surface_attachment_ready);
+    try std.testing.expect(result.timing.background_ms == timing.background_ms);
+    try std.testing.expect(result.timing.glyph_ms == timing.glyph_ms);
 }
 
 test "Reuse eligibility decision is pure and deterministic" {
