@@ -142,7 +142,7 @@ test "Reuse fold helper preserves non-reused transport state" {
         .glyph_ms = 0.2,
         .kitty_ms = 0.3,
     };
-    const result = presentation_runtime.foldReuseAttemptOutcome(attempt, timing);
+    const result = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
 
     try std.testing.expectEqual(result.outcome, attempt.outcome);
     try std.testing.expectEqual(result.cache_state_advanced, attempt.cache_state_advanced);
@@ -180,7 +180,7 @@ test "Reuse boundary helper forwards reused and non-reused transport consistentl
     try std.testing.expectEqual(non_reused_result.timing.background_ms, timing.background_ms);
 }
 
-test "Direct timing helper preserves explicit timing transport" {
+test "Direct boundary timing carrier preserves explicit timing transport" {
     const timing = presentation_runtime.directPresentTimingResult(2.0, 3.5, 1.25);
 
     try std.testing.expectEqual(timing.background_ms, 2.0);
@@ -202,7 +202,7 @@ test "Reuse outcome folding preserves attachment state" {
     try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
-test "Reuse fold wrapper parity matches canonical reuse boundary helper" {
+test "Reuse fold alias parity matches canonical reuse boundary helper route" {
     const attempt = presentation_runtime.ReusePresentOutcomeState{
         .outcome = .skipped,
         .cache_state_advanced = false,
@@ -215,16 +215,42 @@ test "Reuse fold wrapper parity matches canonical reuse boundary helper" {
         .kitty_ms = 0.9,
     };
 
-    const via_wrapper = presentation_runtime.presentResultFromReuseOutcomeState(attempt, timing);
+    const via_alias = presentation_runtime.presentResultFromReuseOutcomeState(attempt, timing);
     const via_boundary = presentation_runtime.foldReuseAttemptResultToPresent(attempt, timing);
 
-    try std.testing.expectEqual(via_wrapper.outcome, via_boundary.outcome);
-    try std.testing.expectEqual(via_wrapper.cache_state_advanced, via_boundary.cache_state_advanced);
-    try std.testing.expectEqual(via_wrapper.host_surface_target_available, via_boundary.host_surface_target_available);
-    try std.testing.expectEqual(via_wrapper.shared_surface_attachment_ready, via_boundary.shared_surface_attachment_ready);
-    try std.testing.expectEqual(via_wrapper.timing.background_ms, via_boundary.timing.background_ms);
-    try std.testing.expectEqual(via_wrapper.timing.glyph_ms, via_boundary.timing.glyph_ms);
-    try std.testing.expectEqual(via_wrapper.timing.kitty_ms, via_boundary.timing.kitty_ms);
+    try std.testing.expectEqual(via_alias.outcome, via_boundary.outcome);
+    try std.testing.expectEqual(via_alias.cache_state_advanced, via_boundary.cache_state_advanced);
+    try std.testing.expectEqual(via_alias.host_surface_target_available, via_boundary.host_surface_target_available);
+    try std.testing.expectEqual(via_alias.shared_surface_attachment_ready, via_boundary.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_alias.timing.background_ms, via_boundary.timing.background_ms);
+    try std.testing.expectEqual(via_alias.timing.glyph_ms, via_boundary.timing.glyph_ms);
+    try std.testing.expectEqual(via_alias.timing.kitty_ms, via_boundary.timing.kitty_ms);
+}
+
+test "Refresh boundary helper route matches canonical refresh folded result route" {
+    const timing = renderer_presentable_host.TerminalPresentTiming{
+        .background_ms = 0.3,
+        .glyph_ms = 0.6,
+        .kitty_ms = 0.9,
+    };
+    const via_boundary = presentation_runtime.refreshedPresentationResultFromCycle(
+        .refreshed,
+        true,
+        timing,
+    );
+
+    const outcome_state = presentation_runtime.classifyRefreshOutcome(.refreshed, true);
+    const via_canonical_fold = presentation_runtime.presentResultFromRefreshOutcomeState(outcome_state, timing);
+
+    try std.testing.expectEqual(via_boundary.present_result.outcome, via_canonical_fold.outcome);
+    try std.testing.expectEqual(via_boundary.present_result.cache_state_advanced, via_canonical_fold.cache_state_advanced);
+    try std.testing.expectEqual(via_boundary.present_result.host_surface_target_available, via_canonical_fold.host_surface_target_available);
+    try std.testing.expectEqual(via_boundary.present_result.shared_surface_attachment_ready, via_canonical_fold.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_boundary.present_result.followup.required, via_canonical_fold.followup.required);
+    try std.testing.expectEqual(via_boundary.present_result.followup.reason, via_canonical_fold.followup.reason);
+    try std.testing.expectEqual(via_boundary.present_result.timing.background_ms, via_canonical_fold.timing.background_ms);
+    try std.testing.expectEqual(via_boundary.present_result.timing.glyph_ms, via_canonical_fold.timing.glyph_ms);
+    try std.testing.expectEqual(via_boundary.present_result.timing.kitty_ms, via_canonical_fold.timing.kitty_ms);
 }
 
 test "Geometry struct is defined and initializable" {
@@ -330,7 +356,7 @@ test "Direct present outcome paths maintain host availability coupling" {
     try std.testing.expect(not_updated.cache_state_advanced == true);
 }
 
-test "Direct present canonical fold preserves classification fields" {
+test "Direct folded-result route preserves classification fields" {
     const direct_updated = presentation_runtime.classifyDirectPresentOutcome(true);
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 3.0,

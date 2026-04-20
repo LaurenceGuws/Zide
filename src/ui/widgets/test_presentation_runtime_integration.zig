@@ -116,13 +116,19 @@ test "Widget layer delegates outcome folding without re-derivation" {
     try std.testing.expect(result.timing.background_ms == 1.5);
 }
 
-test "Widget layer reuse boundary helper preserves outcome semantics" {
+test "Widget layer canonical reuse alias export preserves outcome semantics" {
     const reuse = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse, timing);
+    const via_alias = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(reuse, timing);
+    const via_boundary_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse, timing);
 
-    try std.testing.expect(result.outcome == .reused);
-    try std.testing.expect(result.shared_surface_attachment_ready == true);
+    try std.testing.expect(via_alias.outcome == .reused);
+    try std.testing.expect(via_alias.shared_surface_attachment_ready == true);
+    try std.testing.expectEqual(via_alias.outcome, via_boundary_helper.outcome);
+    try std.testing.expectEqual(via_alias.shared_surface_attachment_ready, via_boundary_helper.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_alias.timing.background_ms, via_boundary_helper.timing.background_ms);
+    try std.testing.expectEqual(via_alias.timing.glyph_ms, via_boundary_helper.timing.glyph_ms);
+    try std.testing.expectEqual(via_alias.timing.kitty_ms, via_boundary_helper.timing.kitty_ms);
 }
 
 test "Widget layer assertions validate outcome consistency" {
@@ -309,17 +315,18 @@ test "Callback contract: terminal classification used regardless of widget execu
     try std.testing.expect(reuse_outcome.outcome == .reused);
 }
 
-test "Integration invariant: direct folded-result parity with direct classification" {
+test "Integration invariant: direct folded-result route preserves canonical timing carrier semantics" {
     const direct_outcome = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
-    const timing = .{ .background_ms = 2.0, .glyph_ms = 1.0, .kitty_ms = 0.0 };
-    const direct_folded_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_outcome, timing);
+    const timing = terminal_presentation_runtime.directPresentTimingResult(2.0, 1.0, 0.0);
+    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_outcome, timing);
 
-    try std.testing.expect(direct_folded_result.outcome == direct_outcome.outcome);
-    try std.testing.expect(direct_folded_result.cache_state_advanced == direct_outcome.cache_state_advanced);
-    try std.testing.expect(direct_folded_result.host_surface_target_available == direct_outcome.host_surface_target_available);
-    try std.testing.expect(direct_folded_result.shared_surface_attachment_ready == direct_outcome.shared_surface_attachment_ready);
-    try std.testing.expect(direct_folded_result.timing.background_ms == timing.background_ms);
-    try std.testing.expect(direct_folded_result.timing.glyph_ms == timing.glyph_ms);
+    try std.testing.expect(direct_result.outcome == direct_outcome.outcome);
+    try std.testing.expect(direct_result.cache_state_advanced == direct_outcome.cache_state_advanced);
+    try std.testing.expect(direct_result.host_surface_target_available == direct_outcome.host_surface_target_available);
+    try std.testing.expect(direct_result.shared_surface_attachment_ready == direct_outcome.shared_surface_attachment_ready);
+    try std.testing.expect(direct_result.timing.background_ms == timing.background_ms);
+    try std.testing.expect(direct_result.timing.glyph_ms == timing.glyph_ms);
+    try std.testing.expect(direct_result.timing.kitty_ms == timing.kitty_ms);
 }
 
 test "Integration invariant: refresh boundary helper folds cycle result into host-facing carrier" {
@@ -374,7 +381,7 @@ test "Integration invariant: reuse fold helper preserves flattened reuse transpo
     try std.testing.expectEqual(result.timing.kitty_ms, timing.kitty_ms);
 }
 
-test "Integration invariant: widget and terminal reuse boundary helpers stay transport-equivalent" {
+test "Integration invariant: widget reuse canonical alias export and boundary helper stay transport-equivalent" {
     const reuse_attempt = terminal_widget_presentation_runtime.ReusePresentOutcomeState{
         .outcome = .skipped,
         .cache_state_advanced = false,
@@ -383,8 +390,17 @@ test "Integration invariant: widget and terminal reuse boundary helpers stay tra
     };
     const timing = .{ .background_ms = 0.125, .glyph_ms = 0.25, .kitty_ms = 0.375 };
 
+    const via_widget_alias_export = terminal_widget_presentation_runtime.presentResultFromReuseOutcomeState(reuse_attempt, timing);
     const via_widget_boundary_helper = terminal_widget_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
     const via_terminal_boundary_helper = terminal_presentation_runtime.foldReuseAttemptResultToPresent(reuse_attempt, timing);
+
+    try std.testing.expectEqual(via_widget_alias_export.outcome, via_widget_boundary_helper.outcome);
+    try std.testing.expectEqual(via_widget_alias_export.cache_state_advanced, via_widget_boundary_helper.cache_state_advanced);
+    try std.testing.expectEqual(via_widget_alias_export.host_surface_target_available, via_widget_boundary_helper.host_surface_target_available);
+    try std.testing.expectEqual(via_widget_alias_export.shared_surface_attachment_ready, via_widget_boundary_helper.shared_surface_attachment_ready);
+    try std.testing.expectEqual(via_widget_alias_export.timing.background_ms, via_widget_boundary_helper.timing.background_ms);
+    try std.testing.expectEqual(via_widget_alias_export.timing.glyph_ms, via_widget_boundary_helper.timing.glyph_ms);
+    try std.testing.expectEqual(via_widget_alias_export.timing.kitty_ms, via_widget_boundary_helper.timing.kitty_ms);
 
     try std.testing.expectEqual(via_widget_boundary_helper.outcome, via_terminal_boundary_helper.outcome);
     try std.testing.expectEqual(via_widget_boundary_helper.cache_state_advanced, via_terminal_boundary_helper.cache_state_advanced);
