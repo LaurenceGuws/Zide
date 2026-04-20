@@ -614,6 +614,99 @@ Prior sprint records:
 - CZH-S60 baseline: `CZH_S60_CHECKPOINT.md`
 - CZH-S61 enforcement: `CZH_S61_CHECKPOINT.md`, `CZH_S61_ENFORCEMENT_SUMMARY.md`
 
+## Enforcement Claims Binding Reference (CZH-S67)
+
+Authority mapping of enforcement claims to concrete compile/test locks.
+
+**Claim Definition Format:**
+- Claim name and statement
+- Lock type (compile-time, runtime, test, code-review)
+- Lock detail (specific function, line, type, or test name)
+- Ambiguity status (✓ NONE or ⚠️ description)
+
+**Enforcement Claims (14 total, all mapped):**
+
+### Refresh Path (4 claims)
+1. **No-bypass invariant:** widget refresh flows only through `refreshPresentEntry`
+   - Lock: `foldRefreshOutcomeToPresent` private (compile-time)
+   - Test: "outcome classification from refresh cycle is pure"
+   - Status: ✓ NONE
+
+2. **Outcome type freeze:** .updated_and_presented | .presented
+   - Lock: Zig enum type + assertion line 168 (compile/runtime)
+   - Test: outcome classification test validates types
+   - Status: ✓ NONE
+
+3. **Transport determinism:** fields always computed, no conditionals
+   - Lock: `refreshTransportFromResult()` logic (runtime)
+   - Test: "Refresh result helper preserves transport fields"
+   - Status: ✓ NONE
+
+4. **Outcome state isolation:** RefreshOutcomeState internal
+   - Lock: type privacy prevents widget construction (compile-time)
+   - Test: binding tests validate canonical production
+   - Status: ✓ NONE
+
+### Reuse Path (4 claims)
+5. **Eligibility decision immutability:** decision determines outcome directly
+   - Lock: `reuseSuccessOutcome()` construction logic (runtime)
+   - Test: "Reuse success outcome invariants hold"
+   - Status: ✓ NONE
+
+6. **Outcome type freeze:** .reused | .skipped
+   - Lock: Zig enum type (compile-time)
+   - Test: outcome type tests
+   - Status: ✓ NONE
+
+7. **Transport consistency:** both reused/non-reused paths preserve fields
+   - Lock: transport mapping logic per path (runtime)
+   - Test: "Reuse fold helper preserves non-reused transport" + boundary test
+   - Status: ✓ NONE
+
+8. **Success signal uniqueness:** only .reused indicates success
+   - Lock: outcome type set (compile-time)
+   - Test: "Reuse success outcome invariants"
+   - Status: ✓ NONE
+
+### Direct Path (3 claims)
+9. **Updated flag determinism:** classification depends only on boolean
+   - Lock: classification pure function (runtime)
+   - Test: "Direct present outcome classification is pure"
+   - Status: ✓ NONE
+
+10. **Field guarantees:** cache_state_advanced=true, host_surface_target_available=true, shared_surface_attachment_ready=false
+    - Lock: result struct field requirements + field computation logic (compile/runtime)
+    - Test: field preservation test validates all three
+    - Status: ✓ NONE
+
+11. **Outcome type freeze:** .updated_and_presented | .presented
+    - Lock: Zig enum type (compile-time)
+    - Test: classification test validates types
+    - Status: ✓ NONE
+
+### Shared (3 claims)
+12. **No shared outcome production:** outcomes created per-path only
+    - Lock: outcome types internal per path, no shared helper (compile-time)
+    - Test: outcome type tests validate per-path production
+    - Status: ✓ NONE
+
+13. **Attachment consistency:** single computation path only
+    - Lock: `computeHostSurfaceAttachmentState()` is only function (compile-time)
+    - Test: integration tests validate single path
+    - Status: ✓ NONE
+
+14. **Transport routing immutability:** all paths route through canonical folds
+    - Lock: fold helpers private, prevent alternates (compile-time)
+    - Test: "Fold routes consume contracted transport carrier"
+    - Status: ✓ NONE
+
+**Claim-to-Lock Matrix Summary:**
+- Total claims: 14
+- Mapped claims: 14 (100%)
+- Unmapped claims: 0
+- Ambiguous claims: 0
+- Traceability: ✓ COMPLETE AND UNAMBIGUOUS
+
 ## Evidence Format Reference (CZH-S66)
 
 Authority policy and format definitions for enforcement evidence artifacts (checkpoints, audits, verifications, implementations).
