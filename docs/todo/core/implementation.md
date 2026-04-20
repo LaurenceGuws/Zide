@@ -3728,7 +3728,7 @@ Acceptance:
 - Helper/integration invariants locked flattened transport behavior.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B45` Refresh/Reuse Transport Boundary Consolidation (`in_progress`)
+### `CZH-B45` Refresh/Reuse Transport Boundary Consolidation (`review_gate`)
 
 Queue line (exact):
 
@@ -3750,10 +3750,39 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B45` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded startup smoke; process exited by timeout after startup banner)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B45` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B45`
+- `Verdict: architect_review_pending`
+- `Scope summary:` refresh/reuse transport boundary consolidation landed as behavior-neutral seams:
+  - `CZH-941` added boundary audit/consolidation authority map for remaining refresh/reuse boundary spread
+  - `CZH-942` tightened architecture authority for refresh/reuse boundary ownership and canonical fold exits
+  - `CZH-943` consolidated refresh boundary transport to terminal-owned canonical folded host-facing result via `refreshedPresentationResultFromCycle(...)`
+  - `CZH-944` consolidated reuse boundary transport to terminal-owned canonical helper `foldReuseAttemptResultToPresent(...)`
+  - `CZH-945` simplified boundary helper aliases/usages to match consolidated canonical naming
+  - `CZH-946` removed residual widget/runtime glue duplication at reuse boundary callsite
+  - `CZH-947` and `CZH-948` added helper/integration invariants locking consolidated refresh/reuse boundary semantics and parity
+  - `CZH-949` completed hygiene sweep with no residual probe/debug lineage in touched seams
+- `Engineer commits reviewed:` `509b61aa`, `97066e49`, `273a69ac`, `f6ab3ce0`, `54b7b1f3`, `fe8589ac`, `4afedb39`, `cb20133a`, `ee3efa3f`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-99` review
+- `Architect validation request:` validate behavior-neutral refresh/reuse transport boundary consolidation against `CZH-GATE-99`; confirm sprint closure if accepted.
+
 Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
-- `docs/todo/core/CZH_S39_TICKETS.md`
+- `docs/todo/core/CZH_S40_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
