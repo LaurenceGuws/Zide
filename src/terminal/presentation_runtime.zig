@@ -142,14 +142,10 @@ fn refreshTransportFromResult(
 /// Invariant: both legs and conjunction remain fixed to the direct boundary contract values.
 /// *Hardening:* validates direct boundary invariant fields to catch invalid state early.
 pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
+    const transport = directTransportFromUpdated(updated);
     const outcome_state: DirectPresentOutcomeState = .{
-        .transport = .{
-            .outcome = if (updated) .updated_and_presented else .presented,
-            .cache_state_advanced = true,
-            .host_surface_target_available = true,
-            .shared_surface_attachment_ready = false,
-        },
-        .outcome = if (updated) .updated_and_presented else .presented,
+        .transport = transport,
+        .outcome = transport.outcome,
     };
     assertDirectPresentOutcomeConsistency(outcome_state);
     return outcome_state;
@@ -267,12 +263,19 @@ pub fn foldDirectOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertDirectPresentOutcomeConsistency(outcome_state);
-    return presentResultFromOutcomeState(.{
-        .outcome = outcome_state.outcome,
-        .cache_state_advanced = outcome_state.cache_state_advanced,
-        .host_surface_target_available = outcome_state.host_surface_target_available,
-        .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
-    }, timing);
+    return presentResultFromOutcomeState(
+        directTransportFromUpdated(outcome_state.outcome == .updated_and_presented),
+        timing,
+    );
+}
+
+fn directTransportFromUpdated(updated: bool) FoldTransportFields {
+    return .{
+        .outcome = if (updated) .updated_and_presented else .presented,
+        .cache_state_advanced = true,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
 }
 
 /// **Validate reuse outcome consistency:** hardening check that reuse outcome state has correct field values.
