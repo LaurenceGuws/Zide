@@ -309,6 +309,10 @@ pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) v
 /// **Validate refresh outcome consistency:** consolidation of refresh-path assertion patterns.
 /// Verifies that followup coupling invariants hold (if `followup.required`, then `followup.reason != .none`).
 pub fn assertRefreshOutcomeConsistency(state: RefreshOutcomeState) void {
+    std.debug.assert(state.transport.outcome == state.outcome);
+    std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
+    std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
+    std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
     if (state.followup.required) {
         std.debug.assert(state.followup.reason != .none);
     } else {
