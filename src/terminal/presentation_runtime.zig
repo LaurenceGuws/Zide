@@ -163,7 +163,10 @@ pub fn refreshPresentEntry(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     const outcome = classifyRefreshOutcome(refresh, shared_surface_attachment_ready);
-    return foldRefreshOutcomeToPresent(outcome, timing);
+    const result = foldRefreshOutcomeToPresent(outcome, timing);
+    // Invariant: refresh entry always produces a result with outcome
+    std.debug.assert(result.outcome == .updated_and_presented or result.outcome == .presented);
+    return result;
 }
 
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
@@ -183,7 +186,12 @@ pub fn reusePresentEntry(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
-    return foldReuseOutcomeToPresent(outcome_state, timing);
+    const result = foldReuseOutcomeToPresent(outcome_state, timing);
+    // Invariant: reuse entry produces outcome that reflects input state
+    if (outcome_state.transport.outcome == .reused) {
+        std.debug.assert(result.outcome == .reused);
+    }
+    return result;
 }
 
 fn reuseTransportFromOutcome(
@@ -217,7 +225,12 @@ pub fn directPresentEntry(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     const outcome = classifyDirectPresentOutcome(updated);
-    return foldDirectOutcomeToPresent(outcome, timing);
+    const result = foldDirectOutcomeToPresent(outcome, timing);
+    // Invariant: direct entry always advances cache and has host target available
+    std.debug.assert(result.cache_state_advanced == true);
+    std.debug.assert(result.host_surface_target_available == true);
+    std.debug.assert(result.shared_surface_attachment_ready == false);
+    return result;
 }
 
 fn directTransportFromUpdated(updated: bool) FoldTransportFields {
