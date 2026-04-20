@@ -159,6 +159,12 @@ that manages all semantic presentation logic:
   - Assertion-surface minimization: only essential outcome-type invariants retained; construction-guaranteed checks removed
   - Terminal/widget integration surface uses only canonical per-flow fold routes; generic fold composition helpers remain terminal-runtime internals
   - Attachment-readiness transport remains part of canonical folded result fields
+  - **Canonical fold-entry consolidation (CZH-B57):** Three canonical terminal entry points encapsulate classification + folding per flow:
+    - `refreshPresentEntry(refresh, attachment_ready, timing) -> TerminalPresentResult` — internal `RefreshOutcomeState` construction
+    - `reusePresentEntry(outcome, timing) -> TerminalPresentResult` — internal `ReusePresentOutcomeState` construction
+    - `directPresentEntry(updated, timing) -> TerminalPresentResult` — internal `DirectPresentOutcomeState` construction
+    - Widget layer calls canonical entries directly; outcome state structures invisible at boundary
+    - Removes const alias imports and intermediate outcome state threading from widget layer
   
 - **Orchestration coordination** (pure except for integration seams):
   - **Refresh path:** `runPresentableRefreshCycle()`, `executeRefreshPresentFlow()`
