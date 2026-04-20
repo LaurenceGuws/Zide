@@ -433,9 +433,19 @@ test "Integration hygiene: terminal/runtime boundary exposes collapsed transport
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldRefreshOutcomeToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseOutcomeToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldDirectOutcomeToPresent"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "FoldTransportFields"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "directPresentTimingResult"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "presentResultFromRefreshOutcomeState"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldReuseAttemptResultToPresent"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "presentResultFromDirectPresentOutcomeState"));
     }
+}
+
+test "Integration invariant: refresh outcome followup carrier is contracted field" {
+    const unavailable = terminal_presentation_runtime.classifyRefreshOutcome(.target_unavailable, false);
+    try std.testing.expect(unavailable.followup.required == true);
+    try std.testing.expect(unavailable.followup.reason == .target_unavailable);
 }
 
 test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
