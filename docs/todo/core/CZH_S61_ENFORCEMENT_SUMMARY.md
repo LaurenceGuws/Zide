@@ -5,31 +5,31 @@ Sprint: CZH-S61 (governance enforcement + per-path + shared + integration + chec
 
 ## Enforcement Points Established
 
-### CZH-1135: Refresh Enforcement
+### CZH-1135: Refresh Enforcement (doc: CZH_S61_REFRESH_ENFORCEMENT.md)
 - **Compile-time:** foldRefreshOutcomeToPresent private ✓ LOCKED
 - **Runtime:** refreshPresentEntry outcome assertion (line 168) ✓ LOCKED
 - **Test:** assertRefreshOutcomeConsistency isolation ✓ LOCKED
 - **Code review:** Canonical entry signature frozen ✓ APPROVED
 
-### CZH-1136: Reuse Enforcement
+### CZH-1136: Reuse Enforcement (doc: CZH_S61_REUSE_ENFORCEMENT.md)
 - **Compile-time:** foldReuseOutcomeToPresent private ✓ LOCKED
 - **Runtime:** Outcome construction single-path ✓ LOCKED
 - **Test:** assertReuseOutcomeConsistency isolation ✓ LOCKED
 - **Code review:** Eligibility decision immutable ✓ APPROVED
 
-### CZH-1137: Direct Enforcement
+### CZH-1137: Direct Enforcement (doc: CZH_S61_DIRECT_ENFORCEMENT.md)
 - **Compile-time:** foldDirectOutcomeToPresent private ✓ LOCKED
 - **Runtime:** Field guarantees enforced ✓ LOCKED
 - **Test:** No test-only assertions (deterministic) ✓ LOCKED
 - **Code review:** Updated flag determinism ✓ APPROVED
 
-### CZH-1138: Shared Enforcement
+### CZH-1138: Shared Enforcement (doc: CZH_S61_SHARED_ENFORCEMENT.md)
 - **Compile-time:** All private fold helpers enforce single routing ✓ LOCKED
 - **Runtime:** Transport field immutability ✓ LOCKED
 - **Test:** No shared test helpers (path-specific) ✓ LOCKED
 - **Code review:** Result type unified ✓ APPROVED
 
-### CZH-1139: Regression/Integration Locks
+### CZH-1139: Regression/Integration Locks (doc: CZH_S61_INTEGRATION_ENFORCEMENT.md)
 - **Test-only leak:** No production calls to test helpers ✓ ENFORCED
 - **Outcome mutation:** Direct flow to result ✓ ENFORCED
 - **Widget bypass:** Type system prevents construction ✓ ENFORCED

@@ -37,23 +37,26 @@ Governance enforcement tightening: establish enforcement mechanisms (compile-tim
    - Status: ✓ COMPLETE
 
 5. **CZH-1137** — Direct enforcement tightening
-   - Compile-time: foldDirectOutcomeToPresent private enforcement ✓
-   - Runtime: Field guarantees verified ✓
-   - Test: Deterministic path (no test assertions) confirmed ✓
+   - Verified: foldDirectOutcomeToPresent private enforcement
+   - Verified: Field guarantees enforced by logic
+   - Verified: Deterministic path (no test assertions needed)
+   - Documentation: `docs/todo/core/CZH_S61_DIRECT_ENFORCEMENT.md`
    - Status: ✓ COMPLETE
 
 6. **CZH-1138** — Shared enforcement tightening
-   - Compile-time: All private fold helpers locked ✓
-   - Runtime: Transport field immutability enforced ✓
-   - Test: Path-specific test isolation confirmed ✓
+   - Verified: All private fold helpers enforce routing
+   - Verified: Transport field immutability enforced
+   - Verified: Path-specific test isolation
+   - Documentation: `docs/todo/core/CZH_S61_SHARED_ENFORCEMENT.md`
    - Status: ✓ COMPLETE
 
 7. **CZH-1139** — Regression/integration lock expansion
-   - Test-only surface leak prevention: ✓ ENFORCED
-   - Outcome state mutation prevention: ✓ ENFORCED
-   - Widget bypass prevention: ✓ ENFORCED
-   - No-bypass invariant maintenance: ✓ ENFORCED
-   - Attachment state consistency: ✓ ENFORCED
+   - Verified: Test-only surface leak prevention
+   - Verified: Outcome state mutation prevention
+   - Verified: Widget bypass prevention (type system)
+   - Verified: No-bypass invariant maintenance
+   - Verified: Attachment state consistency
+   - Documentation: `docs/todo/core/CZH_S61_INTEGRATION_ENFORCEMENT.md`
    - Status: ✓ COMPLETE
 
 8. **CZH-1140** — Hygiene sweep + validation packet + gate handoff
