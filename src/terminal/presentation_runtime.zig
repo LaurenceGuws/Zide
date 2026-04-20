@@ -290,6 +290,10 @@ fn directTransportFromUpdated(updated: bool) FoldTransportFields {
 
 /// **Validate reuse outcome consistency:** hardening check that reuse outcome state has correct field values.
 pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
+    std.debug.assert(state.transport.outcome == state.outcome);
+    std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
+    std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
+    std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
     if (state.outcome == .reused) {
         std.debug.assert(state.cache_state_advanced == true);
         std.debug.assert(state.host_surface_target_available == true);
@@ -301,6 +305,10 @@ pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
 /// state has invariant field values. Direct boundary draws always advance cache and keep renderer available;
 /// conjunction remains false (not pre-verified).
 pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void {
+    std.debug.assert(state.transport.outcome == state.outcome);
+    std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
+    std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
+    std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
     std.debug.assert(state.cache_state_advanced == true);
     std.debug.assert(state.host_surface_target_available == true);
     std.debug.assert(state.shared_surface_attachment_ready == false);
