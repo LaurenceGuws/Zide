@@ -114,12 +114,12 @@ See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitio
 
 ## Integration Enforcement Locks
 
-- **Test-Only Surface Leak Prevention:** Test assertions isolated; ✓ No production calls detected
-- **Outcome State Mutation Prevention:** Direct flow classify → fold → result; ✓ No mutations possible
-- **Widget Bypass Prevention:** Outcome types internal, fold helpers private; ✓ Compile-time prevents calls
+- **Test-Only Surface Leak Prevention:** Test assertions isolated; ✓ No production calls
+- **Outcome State Mutation Prevention:** Direct flow classify → fold → result; ✓ No mutations
+- **Widget Bypass Prevention:** Outcome types internal, fold helpers private; ✓ Compile-time enforced
 - **No-Bypass Invariant Maintenance:** All canonical entries single-site; ✓ Code review verified
-- **Attachment State Consistency:** `computeHostSurfaceAttachmentState()` is only path; ✓ Single-path enforced
-- **Transport Routing Immutability:** All fields set deterministically; ✓ No conditional logic
+- **Attachment State Consistency:** See authority signal definitions; ✓ Single-path enforced
+- **Transport Routing Immutability:** See authority transport field mapping reference; ✓ Deterministic
 
 ## Shared Change Control
 
