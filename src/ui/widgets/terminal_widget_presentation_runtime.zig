@@ -806,7 +806,7 @@ pub fn runPresentableRefreshCycle(
     }, update_ctx, Local);
 }
 
-pub fn runRefreshedPresentablePresentation(
+pub fn runRefreshBoundaryPresentationResult(
     self: anytype,
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
@@ -955,7 +955,7 @@ pub fn executeRefreshPresentFlow(
             );
         }
         pub fn runPresentation(ctx: RefreshCtx, cycle: TerminalPresentableRefreshExecutionResult) RefreshedPresentablePresentationResult {
-            return runRefreshedPresentablePresentation(
+            return runRefreshBoundaryPresentationResult(
                 ctx.self_widget,
                 ctx.renderer,
                 ctx.terminal_view,

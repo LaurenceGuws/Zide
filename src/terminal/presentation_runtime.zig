@@ -423,15 +423,15 @@ pub fn computeTerminalPresentPlanDecision(
     };
 }
 
-/// **Outcome from refresh + presentation:** host-facing refresh fold result.
-/// Produced at the refresh boundary by terminal-owned canonical fold route.
+/// **Refresh boundary folded result:** host-facing refresh result transport
+/// produced at the terminal-owned refresh boundary fold route.
 pub const RefreshedPresentablePresentationResult = struct {
     present_result: TerminalPresentResult = .{},
 };
 
-/// **Build refreshed presentation result from cycle outcome + timing:** canonical
-/// refresh boundary helper that classifies and folds into host-facing result.
-/// *Consolidation:* refresh boundary transport is collapsed to one terminal-owned
+/// **Build refresh boundary folded result from cycle outcome + timing:** canonical
+/// refresh boundary helper that classifies and folds into host-facing result transport.
+/// *Consolidation:* refresh boundary transport is single-path at the terminal-owned
 /// fold route, avoiding split timing/conjunction assembly at callsites.
 pub fn refreshedPresentationResultFromCycle(
     refresh: TerminalPresentableRefresh,
@@ -590,7 +590,7 @@ pub fn checkDirectPresentEligibility(
 ///   `runPresentation(ctx, cycle: TerminalPresentableRefreshExecutionResult) -> RefreshedPresentablePresentationResult`
 ///
 /// Terminal owns orchestration and classification; widget owns execution via `Hooks`.
-/// *Consolidation:* refresh boundary transport returns canonical folded host-facing result.
+/// *Consolidation:* refresh boundary transport returns canonical folded host-facing result transport.
 pub fn executeRefreshPresentFlow(
     rows: usize,
     cols: usize,
