@@ -1,6 +1,6 @@
 # Terminal Surface Contract (host-agnostic)
 
-Date: 2026-04-19 (authority corrected 2026-04-19 — `CZH-B6-corrective`)
+Date: 2026-04-20 (authority expanded 2026-04-20 — `CZH-S56`; corrected 2026-04-19 — `CZH-B6-corrective`)
 
 Purpose: freeze the **terminal surface** contract for **shared GPU presentation**
 of terminal frames: what the host supplies, what Zide owns, and what stays in
@@ -248,6 +248,72 @@ Widget layer does not construct, access, or manipulate outcome state types.
 - Tests can call classification and invariant helpers for understanding outcome semantics
 - No outcome state construction or manipulation in widget layer
 - No test helper calls in production code paths
+
+## Canonical Entry Contract Lock (CZH-S56)
+
+**Authority:** Strict canonical-entry contract for presentation runtime entry points.
+
+**Three canonical entries are the ONLY widget-layer entry points:**
+1. `refreshPresentEntry(refresh, shared_surface_attachment_ready, timing) → TerminalPresentResult`
+   - Single route for widget refresh presentation
+   - Encapsulates refresh cycle outcome classification + folding in one call
+   - Called exactly once per refresh cycle from widget execution
+
+2. `reuseEligibilityEntry(eligible, host_surface_target_available, shared_surface_attachment_ready, timing) → TerminalPresentResult`
+   - Single route for widget reuse presentation
+   - Encapsulates reuse eligibility decision, outcome construction, and folding in one call
+   - Called exactly once per reuse attempt decision
+
+3. `directPresentEntry(updated, timing) → TerminalPresentResult`
+   - Single route for widget direct presentation
+   - Encapsulates direct present outcome classification + folding in one call
+   - Called exactly once per direct draw execution
+
+**No secondary entry routes:**
+- Fold helpers (`foldRefreshOutcomeToPresent`, `foldReuseOutcomeToPresent`, `foldDirectOutcomeToPresent`) are private (fn not pub fn)
+- No alternate outcome construction paths
+- No outcome state manipulation at widget boundary
+- No result type construction outside canonical entries
+
+**Helper exposure enforcement:**
+- **Production helpers** (11 total including canonical entries):
+  - 3 canonical entries (public)
+  - 2 eligibility checks (public): `checkReuseEligibility`, `checkDirectPresentEligibility`
+  - 4 state computation (public): `refreshPresentState`, `computeHostSurfaceAttachmentState`, `computePresentationSurfaceGeometry`, `computeTerminalPresentPlanDecision`
+  - 2 orchestration (public): `executeRefreshPresentFlow`, `presentDraw`
+
+- **Test-only helpers** (4 public + 1 shared):
+  - 2 outcome classification: `classifyRefreshOutcome`, `classifyDirectPresentOutcome`
+  - 2 outcome invariants: `assertReuseOutcomeConsistency`, `assertRefreshOutcomeConsistency`
+  - 1 shared outcome construction: `reuseSuccessOutcome()` (used by both production and tests)
+
+- **Private fold helpers** (not callable from production):
+  - `foldRefreshOutcomeToPresent` — private, only called by `refreshPresentEntry`
+  - `foldReuseOutcomeToPresent` — private, only called by `reuseEligibilityEntry`
+  - `foldDirectOutcomeToPresent` — private, only called by `directPresentEntry`
+  - Tests can call via import for validation; production cannot compile against them
+
+**Canonical routing rules:**
+- Widget gathers input (refresh cycle, eligibility decision, update state, timing)
+- Widget calls ONE canonical entry (refreshPresentEntry, reuseEligibilityEntry, or directPresentEntry)
+- Terminal entry point encapsulates all semantic decisions, outcome construction, and folding
+- Widget receives `TerminalPresentResult` directly (never outcome state types)
+- Widget interprets result in renderer/GPU/shell context (execution only)
+
+**Verification:** Canonical entry contract audit (CZH-1093) confirms:
+- ✓ All three entry points are called from widget layer
+- ✓ All calls are single-site per path (908, 1404, 1223 in terminal_widget_presentation_runtime.zig)
+- ✓ No fold helper calls in production code
+- ✓ No secondary entry routes detected
+- ✓ No outcome state construction outside canonical entries
+- ✓ No exposure violations in production surface
+- ✓ Test-only surface isolated and explicit
+
+**Lock enforcement:**
+- Fold helper privacy enforced at compile time (fn not pub fn)
+- No alternate production surface
+- All future presentation runtime changes must route through canonical entries
+- Any violation of single-entry constraint must be authorized by architect
 
 ## Android mapping (example, not definition)
 
