@@ -55,6 +55,7 @@ test "Widget layer outcome folding uses terminal helpers" {
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
     const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
     try std.testing.expect(result.outcome == .presented);
+    try std.testing.expect(result.shared_surface_attachment_ready == outcome.shared_surface_attachment_ready);
 }
 
 test "ViewportShiftState is accessible in widget layer" {
@@ -178,6 +179,7 @@ test "Integration boundary: no outcome re-derivation in widget folding" {
     // Verify that the result's outcome matches input outcome (no re-derivation)
     try std.testing.expect(result.outcome == outcome.outcome);
     try std.testing.expect(result.cache_state_advanced == outcome.cache_state_advanced);
+    try std.testing.expect(result.shared_surface_attachment_ready == outcome.shared_surface_attachment_ready);
 }
 
 test "Callback contract: reuse eligibility check integrates with outcome generation" {
@@ -295,6 +297,35 @@ test "Callback contract: terminal classification used regardless of widget execu
     // Reuse path uses terminal outcome constructor
     const reuse_outcome = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     try std.testing.expect(reuse_outcome.outcome == .reused);
+}
+
+test "Integration invariant: direct fold helper parity with direct classification" {
+    const direct_outcome = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
+    const timing = .{ .background_ms = 2.0, .glyph_ms = 1.0, .kitty_ms = 0.0 };
+    const direct_result = terminal_presentation_runtime.presentResultFromDirectPresentOutcomeState(direct_outcome, timing);
+
+    try std.testing.expect(direct_result.outcome == direct_outcome.outcome);
+    try std.testing.expect(direct_result.cache_state_advanced == direct_outcome.cache_state_advanced);
+    try std.testing.expect(direct_result.host_surface_target_available == direct_outcome.host_surface_target_available);
+    try std.testing.expect(direct_result.shared_surface_attachment_ready == direct_outcome.shared_surface_attachment_ready);
+    try std.testing.expect(direct_result.timing.background_ms == timing.background_ms);
+    try std.testing.expect(direct_result.timing.glyph_ms == timing.glyph_ms);
+}
+
+test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
+    const attached_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, true);
+    const detached_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, false);
+    const timing = .{ .background_ms = 0.25, .glyph_ms = 0.75, .kitty_ms = 0.0 };
+
+    const attached_result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(attached_outcome, timing);
+    const detached_result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(detached_outcome, timing);
+
+    try std.testing.expect(attached_result.shared_surface_attachment_ready == true);
+    try std.testing.expect(detached_result.shared_surface_attachment_ready == false);
+    try std.testing.expect(attached_result.host_surface_target_available == attached_outcome.host_surface_target_available);
+    try std.testing.expect(detached_result.host_surface_target_available == detached_outcome.host_surface_target_available);
+    try std.testing.expectEqual(attached_result.timing.background_ms, timing.background_ms);
+    try std.testing.expectEqual(detached_result.timing.glyph_ms, timing.glyph_ms);
 }
 
 test "PresentationPresentState type is consistent at widget/terminal boundary" {
