@@ -79,6 +79,7 @@ comptime {
 
 /// **Outcome snapshot from reuse path:** carries result of the reuse attempt.
 pub const ReusePresentOutcomeState = struct {
+    transport: FoldTransportFields = .{},
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,
     /// **Leg only** — host drawable-target (renderer `terminalPresentableInfo`); not conjunction.
@@ -142,6 +143,12 @@ pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
 /// Invariant: outcome == .reused requires cache_state_advanced && host_surface_target_available && shared_surface_attachment_ready.
 pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
     const outcome: ReusePresentOutcomeState = .{
+        .transport = .{
+            .outcome = .reused,
+            .cache_state_advanced = true,
+            .host_surface_target_available = true,
+            .shared_surface_attachment_ready = true,
+        },
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
