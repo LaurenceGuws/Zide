@@ -804,95 +804,6 @@ pub fn runPresentableRefreshCycle(
     }, update_ctx, Local);
 }
 
-pub fn runRefreshBoundaryPresentationResult(
-    self: anytype,
-    renderer: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    view_geometry: TerminalViewGeometry,
-    draw_cursor: bool,
-    cursor: CursorPos,
-    cursor_style: terminal_types.CursorStyle,
-    hover_link_id: u32,
-    composing_active: bool,
-    composing_hash: u64,
-    surface_update_plan: PresentationUpdatePlan,
-    cycle_result: TerminalPresentableRefreshExecutionResult,
-    note_present_ctx: anytype,
-    note_present: anytype,
-) TerminalPresentResult {
-    const view_cells_len = terminal_view.cells.len;
-
-    const visible_w = surface_update_plan.geometry.visible_w;
-    const visible_h = surface_update_plan.geometry.visible_h;
-    const viewport_w = surface_update_plan.geometry.viewport_w;
-    const viewport_h = surface_update_plan.geometry.viewport_h;
-
-    if (cycle_result.refresh == .refreshed) {
-        advancePresentationCache(
-            &self.surface,
-            terminal_view,
-            surface_update_plan.geometry,
-            draw_cursor,
-            cursor,
-            cursor_style,
-            hover_link_id,
-            composing_active,
-            composing_hash,
-        );
-    }
-    const present_state = terminal_presentation_runtime.refreshPresentState(
-        &self.surface,
-        renderer,
-        terminal_view,
-        cycle_result.refresh,
-        visible_w,
-        visible_h,
-        view_cells_len,
-    );
-    if (present_state.present) {
-        beginViewportClip(renderer, view_geometry, visible_w, visible_h);
-    }
-    defer if (present_state.present) renderer_clip_host.endClip(renderer);
-    const bg = if (view_cells_len > 0)
-        Color{
-            .r = terminal_view.base_colors.resolved_background.r,
-            .g = terminal_view.base_colors.resolved_background.g,
-            .b = terminal_view.base_colors.resolved_background.b,
-            .a = terminal_view.base_colors.resolved_background.a,
-        }
-    else
-        renderer.theme.background;
-    if (view_geometry.viewport.width > 0 and view_geometry.viewport.height > 0) {
-        renderer_presentable_host.drawTerminalPresentableBackdrop(
-            renderer,
-            view_geometry.viewport.x,
-            view_geometry.viewport.y,
-            view_geometry.viewport.width,
-            view_geometry.viewport.height,
-            bg.toRgba(),
-        );
-    }
-    logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
-    if (present_state.present) {
-        terminal_presentation_runtime.presentDraw(
-            renderer,
-            self.surface.lastRenderGeneration(),
-            self.surface.lastRenderGeneration(),
-            view_geometry,
-            viewport_w,
-            viewport_h,
-            note_present_ctx,
-            note_present,
-        );
-    }
-
-    const refresh_outcome = classifyRefreshOutcome(
-        cycle_result.refresh,
-        present_state.shared_surface_attachment_ready,
-    );
-    return presentResultFromRefreshOutcomeState(refresh_outcome, cycle_result.timing);
-}
-
 pub fn executeRefreshPresentFlow(
     self: anytype,
     shell: *app_shell.Shell,
@@ -953,22 +864,76 @@ pub fn executeRefreshPresentFlow(
             );
         }
         pub fn runPresentation(ctx: RefreshCtx, cycle: TerminalPresentableRefreshExecutionResult) TerminalPresentResult {
-            return runRefreshBoundaryPresentationResult(
-                ctx.self_widget,
+            const view_cells_len = ctx.terminal_view.cells.len;
+            const visible_w = ctx.surface_update_plan.geometry.visible_w;
+            const visible_h = ctx.surface_update_plan.geometry.visible_h;
+            const viewport_w = ctx.surface_update_plan.geometry.viewport_w;
+            const viewport_h = ctx.surface_update_plan.geometry.viewport_h;
+
+            if (cycle.refresh == .refreshed) {
+                advancePresentationCache(
+                    &ctx.self_widget.surface,
+                    ctx.terminal_view,
+                    ctx.surface_update_plan.geometry,
+                    ctx.draw_cursor,
+                    ctx.cursor,
+                    ctx.cursor_style,
+                    ctx.hover_link_id,
+                    ctx.composing_active,
+                    ctx.composing_hash,
+                );
+            }
+            const present_state = terminal_presentation_runtime.refreshPresentState(
+                &ctx.self_widget.surface,
                 ctx.renderer,
                 ctx.terminal_view,
-                ctx.view_geometry,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.hover_link_id,
-                ctx.composing_active,
-                ctx.composing_hash,
-                ctx.surface_update_plan,
-                cycle,
-                ctx.note_present_ctx,
-                note_present, // captured from outer scope
+                cycle.refresh,
+                visible_w,
+                visible_h,
+                view_cells_len,
             );
+            if (present_state.present) {
+                beginViewportClip(ctx.renderer, ctx.view_geometry, visible_w, visible_h);
+            }
+            defer if (present_state.present) renderer_clip_host.endClip(ctx.renderer);
+            const bg = if (view_cells_len > 0)
+                Color{
+                    .r = ctx.terminal_view.base_colors.resolved_background.r,
+                    .g = ctx.terminal_view.base_colors.resolved_background.g,
+                    .b = ctx.terminal_view.base_colors.resolved_background.b,
+                    .a = ctx.terminal_view.base_colors.resolved_background.a,
+                }
+            else
+                ctx.renderer.theme.background;
+            if (ctx.view_geometry.viewport.width > 0 and ctx.view_geometry.viewport.height > 0) {
+                renderer_presentable_host.drawTerminalPresentableBackdrop(
+                    ctx.renderer,
+                    ctx.view_geometry.viewport.x,
+                    ctx.view_geometry.viewport.y,
+                    ctx.view_geometry.viewport.width,
+                    ctx.view_geometry.viewport.height,
+                    bg.toRgba(),
+                );
+            }
+            logUnavailable(&ctx.self_widget.surface, ctx.terminal_view, present_state, visible_w, visible_h);
+            if (present_state.present) {
+                terminal_presentation_runtime.presentDraw(
+                    ctx.renderer,
+                    ctx.self_widget.surface.lastRenderGeneration(),
+                    ctx.self_widget.surface.lastRenderGeneration(),
+                    ctx.view_geometry,
+                    viewport_w,
+                    viewport_h,
+                    ctx.note_present_ctx,
+                    note_present,
+                );
+            }
+
+            const refresh_outcome = classifyRefreshOutcome(
+                cycle.refresh,
+                present_state.shared_surface_attachment_ready,
+            );
+            return presentResultFromRefreshOutcomeState(refresh_outcome, cycle.timing);
         }
     };
     const ctx = RefreshCtx{
