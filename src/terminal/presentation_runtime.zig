@@ -230,15 +230,7 @@ pub fn foldReuseOutcomeToPresent(
         std.debug.assert(outcome_state.host_surface_target_available == true);
         std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
     }
-    return presentResultFromOutcomeState(
-        reuseTransportFromOutcome(
-            outcome_state.outcome,
-            outcome_state.cache_state_advanced,
-            outcome_state.host_surface_target_available,
-            outcome_state.shared_surface_attachment_ready,
-        ),
-        timing,
-    );
+    return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
 fn reuseTransportFromOutcome(
@@ -263,10 +255,7 @@ pub fn foldDirectOutcomeToPresent(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertDirectPresentOutcomeConsistency(outcome_state);
-    return presentResultFromOutcomeState(
-        directTransportFromUpdated(outcome_state.outcome == .updated_and_presented),
-        timing,
-    );
+    return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
 fn directTransportFromUpdated(updated: bool) FoldTransportFields {
