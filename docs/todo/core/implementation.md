@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B68` (in_progress, super-gate `CZH-GATE-122`). Sprint `CZH-S63` in progress.
+- Current active macro batch: `CZH-B69` (in_progress, super-gate `CZH-GATE-123`). Sprint `CZH-S64` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -26,6 +26,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S60` (`CZH-B65`, `CZH-GATE-119`). Checkpoint: `docs/todo/core/CZH_S60_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S61` (`CZH-B66`, `CZH-GATE-120`). Checkpoint: `docs/todo/core/CZH_S61_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S62` (`CZH-B67`, `CZH-GATE-121`). Checkpoint: `docs/todo/core/CZH_S62_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S63` (`CZH-B68`, `CZH-GATE-122`). Checkpoint: `docs/todo/core/CZH_S63_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S53` (`CZH-B58`, `CZH-GATE-112`). Checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`.
@@ -4702,7 +4703,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B68` Governance Runtime-to-Test Binding Tightening (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B68` Governance Runtime-to-Test Binding Tightening (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4723,5 +4724,30 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S63_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+### `CZH-B69` Enforcement Surface Compaction with Lock Preservation (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- compact enforcement surface representation while preserving all established no-bypass and drift-lock guarantees
+
+Acceptance:
+
+- enforcement surface is reduced/compacted without weakening binding or lock guarantees
+- refresh/reuse/direct/shared compaction preserves enforcement ownership clarity
+- regression + integration verification proves lock preservation after compaction
+- docs align with compaction vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-123`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S64_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`

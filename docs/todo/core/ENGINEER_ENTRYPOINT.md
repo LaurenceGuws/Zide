@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B68` — **`in_progress`** toward **`CZH-GATE-122`** (sprint `CZH-S63`):
-  governance runtime-to-test binding tightening: make enforcement claims explicitly verifiable through compile/test guards.
-  Ticket source: `docs/todo/core/CZH_S63_TICKETS.md`.
+- `CZH-B69` — **`in_progress`** toward **`CZH-GATE-123`** (sprint `CZH-S64`):
+  enforcement surface compaction: reduce representation while preserving all lock/binding guarantees.
+  Ticket source: `docs/todo/core/CZH_S64_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S63` tickets `CZH-1149`..`CZH-1156` are active; run to
-  **`CZH-GATE-122`** unless blocked.
+- Sprint `CZH-S64` tickets `CZH-1157`..`CZH-1164` are active; run to
+  **`CZH-GATE-123`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-122`): `CZH-B68` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-123`): `CZH-B69` in
   `docs/todo/core/implementation.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`
@@ -20,6 +20,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S60_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S61_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S62_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S63_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S50_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`
@@ -70,7 +71,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S63_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S64_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Connected Android device for this checkpoint: `RF8M74JDWEK`.
@@ -97,11 +98,11 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch status (`CZH-B68`, in progress toward `CZH-GATE-122`):
+Current batch status (`CZH-B69`, in progress toward `CZH-GATE-123`):
 
-- target: bind runtime governance claims directly to explicit compile/test locks
+- target: compact enforcement representation while preserving all established locks
 - preserve sealed canonical surface and no-bypass guarantees
-- preserve behavior and host ABI while improving verifiability of enforcement claims
+- preserve behavior and host ABI while reducing enforcement surface duplication
 
 ## First Read Order
 
