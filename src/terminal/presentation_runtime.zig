@@ -225,11 +225,7 @@ pub fn foldReuseOutcomeToPresent(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
-    if (outcome_state.outcome == .reused) {
-        std.debug.assert(outcome_state.cache_state_advanced == true);
-        std.debug.assert(outcome_state.host_surface_target_available == true);
-        std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
-    }
+    assertReuseOutcomeConsistency(outcome_state);
     return presentResultFromOutcomeState(outcome_state.transport, timing);
 }
 
@@ -267,12 +263,16 @@ fn directTransportFromUpdated(updated: bool) FoldTransportFields {
     };
 }
 
-/// **Validate reuse outcome consistency:** hardening check that reuse outcome state has correct field values.
+/// **Validate reuse outcome route-lock and success invariant:**
+/// Verifies that all outcome fields are locked to canonical transport carrier
+/// and that reuse success path maintains invariants.
 pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
+    // Route-lock: outcome fields locked to canonical transport carrier
     std.debug.assert(state.transport.outcome == state.outcome);
     std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
     std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
     std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
+    // Reuse success invariants: outcome==reused requires all legs and conjunction ready
     if (state.outcome == .reused) {
         std.debug.assert(state.cache_state_advanced == true);
         std.debug.assert(state.host_surface_target_available == true);
@@ -280,14 +280,16 @@ pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
     }
 }
 
-/// **Validate direct boundary outcome consistency:** hardening check that direct boundary outcome
-/// state has invariant field values. Direct boundary draws always advance cache and keep renderer available;
-/// conjunction remains false (not pre-verified).
+/// **Validate direct boundary outcome route-lock and invariants:**
+/// Verifies that all outcome fields are locked to canonical transport carrier
+/// and that direct boundary invariants hold (cache advanced, renderer available, no pre-verified conjunction).
 pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) void {
+    // Route-lock: outcome fields locked to canonical transport carrier
     std.debug.assert(state.transport.outcome == state.outcome);
     std.debug.assert(state.transport.cache_state_advanced == state.cache_state_advanced);
     std.debug.assert(state.transport.host_surface_target_available == state.host_surface_target_available);
     std.debug.assert(state.transport.shared_surface_attachment_ready == state.shared_surface_attachment_ready);
+    // Direct boundary invariants: cache always advanced, renderer always available, conjunction always false
     std.debug.assert(state.cache_state_advanced == true);
     std.debug.assert(state.host_surface_target_available == true);
     std.debug.assert(state.shared_surface_attachment_ready == false);
