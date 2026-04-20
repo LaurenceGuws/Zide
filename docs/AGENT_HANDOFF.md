@@ -8,9 +8,6 @@ Session entrypoint only. Keep this file short and current.
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
 - Active macro batch (`in_progress`, super-gate `CZH-GATE-127`): `CZH-B73` in
   `docs/todo/core/implementation.md`
-- Active sprint (review_gate, awaiting architect decision): `CZH-S67` (CZH-1181..1188)
-  - Checkpoint: `docs/todo/core/CZH_S67_CHECKPOINT.md`
-  - Exception: CZH-1183..1186 consolidated as architect-approved atomic-group (cross-path consistency rationale); board marked; review_gate status pending architect decision
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`
