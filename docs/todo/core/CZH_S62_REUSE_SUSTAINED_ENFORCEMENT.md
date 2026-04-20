@@ -14,7 +14,7 @@ Scope: Consolidated baseline + enforcement for reuse path post-seal
 ### Outcome Construction
 - **Function:** `reuseSuccessOutcome()` (line 112)
 - **Status:** Production essential, public (called by production + tests)
-- **Governance:** No alternate success outcome construction allowed
+- **Governance:** See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions" for outcome type set
 
 ### Eligibility Check
 - **Function:** `checkReuseEligibility(input)` (line 506)
@@ -58,11 +58,11 @@ See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitio
 ## Reuse Path Regression Guards
 
 - **No Alternate Fold Routing:** `foldReuseOutcomeToPresent` private; ✓ No alternate routing
-- **Outcome Construction Single-Path:** `reuseSuccessOutcome()` only path; ✓ Verified
+- **Outcome Construction Single-Path:** `reuseSuccessOutcome()` only path; ✓ Signal ref: authority definitions
 - **Test-Only Helper Isolation:** `assertReuseOutcomeConsistency()` test-only; ✓ No production calls
 - **No Outcome State Mutation:** Direct flow eligibility → construction → fold → result; ✓ Verified
-- **Transport Field Consistency:** Attachment fields constructed consistently; ✓ Deterministic
-- **Eligibility Decision Immutability:** Decision determines outcome type directly; ✓ No re-evaluation
+- **Transport Field Consistency:** See authority transport field mapping reference; ✓ Deterministic
+- **Eligibility Decision Immutability:** Decision determines outcome type; ✓ No re-evaluation
 
 ## Reuse Path Change Control
 
