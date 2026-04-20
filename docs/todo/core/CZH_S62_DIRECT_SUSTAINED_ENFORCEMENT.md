@@ -14,7 +14,7 @@ Scope: Consolidated baseline + enforcement for direct path post-seal
 ### Outcome Classification
 - **Function:** `classifyDirectPresentOutcome(updated)` (line 103)
 - **Status:** Public (used by production + tests)
-- **Contract:** Outcome types frozen (2 states: .updated_and_presented | .presented)
+- **Contract:** See TERMINAL_SURFACE_CONTRACT.md "Signal Definitions" for outcome type set
 
 ### Eligibility Check
 - **Function:** `checkDirectPresentEligibility(input)` (line 523)
@@ -58,11 +58,11 @@ See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitio
 ## Direct Path Regression Guards
 
 - **No Alternate Fold Routing:** `foldDirectOutcomeToPresent` private; ✓ No alternate routing
-- **Outcome Field Guarantees:** All 3 fields guaranteed (cache=true, host=true, attach=false); ✓ Verified
+- **Outcome Field Guarantees:** See authority transport field mapping reference; ✓ All fields guaranteed
 - **Classification Helper Safe:** Test-only usage; ✓ No production logic dependency
 - **No Outcome State Mutation:** Direct flow classify → fold → result; ✓ Verified
 - **Updated Flag Determinism:** Classification depends only on `updated` boolean; ✓ Deterministic
-- **Transport Field Construction:** All three fields always assigned; ✓ No conditional logic
+- **Transport Field Construction:** See authority transport reference; ✓ Deterministic logic
 
 ## Direct Path Change Control
 
