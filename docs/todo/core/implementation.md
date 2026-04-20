@@ -11,13 +11,14 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B46` (in_progress, super-gate `CZH-GATE-100`). Sprint `CZH-S41` in progress.
+- Current active macro batch: `CZH-B47` (in_progress, super-gate `CZH-GATE-101`). Sprint `CZH-S42` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S41`. Ticket source: `docs/todo/core/CZH_S41_TICKETS.md`.
+- Active sprint: `CZH-S42`. Ticket source: `docs/todo/core/CZH_S42_TICKETS.md`.
+- Accepted sprint: `CZH-S41` (`CZH-B46`, `CZH-GATE-100`). Checkpoint: `docs/todo/core/CZH_S41_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S35` (`CZH-B40`, `CZH-GATE-94`). Checkpoint: `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
 - Completed sprint: `CZH-S34` (accepted, with CZH-B39-corrective extraction). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md` and `docs/todo/core/CZH_B39_CORRECTIVE_CHECKPOINT.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
@@ -3785,7 +3786,7 @@ Owner docs:
 - Helper and integration invariants locked the consolidated boundary semantics.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
 
-### `CZH-B46` Boundary Alias Pruning and Surface Contract Narrowing (`review_gate`)
+### `CZH-B46` Boundary Alias Pruning and Surface Contract Narrowing (`accepted`)
 
 Queue line (exact):
 
@@ -3814,7 +3815,7 @@ Acceptance:
 #### `CZH-B46` super-gate packet (engineer → architect)
 
 - `Review chunk: CZH-B46`
-- `Verdict: architect_review_pending`
+- `Verdict: accepted`
 - `Scope summary:` boundary alias pruning + surface contract narrowing landed as behavior-neutral seam hardening:
   - `CZH-951` added alias/vocabulary audit map and canonical replacement dictionary for boundary transport terms
   - `CZH-952` tightened architecture authority to canonical transport vocabulary and narrowed refresh/reuse wording
@@ -3828,6 +3829,35 @@ Acceptance:
 - `Residual risks / follow-ups:`
   - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-100` review
 - `Architect validation request:` validate behavior-neutral alias pruning and contract vocabulary narrowing against `CZH-GATE-100`; confirm sprint closure if accepted.
+
+`Verdict: accepted`
+
+- Architect review confirmed alias pruning and contract vocabulary narrowing remained behavior-neutral and ABI-stable.
+- Helper and integration invariants lock canonical boundary vocabulary routes after pruning.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B47` Boundary Helper Contraction + Refresh/Reuse Result Narrowing (`in_progress`)
+
+Queue line (exact):
+
+- contract remaining refresh/reuse boundary helper duplication and narrow result carriers to canonical folded host-facing transport semantics without behavior change
+
+Acceptance:
+
+- refresh/reuse boundary helper routes are canonical and single-path
+- refresh/reuse result carriers expose only canonical folded host-facing transport semantics
+- widget/runtime boundary has no duplicate helper or carrier glue
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-101`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S42_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
 
 Owner docs:
 
