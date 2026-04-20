@@ -39,14 +39,10 @@ const TerminalPresentFollowupReason = presentable_contract.TerminalPresentFollow
 const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
 const TerminalPresentableRefresh = renderer_presentable_host.TerminalPresentableRefresh;
 
-/// **Outcome snapshot from refresh cycle:** carries result and followup state.
-/// Simplified carrier: full attachment state carried inline, no separate conjunction parameter.
+/// **Outcome snapshot from refresh cycle:** carries transport and followup state.
+/// Transport routes all outcome fields; followup state separate for refresh path only.
 pub const RefreshOutcomeState = struct {
     transport: FoldTransportFields = .{},
-    outcome: TerminalPresentOutcome = .presented,
-    cache_state_advanced: bool = false,
-    host_surface_target_available: bool = false,
-    shared_surface_attachment_ready: bool = false,
     followup: presentable_contract.TerminalPresentFollowup = .{},
 };
 
@@ -112,19 +108,13 @@ pub fn classifyRefreshOutcome(
 ) RefreshOutcomeState {
     const transport = refreshTransportFromResult(refresh, shared_surface_attachment_ready);
     const followup_required = refresh == .target_unavailable;
-    const outcome_state: RefreshOutcomeState = .{
+    return .{
         .transport = transport,
-        .outcome = transport.outcome,
-        .cache_state_advanced = transport.cache_state_advanced,
-        .host_surface_target_available = transport.host_surface_target_available,
-        .shared_surface_attachment_ready = transport.shared_surface_attachment_ready,
         .followup = .{
             .required = followup_required,
             .reason = if (followup_required) .target_unavailable else .none,
         },
     };
-    assertRefreshOutcomeConsistency(outcome_state);
-    return outcome_state;
 }
 
 fn refreshTransportFromResult(
@@ -202,10 +192,9 @@ fn presentResultFromOutcomeState(
     return result;
 }
 
-/// **Canonical outcome fold for refresh path:** uses conjunction carried in outcome state.
-/// *Simplification:* reads `shared_surface_attachment_ready` from outcome state, no separate parameter.
-/// *Hardening:* validates outcome -> result threading and followup propagation; route-lock verified at classification.
-/// *Consolidation:* routes refresh outcomes directly through generic fold with inline followup assignment.
+/// **Canonical outcome fold for refresh path:** routes transport and followup.
+/// *Simplification:* transport carries all outcome fields; followup separate.
+/// *Hardening:* validates followup propagation.
 pub fn foldRefreshOutcomeToPresent(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -213,7 +202,6 @@ pub fn foldRefreshOutcomeToPresent(
     assertRefreshOutcomeConsistency(outcome_state);
     var result = presentResultFromOutcomeState(outcome_state.transport, timing);
     result.followup = outcome_state.followup;
-    // Harden: followup propagates correctly through fold
     if (outcome_state.followup.required) {
         std.debug.assert(result.followup.required == true);
         std.debug.assert(result.followup.reason != .none);
@@ -287,10 +275,9 @@ pub fn assertDirectPresentOutcomeConsistency(state: DirectPresentOutcomeState) v
     std.debug.assert(state.shared_surface_attachment_ready == false);
 }
 
-/// **Validate refresh outcome invariants:**
-/// Verifies followup coupling invariants; transport route-lock verified at construction.
+/// **Validate refresh outcome followup consistency:**
+/// Verifies followup coupling invariant.
 pub fn assertRefreshOutcomeConsistency(state: RefreshOutcomeState) void {
-    // Followup consistency: required must have reason
     if (state.followup.required) {
         std.debug.assert(state.followup.reason != .none);
     } else {
