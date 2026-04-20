@@ -567,11 +567,9 @@ test "PresentationPresentState carries expected fields from pure computation" {
         .present = true,
         .shared_surface_attachment_ready = true,
         .visible = true,
-        .log_unavailable = false,
     };
     try std.testing.expect(state.updated == true);
     try std.testing.expect(state.present == true);
-    try std.testing.expect(state.log_unavailable == false);
 }
 
 test "Widget PresentationPresentState is accessible from re-export" {

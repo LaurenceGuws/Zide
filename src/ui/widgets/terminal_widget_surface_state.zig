@@ -20,8 +20,7 @@
 //!
 //! **Reporting-carrier:** **`readSharedSurfaceAttachmentReady`** is the dominant widget-surface
 //! **report** for conjunction when no `PresentationPresentState` snapshot applies (e.g., diagnostics
-//! outside the refreshed-present path). It must not be described as the operator-log carrier — that
-//! role is `PresentationPresentState.shared_surface_attachment_ready` in `logUnavailable`.
+//! outside the refreshed-present path). The canonical conjunction is `PresentationPresentState.shared_surface_attachment_ready`.
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
@@ -246,8 +245,8 @@ pub const TerminalWidgetSurfaceState = struct {
     /// **Canonical read-only route for conjunction (delegates to terminal presentation bridge):**
     /// derives conjunction from stored legs. Returns same predicate as `notePresentableAvailability`’s
     /// return. Dominant widget-surface **report** when `PresentationPresentState` is not in scope;
-    /// not the operator-log carrier (which uses `PresentationPresentState.shared_surface_attachment_ready`
-    /// in `logUnavailable`). **Pairing:** maintains storage/read consistency with `notePresentableAvailability`.
+    /// not the canonical conjunction (which is `PresentationPresentState.shared_surface_attachment_ready`).
+    /// **Pairing:** maintains storage/read consistency with `notePresentableAvailability`.
     /// **Delegation:** Terminal-owned bridge (`presentation_bridge`) computes the conjunction;
     /// widget storage delegates and does not re-derive.
     pub fn readSharedSurfaceAttachmentReady(self: *const TerminalWidgetSurfaceState) bool {

@@ -474,7 +474,6 @@ pub const PresentationPresentState = struct {
     shared_surface_attachment_ready: bool = false,
     visible: bool = false,
     present: bool = false,
-    log_unavailable: bool = false,
 };
 
 /// **Presentation state computation:** pure conjunction computation for a refresh tick.
@@ -483,11 +482,9 @@ pub const PresentationPresentState = struct {
 pub fn refreshPresentState(
     surface_state: anytype,
     renderer: anytype,
-    terminal_view: anytype,
     presentable_refresh: TerminalPresentableRefresh,
     visible_w: i32,
     visible_h: i32,
-    view_cells_len: usize,
 ) PresentationPresentState {
     var state = PresentationPresentState{
         .updated = presentable_refresh == .refreshed,
@@ -498,7 +495,6 @@ pub fn refreshPresentState(
     state.host_surface_target_available = attachment_state.host_surface_target_available;
     state.shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
     state.present = state.shared_surface_attachment_ready and state.visible;
-    state.log_unavailable = !state.shared_surface_attachment_ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
     return state;
 }
 

@@ -1,7 +1,7 @@
 //! Terminal UI widget: publication capture feeds draw. `terminal.generation_handoff` logs pair
 //! publication generation state with the terminal presentable **pipeline** leg (`terminalPresentablePipelineReady`);
 //! they are not full attachment logs — host target and conjunction vocabulary live on
-//! `TerminalWidgetSurfaceState` / `logUnavailable` (`CZH-B24`, alias lock `CZH-B25`).
+//! `TerminalWidgetSurfaceState` and `PresentationPresentState.shared_surface_attachment_ready` (`CZH-B24`, alias lock `CZH-B25`).
 //! Present aggregation (`TerminalPresentResult`) keeps host-target vs full-attachment fields
 //! distinct (`CZH-B26`). **Reporting carrier (`CZH-S23`):** widget shell defers conjunction in
 //! `renderer.terminal_present` to runtime’s `PresentationPresentState` snapshot, not draw.

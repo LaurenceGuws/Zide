@@ -728,8 +728,8 @@ test "refreshPresentState is pure and deterministic" {
     const renderer = FakeRenderer{ .backend = .{ .available = true } };
     const view = FakeView{};
 
-    const s1 = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
-    const s2 = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
+    const s1 = presentation_runtime.refreshPresentState(&surface, &renderer, .refreshed, 800, 600);
+    const s2 = presentation_runtime.refreshPresentState(&surface, &renderer, .refreshed, 800, 600);
 
     try std.testing.expect(s1.updated == s2.updated);
     try std.testing.expect(s1.present == s2.present);
@@ -741,8 +741,8 @@ test "refreshPresentState updated flag reflects refresh result" {
     const renderer = FakeRenderer{ .backend = .{ .available = true } };
     const view = FakeView{};
 
-    const refreshed = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
-    const presented = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .presented, 800, 600, 1920);
+    const refreshed = presentation_runtime.refreshPresentState(&surface, &renderer, .refreshed, 800, 600);
+    const presented = presentation_runtime.refreshPresentState(&surface, &renderer, .presented, 800, 600);
 
     try std.testing.expect(refreshed.updated == true);
     try std.testing.expect(presented.updated == false);
@@ -753,32 +753,11 @@ test "refreshPresentState visible requires non-zero dimensions" {
     const renderer = FakeRenderer{ .backend = .{ .available = true } };
     const view = FakeView{};
 
-    const visible = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
-    const invisible_w = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 0, 600, 1920);
-    const invisible_h = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 0, 1920);
+    const visible = presentation_runtime.refreshPresentState(&surface, &renderer, .refreshed, 800, 600);
+    const invisible_w = presentation_runtime.refreshPresentState(&surface, &renderer, .refreshed, 0, 600);
+    const invisible_h = presentation_runtime.refreshPresentState(&surface, &renderer, .refreshed, 800, 0);
 
     try std.testing.expect(visible.present == true);
     try std.testing.expect(invisible_w.present == false);
     try std.testing.expect(invisible_h.present == false);
-}
-
-test "refreshPresentState log_unavailable when attachment absent and cells present" {
-    var surface = FakeSurface{ .attachment_ready = false };
-    const renderer = FakeRenderer{ .backend = .{ .available = false } };
-    const view = FakeView{};
-
-    const state = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 1920);
-
-    try std.testing.expect(state.shared_surface_attachment_ready == false);
-    try std.testing.expect(state.log_unavailable == true);
-}
-
-test "refreshPresentState log_unavailable suppressed when no view cells" {
-    var surface = FakeSurface{ .attachment_ready = false };
-    const renderer = FakeRenderer{ .backend = .{ .available = false } };
-    const view = FakeView{};
-
-    const state = presentation_runtime.refreshPresentState(&surface, &renderer, &view, .refreshed, 800, 600, 0);
-
-    try std.testing.expect(state.log_unavailable == false);
 }

@@ -23,10 +23,10 @@
 //! `notePresentableAvailability`. Cache state is advanced by `advancePresentationCache`
 //! (called by widget in the refreshed path, and directly in the reuse path).
 //! Conjunction stored on transient `PresentationPresentState` and outcome/result structs.
-//! Reported through `logUnavailable`, `readSharedSurfaceAttachmentReady`, and result consumers.
+//! Reported through `readSharedSurfaceAttachmentReady` and result consumers.
 //!
 //! **Reporting carriers:** For operator JSON on present failure, conjunction carrier is
-//! `PresentationPresentState.shared_surface_attachment_ready` (see `logUnavailable`).
+//! `PresentationPresentState.shared_surface_attachment_ready` (canonical conjunction).
 //! For ad-hoc reads without a present-state snapshot, carrier is `readSharedSurfaceAttachmentReady`
 //! on `TerminalWidgetSurfaceState`. Do not log conjunction from getter when snapshot already in scope.
 //!
@@ -877,11 +877,9 @@ pub fn executeRefreshPresentFlow(
             const present_state = terminal_presentation_runtime.refreshPresentState(
                 &ctx.self_widget.surface,
                 ctx.renderer,
-                ctx.terminal_view,
                 cycle.refresh,
                 visible_w,
                 visible_h,
-                view_cells_len,
             );
             if (present_state.present) {
                 beginViewportClip(ctx.renderer, ctx.view_geometry, visible_w, visible_h);
@@ -906,7 +904,6 @@ pub fn executeRefreshPresentFlow(
                     bg.toRgba(),
                 );
             }
-            logUnavailable(&ctx.self_widget.surface, ctx.terminal_view, present_state, visible_w, visible_h);
             if (present_state.present) {
                 terminal_presentation_runtime.presentDraw(
                     ctx.renderer,
@@ -1358,33 +1355,6 @@ pub fn beginViewportClip(
         visible_w,
         visible_h,
     );
-}
-
-/// Operator `renderer.terminal_present` JSON when present cannot proceed because the drawable
-/// shared-surface attachment is unavailable. **Conjunction key:** the full-attachment
-/// boolean is reported **only** from **`present_state.shared_surface_attachment_ready`** (same
-/// predicate family as `readSharedSurfaceAttachmentReady` when legs match). Other keys: **generation**
-/// on the view model; view/update flags; renderer presentable **refresh cycle** enum; **pipeline** vs
-/// **host-target** legs per `surface_attachment_contract`; viewport geometry.
-pub fn logUnavailable(
-    surface_state: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    present_state: PresentationPresentState,
-    visible_w: i32,
-    visible_h: i32,
-) void {
-    if (!present_state.log_unavailable) return;
-    app_logger.logger("renderer.terminal_present").logFields(.warning, "terminal_surface_unavailable_for_present", &.{
-        .{ .key = "publication_generation", .value = .{ .unsigned = terminal_view.generation } },
-        .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
-        .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
-        .{ .key = "renderer_presentable_refresh_tag", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
-        .{ .key = "terminal_presentable_pipeline_ready", .value = .{ .boolean = surface_state.terminalPresentablePipelineReady() } },
-        .{ .key = "host_surface_target_available", .value = .{ .boolean = present_state.host_surface_target_available } },
-        .{ .key = "shared_surface_attachment_ready", .value = .{ .boolean = present_state.shared_surface_attachment_ready } },
-        .{ .key = "visible_w", .value = .{ .integer = visible_w } },
-        .{ .key = "visible_h", .value = .{ .integer = visible_h } },
-    });
 }
 
 /// **Reuse orchestration:** delegates to terminal eligibility check, executes if eligible.
