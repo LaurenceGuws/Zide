@@ -23,9 +23,9 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S51`
+- Sprint ID: `CZH-S51` (complete)
 - Previous Sprint: `CZH-S50` (accepted)
-- Super-gate: `CZH-GATE-110` (CZH-B56, `in_progress`)
+- Super-gate: `CZH-GATE-110` (CZH-B56, validation_passed — awaiting architect review)
 
 ## Ticket Order (`CZH-S51`)
 
@@ -42,8 +42,9 @@ This file is the canonical ticket board for active core execution.
 
 ## Current State
 
-- `in_progress`: `CZH-1051`
-- `todo`: `CZH-1052`, `CZH-1053`, `CZH-1054`, `CZH-1055`, `CZH-1056`, `CZH-1057`, `CZH-1058`, `CZH-1059`, `CZH-1060`
+- `in_progress`: none
+- `todo`: none
+- `review_gate`: `CZH-1051`, `CZH-1052`, `CZH-1053`, `CZH-1054`, `CZH-1055`, `CZH-1056`, `CZH-1057`, `CZH-1058`, `CZH-1059`, `CZH-1060` (batch validation complete; awaiting architect)
 - `blocked`: none
 - `review_gate`: none
 - `changes_required`: `CZH-B35` at `CZH-GATE-89`
