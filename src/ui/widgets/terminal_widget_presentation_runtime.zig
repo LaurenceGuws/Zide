@@ -1436,36 +1436,37 @@ pub fn tryFastPresentExisting(
             .supports_reuse_without_sync = renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer),
         },
     );
-    if (!eligible) {
-        return foldReuseAttemptResultToPresent(.{
-            .host_surface_target_available = attachment_state.host_surface_target_available,
-            .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
-        }, .{});
+    var outcome: ReusePresentOutcomeState = .{
+        .host_surface_target_available = attachment_state.host_surface_target_available,
+        .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
+    };
+    if (eligible) {
+        renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
+        terminal_presentation_runtime.presentDraw(
+            renderer,
+            terminal_view.generation,
+            surface_state.lastRenderGeneration(),
+            view_geometry,
+            view_geometry.viewport_width,
+            view_geometry.viewport_height,
+            note_present_ctx,
+            note_present,
+        );
+        const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
+        advancePresentationCache(
+            surface_state,
+            terminal_view,
+            pres_geom,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            hover_link_id,
+            composing_active,
+            composing_hash,
+        );
+        outcome = reuseSuccessOutcome();
     }
-    renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
-    terminal_presentation_runtime.presentDraw(
-        renderer,
-        terminal_view.generation,
-        surface_state.lastRenderGeneration(),
-        view_geometry,
-        view_geometry.viewport_width,
-        view_geometry.viewport_height,
-        note_present_ctx,
-        note_present,
-    );
-    const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
-    advancePresentationCache(
-        surface_state,
-        terminal_view,
-        pres_geom,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        hover_link_id,
-        composing_active,
-        composing_hash,
-    );
-    return foldReuseAttemptResultToPresent(reuseSuccessOutcome(), .{});
+    return foldReuseAttemptResultToPresent(outcome, .{});
 }
 
 /// **Direct presentation:** terminal-owned eligibility check, widget executes if eligible.
