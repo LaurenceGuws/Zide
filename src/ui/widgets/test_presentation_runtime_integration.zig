@@ -444,6 +444,9 @@ test "Integration hygiene: terminal/runtime boundary exposes collapsed transport
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldFieldsFromRefreshOutcome"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldFieldsFromReuseOutcome"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "foldFieldsFromDirectOutcome"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "refreshTransportFromResult"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "reuseTransportFromOutcome"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "directTransportFromUpdated"));
     }
 }
 
@@ -486,6 +489,28 @@ test "Integration invariant: outcome carriers expose contracted transport field"
         }
         std.debug.assert(refresh_transport == 1 and reuse_transport == 1 and direct_transport == 1);
     }
+}
+
+test "Integration invariant: widget canonical fold routes preserve transport-carrier outcomes" {
+    const timing = .{ .background_ms = 0.3, .glyph_ms = 0.2, .kitty_ms = 0.1 };
+
+    const refresh = terminal_presentation_runtime.classifyRefreshOutcome(.presented, true);
+    const refresh_folded = terminal_widget_presentation_runtime.foldRefreshOutcomeToPresent(refresh, timing);
+    try std.testing.expectEqual(refresh_folded.outcome, refresh.transport.outcome);
+
+    const reuse = terminal_presentation_runtime.ReusePresentOutcomeState{
+        .transport = .{ .outcome = .skipped, .cache_state_advanced = false, .host_surface_target_available = true, .shared_surface_attachment_ready = false },
+        .outcome = .skipped,
+        .cache_state_advanced = false,
+        .host_surface_target_available = true,
+        .shared_surface_attachment_ready = false,
+    };
+    const reuse_folded = terminal_widget_presentation_runtime.foldReuseOutcomeToPresent(reuse, timing);
+    try std.testing.expectEqual(reuse_folded.outcome, reuse.transport.outcome);
+
+    const direct = terminal_presentation_runtime.classifyDirectPresentOutcome(false);
+    const direct_folded = terminal_widget_presentation_runtime.foldDirectOutcomeToPresent(direct, timing);
+    try std.testing.expectEqual(direct_folded.outcome, direct.transport.outcome);
 }
 
 test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
