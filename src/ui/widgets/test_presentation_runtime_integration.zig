@@ -447,6 +447,9 @@ test "Integration hygiene: terminal/runtime boundary exposes collapsed transport
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "refreshTransportFromResult"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "reuseTransportFromOutcome"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "directTransportFromUpdated"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldRefreshEntry"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseEntry"));
+        std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldDirectEntry"));
     }
 }
 
@@ -511,6 +514,17 @@ test "Integration invariant: widget canonical fold routes preserve transport-car
     const direct = terminal_presentation_runtime.classifyDirectPresentOutcome(false);
     const direct_folded = terminal_widget_presentation_runtime.foldDirectOutcomeToPresent(direct, timing);
     try std.testing.expectEqual(direct_folded.outcome, direct.transport.outcome);
+}
+
+test "Integration invariant: canonicalized boundary routes keep mirrored field locks" {
+    const refresh = terminal_presentation_runtime.classifyRefreshOutcome(.presented, true);
+    try std.testing.expectEqual(refresh.transport.outcome, refresh.outcome);
+
+    const reuse = terminal_presentation_runtime.reuseSuccessOutcome();
+    try std.testing.expectEqual(reuse.transport.cache_state_advanced, reuse.cache_state_advanced);
+
+    const direct = terminal_presentation_runtime.classifyDirectPresentOutcome(true);
+    try std.testing.expectEqual(direct.transport.host_surface_target_available, direct.host_surface_target_available);
 }
 
 test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
