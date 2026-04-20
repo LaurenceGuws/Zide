@@ -159,11 +159,12 @@ that manages all semantic presentation logic:
   - Assertion-surface minimization: only essential outcome-type invariants retained; construction-guaranteed checks removed
   - Terminal/widget integration surface uses only canonical per-flow fold routes; generic fold composition helpers remain terminal-runtime internals
   - Attachment-readiness transport remains part of canonical folded result fields
-  - **Canonical fold-entry consolidation (CZH-B57):** Three canonical terminal entry points encapsulate classification + folding per flow:
-    - `refreshPresentEntry(refresh, attachment_ready, timing) -> TerminalPresentResult` — internal `RefreshOutcomeState` construction
-    - `reusePresentEntry(outcome, timing) -> TerminalPresentResult` — internal `ReusePresentOutcomeState` construction
-    - `directPresentEntry(updated, timing) -> TerminalPresentResult` — internal `DirectPresentOutcomeState` construction
-    - Widget layer calls canonical entries directly; outcome state structures invisible at boundary
+  - **Canonical fold-entry consolidation (CZH-B57, CZH-S54):** Three canonical terminal entry points encapsulate classification + folding per flow:
+    - `refreshPresentEntry(refresh, attachment_ready, timing) -> TerminalPresentResult` — single route: classify refresh + fold to host result
+    - `reuseEligibilityEntry(eligible, host_target, attachment_ready, timing) -> TerminalPresentResult` — single route: construct outcome from eligibility decision + fold to host result
+    - `directPresentEntry(updated, timing) -> TerminalPresentResult` — single route: classify direct + fold to host result
+    - Widget layer calls canonical entries only; outcome state structures invisible at boundary
+    - Outcome-specific fold helpers (`foldRefreshOutcomeToPresent`, `foldReuseOutcomeToPresent`, `foldDirectOutcomeToPresent`) are terminal-internal; widget does not call them
     - Removes const alias imports and intermediate outcome state threading from widget layer
   
 - **Orchestration coordination** (pure except for integration seams):
@@ -223,7 +224,9 @@ the canonical entry point for consistent outcome handling
 in UI layer.
 
 **Outcome types:** Outcome structs and classification helpers are defined in terminal layer.
-Widget layer uses them, does not redefine or re-classify.
+Widget layer does not construct, access, or manipulate outcome state types.
+
+**Canonical entry-point authority (CZH-S54):** `refreshPresentEntry`, `reuseEligibilityEntry`, and `directPresentEntry` are the only three terminal layer functions the widget layer calls for outcome classification and folding. No outcome-specific fold routes, no intermediate helpers, no outcome state construction at widget boundary. All three are consolidation boundaries: each encapsulates the full path (decision/classify → fold → result) for its flow. Reuse eligibility is the decision input; terminal owns outcome construction.
 
 ## Android mapping (example, not definition)
 
