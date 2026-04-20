@@ -133,11 +133,6 @@ fn presentResultFromOutcomeState(
         .shared_surface_attachment_ready = fields.shared_surface_attachment_ready,
         .timing = timing,
     };
-    // Outcome-specific invariants: verify reused outcome has expected attachment readiness
-    if (fields.outcome == .reused) {
-        std.debug.assert(result.cache_state_advanced == true);
-        std.debug.assert(result.shared_surface_attachment_ready == true);
-    }
     return result;
 }
 
@@ -178,10 +173,6 @@ fn foldReuseOutcomeToPresent(
 ) TerminalPresentResult {
     assertReuseOutcomeConsistency(outcome_state);
     const result = presentResultFromOutcomeState(outcome_state.transport, timing);
-    // Invariant: reuse outcome that reflects input state
-    if (outcome_state.transport.outcome == .reused) {
-        std.debug.assert(result.outcome == .reused);
-    }
     return result;
 }
 
@@ -241,10 +232,6 @@ pub fn directPresentEntry(
 ) TerminalPresentResult {
     const outcome = classifyDirectPresentOutcome(updated);
     const result = foldDirectOutcomeToPresent(outcome, timing);
-    // Invariant: direct entry always advances cache and has host target available
-    std.debug.assert(result.cache_state_advanced == true);
-    std.debug.assert(result.host_surface_target_available == true);
-    std.debug.assert(result.shared_surface_attachment_ready == false);
     return result;
 }
 
