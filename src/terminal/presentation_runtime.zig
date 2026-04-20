@@ -72,6 +72,15 @@ pub const ReusePresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
+/// **Canonical fold transport fields:** shared host-facing transport payload used by
+/// refresh/reuse/direct fold routes before timing/followup composition.
+pub const FoldTransportFields = struct {
+    outcome: TerminalPresentOutcome = .skipped,
+    cache_state_advanced: bool = false,
+    host_surface_target_available: bool = false,
+    shared_surface_attachment_ready: bool = false,
+};
+
 /// **Classify refresh cycle outcome:** derives outcome from refresh result.
 /// Maps `TerminalPresentableRefresh` enum to `RefreshOutcomeState` fields: outcome, cache advancement,
 /// host availability, attachment conjunction, and followup requirements.
@@ -129,27 +138,24 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
 /// outcome-type-specific fields via `applyOutcomeSpecificFields`.
 /// *Hardening:* validates output result consistency across all outcome types.
 pub fn presentResultFromOutcomeState(
-    outcome: TerminalPresentOutcome,
-    cache_state_advanced: bool,
-    host_surface_target_available: bool,
+    fields: FoldTransportFields,
     timing: renderer_presentable_host.TerminalPresentTiming,
-    shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
     const result: TerminalPresentResult = .{
-        .outcome = outcome,
-        .cache_state_advanced = cache_state_advanced,
-        .host_surface_target_available = host_surface_target_available,
-        .shared_surface_attachment_ready = shared_surface_attachment_ready,
+        .outcome = fields.outcome,
+        .cache_state_advanced = fields.cache_state_advanced,
+        .host_surface_target_available = fields.host_surface_target_available,
+        .shared_surface_attachment_ready = fields.shared_surface_attachment_ready,
         .timing = timing,
     };
     // Harden: validate output result consistency across outcome types
-    if (outcome == .reused) {
+    if (fields.outcome == .reused) {
         std.debug.assert(result.cache_state_advanced == true);
         std.debug.assert(result.shared_surface_attachment_ready == true);
     }
     // Direct outcome: cache always advanced, host target always available
-    if (outcome == .updated_and_presented or outcome == .presented) {
-        if (cache_state_advanced and host_surface_target_available) {
+    if (fields.outcome == .updated_and_presented or fields.outcome == .presented) {
+        if (fields.cache_state_advanced and fields.host_surface_target_available) {
             // For direct path, these invariants must hold together
             std.debug.assert(result.outcome == .updated_and_presented or result.outcome == .presented);
         }
@@ -167,11 +173,13 @@ pub fn foldRefreshOutcomeToPresent(
 ) TerminalPresentResult {
     assertRefreshOutcomeConsistency(outcome_state);
     var result = presentResultFromOutcomeState(
-        outcome_state.outcome,
-        outcome_state.cache_state_advanced,
-        outcome_state.host_surface_target_available,
+        .{
+            .outcome = outcome_state.outcome,
+            .cache_state_advanced = outcome_state.cache_state_advanced,
+            .host_surface_target_available = outcome_state.host_surface_target_available,
+            .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
+        },
         timing,
-        outcome_state.shared_surface_attachment_ready,
     );
     applyOutcomeSpecificFields(&result, outcome_state.followup.required, outcome_state.followup.reason);
     // Harden: verify followup propagates correctly through fold
@@ -194,11 +202,13 @@ pub fn foldReuseOutcomeToPresent(
         std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
     }
     return presentResultFromOutcomeState(
-        outcome_state.outcome,
-        outcome_state.cache_state_advanced,
-        outcome_state.host_surface_target_available,
+        .{
+            .outcome = outcome_state.outcome,
+            .cache_state_advanced = outcome_state.cache_state_advanced,
+            .host_surface_target_available = outcome_state.host_surface_target_available,
+            .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
+        },
         timing,
-        outcome_state.shared_surface_attachment_ready,
     );
 }
 
@@ -211,11 +221,13 @@ pub fn foldDirectOutcomeToPresent(
 ) TerminalPresentResult {
     assertDirectPresentOutcomeConsistency(outcome_state);
     return presentResultFromOutcomeState(
-        outcome_state.outcome,
-        outcome_state.cache_state_advanced,
-        outcome_state.host_surface_target_available,
+        .{
+            .outcome = outcome_state.outcome,
+            .cache_state_advanced = outcome_state.cache_state_advanced,
+            .host_surface_target_available = outcome_state.host_surface_target_available,
+            .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
+        },
         timing,
-        outcome_state.shared_surface_attachment_ready,
     );
 }
 
