@@ -159,17 +159,13 @@ pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
 /// construct outcome state with all fields true (reuse succeeded, cache advanced, attachment ready).
 /// Invariant: outcome == .reused requires cache_state_advanced && host_surface_target_available && shared_surface_attachment_ready.
 pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
+    const transport = reuseTransportFromOutcome(.reused, true, true, true);
     const outcome: ReusePresentOutcomeState = .{
-        .transport = .{
-            .outcome = .reused,
-            .cache_state_advanced = true,
-            .host_surface_target_available = true,
-            .shared_surface_attachment_ready = true,
-        },
-        .outcome = .reused,
-        .cache_state_advanced = true,
-        .host_surface_target_available = true,
-        .shared_surface_attachment_ready = true,
+        .transport = transport,
+        .outcome = transport.outcome,
+        .cache_state_advanced = transport.cache_state_advanced,
+        .host_surface_target_available = transport.host_surface_target_available,
+        .shared_surface_attachment_ready = transport.shared_surface_attachment_ready,
     };
     assertReuseOutcomeConsistency(outcome);
     return outcome;
@@ -238,12 +234,29 @@ pub fn foldReuseOutcomeToPresent(
         std.debug.assert(outcome_state.host_surface_target_available == true);
         std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
     }
-    return presentResultFromOutcomeState(.{
-        .outcome = outcome_state.outcome,
-        .cache_state_advanced = outcome_state.cache_state_advanced,
-        .host_surface_target_available = outcome_state.host_surface_target_available,
-        .shared_surface_attachment_ready = outcome_state.shared_surface_attachment_ready,
-    }, timing);
+    return presentResultFromOutcomeState(
+        reuseTransportFromOutcome(
+            outcome_state.outcome,
+            outcome_state.cache_state_advanced,
+            outcome_state.host_surface_target_available,
+            outcome_state.shared_surface_attachment_ready,
+        ),
+        timing,
+    );
+}
+
+fn reuseTransportFromOutcome(
+    outcome: TerminalPresentOutcome,
+    cache_state_advanced: bool,
+    host_surface_target_available: bool,
+    shared_surface_attachment_ready: bool,
+) FoldTransportFields {
+    return .{
+        .outcome = outcome,
+        .cache_state_advanced = cache_state_advanced,
+        .host_surface_target_available = host_surface_target_available,
+        .shared_surface_attachment_ready = shared_surface_attachment_ready,
+    };
 }
 
 /// **Canonical direct boundary fold route:** folds direct boundary outcome through generic result helper.
