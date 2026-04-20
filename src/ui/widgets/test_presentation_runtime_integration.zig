@@ -337,6 +337,24 @@ test "Integration invariant: refresh boundary helper folds cycle result into hos
     try std.testing.expectEqual(refreshed.present_result.outcome, .updated_and_presented);
 }
 
+test "Integration invariant: refresh boundary helper preserves unavailable followup host-facing transport" {
+    const cycle_timing = .{ .background_ms = 0.5, .glyph_ms = 0.25, .kitty_ms = 0.0 };
+    const refreshed = terminal_presentation_runtime.refreshedPresentationResultFromCycle(
+        .target_unavailable,
+        false,
+        cycle_timing,
+    );
+
+    try std.testing.expectEqual(refreshed.present_result.outcome, .presented);
+    try std.testing.expectEqual(refreshed.present_result.followup.required, true);
+    try std.testing.expectEqual(refreshed.present_result.followup.reason, .target_unavailable);
+    try std.testing.expectEqual(refreshed.present_result.host_surface_target_available, false);
+    try std.testing.expectEqual(refreshed.present_result.shared_surface_attachment_ready, false);
+    try std.testing.expectEqual(refreshed.present_result.timing.background_ms, cycle_timing.background_ms);
+    try std.testing.expectEqual(refreshed.present_result.timing.glyph_ms, cycle_timing.glyph_ms);
+    try std.testing.expectEqual(refreshed.present_result.timing.kitty_ms, cycle_timing.kitty_ms);
+}
+
 test "Integration invariant: reuse fold helper preserves flattened reuse transport" {
     const reuse_attempt = terminal_widget_presentation_runtime.ReusePresentOutcomeState{
         .outcome = .skipped,
