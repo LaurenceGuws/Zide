@@ -110,17 +110,13 @@ pub fn classifyRefreshOutcome(
     refresh: TerminalPresentableRefresh,
     shared_surface_attachment_ready: bool,
 ) RefreshOutcomeState {
+    const transport = refreshTransportFromResult(refresh, shared_surface_attachment_ready);
     const outcome_state: RefreshOutcomeState = .{
-        .transport = .{
-            .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
-            .cache_state_advanced = refresh == .refreshed,
-            .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
-            .shared_surface_attachment_ready = shared_surface_attachment_ready,
-        },
-        .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
-        .cache_state_advanced = refresh == .refreshed,
-        .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
-        .shared_surface_attachment_ready = shared_surface_attachment_ready,
+        .transport = transport,
+        .outcome = transport.outcome,
+        .cache_state_advanced = transport.cache_state_advanced,
+        .host_surface_target_available = transport.host_surface_target_available,
+        .shared_surface_attachment_ready = transport.shared_surface_attachment_ready,
         .followup = .{
             .required = refresh == .target_unavailable,
             .reason = if (refresh == .target_unavailable) .target_unavailable else .none,
@@ -128,6 +124,18 @@ pub fn classifyRefreshOutcome(
     };
     assertRefreshOutcomeConsistency(outcome_state);
     return outcome_state;
+}
+
+fn refreshTransportFromResult(
+    refresh: TerminalPresentableRefresh,
+    shared_surface_attachment_ready: bool,
+) FoldTransportFields {
+    return .{
+        .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
+        .cache_state_advanced = refresh == .refreshed,
+        .host_surface_target_available = refresh != .unsupported and refresh != .target_unavailable,
+        .shared_surface_attachment_ready = shared_surface_attachment_ready,
+    };
 }
 
 /// **Classify direct boundary outcome:** derive outcome from direct boundary draw completion.
