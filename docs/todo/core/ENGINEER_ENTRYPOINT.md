@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S54_TICKETS.md`
+3. `docs/todo/core/CZH_S55_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B59` — **`in_progress`** toward **`CZH-GATE-113`** (sprint `CZH-S54`):
-  canonical entry/eligibility unification: one canonical terminal entry per flow with minimal boundary glue.
-  Ticket source: `docs/todo/core/CZH_S54_TICKETS.md`.
+- `CZH-B60` — **`in_progress`** toward **`CZH-GATE-114`** (sprint `CZH-S55`):
+  result-surface tightening and test-surface isolation: production boundary canonical only, test access explicit.
+  Ticket source: `docs/todo/core/CZH_S55_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S54` tickets `CZH-1077`..`CZH-1084` are active; run to
-  **`CZH-GATE-113`** unless blocked.
+- Sprint `CZH-S55` tickets `CZH-1085`..`CZH-1092` are active; run to
+  **`CZH-GATE-114`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

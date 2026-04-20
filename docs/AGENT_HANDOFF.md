@@ -6,11 +6,12 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`, super-gate `CZH-GATE-113`): `CZH-B59` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-114`): `CZH-B60` in
   `docs/todo/core/implementation.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S50_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S48_CHECKPOINT.md`
@@ -61,7 +62,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S54_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S55_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Connected Android device for this checkpoint: `RF8M74JDWEK`.
@@ -88,10 +89,10 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch status (`CZH-B59`, in progress toward `CZH-GATE-113`):
+Current batch status (`CZH-B60`, in progress toward `CZH-GATE-114`):
 
-- target: unify canonical entry/eligibility surfaces so each flow has one entry route and minimal boundary glue
-- prune remaining duplicate helper exposure after result-only boundary contraction
+- target: tighten production result-surface to canonical entries only and isolate test-only helper access
+- prune remaining mixed-surface helper exposure after entry unification
 - preserve behavior and host ABI while tightening runtime boundary contracts
 
 ## First Read Order
@@ -99,7 +100,7 @@ Current batch status (`CZH-B59`, in progress toward `CZH-GATE-113`):
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 2. `docs/todo/core/implementation.md`
 3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/CZH_S54_TICKETS.md`
+4. `docs/todo/core/CZH_S55_TICKETS.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
