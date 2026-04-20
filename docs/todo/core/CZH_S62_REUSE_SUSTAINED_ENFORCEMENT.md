@@ -46,72 +46,23 @@ Scope: Consolidated baseline + enforcement for reuse path post-seal
 
 ## Reuse Path Enforcement Layers (CZH-S61 Verified)
 
-### 1. Compile-Time Enforcement (Type System)
-- **Owner:** Zig type system + module visibility
-- **Responsibility:** Prevent invalid function calls at compile time
-- **Enforcement:** Private fold helper and outcome type isolation prevent bypass
-- **Verification:** ✓ `foldReuseOutcomeToPresent` remains private (line 170)
-- **Status:** ✓ LOCKED
+See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitions.
 
-### 2. Runtime Enforcement (Assertions)
-- **Owner:** Production assertions in canonical entry
-- **Responsibility:** Detect outcome construction violations
-- **Enforcement:** Outcome constructed deterministically in `reuseEligibilityEntry` (line 182)
-- **Check:** `reuseSuccessOutcome()` called per eligibility decision
-- **Verification:** ✓ No assertion needed; construction logic guarantees outcome validity
-- **Test Binding:** `test_presentation_runtime.zig:41-47` "Reuse success outcome invariants hold"
-- **Status:** ✓ LOCKED
+**Per-Path Verification:**
 
-### 3. Test Enforcement (Test Coverage)
-- **Owner:** Unit test suite (zig build test)
-- **Responsibility:** Detect regression vectors in test execution
-- **Enforcement:** Tests validate outcome consistency, field guarantees
-- **Check:** `assertReuseOutcomeConsistency()` (line 249) isolated to tests
-- **Verification:** ✓ No production calls to test helper detected
-- **Test Binding:** `test_presentation_runtime.zig:131-152` "Reuse fold helper preserves non-reused transport"
-- **Test Binding:** `test_presentation_runtime.zig:154-179` "Reuse boundary helper forwards reused/non-reused consistently"
-- **Test Binding:** `test_presentation_runtime.zig:227-247` "Fold routes consume contracted transport carrier"
-- **Status:** ✓ LOCKED
-
-### 4. Code Review Enforcement (Architecture)
-- **Owner:** Architect approval for contract-affecting changes
-- **Responsibility:** Block new entry points, signature changes, exposure violations
-- **Enforcement:** Eligibility decision immutable; all changes require architect approval
-- **Check:** No re-evaluation of eligibility inside canonical entry
-- **Verification:** ✓ Code review gates specified
-- **Status:** ✓ LOCKED
+- **Compile-Time:** ✓ `foldReuseOutcomeToPresent` private (line 170, type system enforces)
+- **Runtime:** ✓ Outcome construction deterministic via `reuseSuccessOutcome()` (test: "success outcome invariants")
+- **Test:** ✓ `assertReuseOutcomeConsistency()` (line 249) isolated; 3 binding tests verify invariants
+- **Code Review:** ✓ Architect approval gates for canonical entry changes
 
 ## Reuse Path Regression Guards
 
-### Guard 1: No Alternate Fold Routing
-- **Risk:** Widget code bypasses canonical entry via alternate fold path
-- **Enforcement:** `foldReuseOutcomeToPresent` private; code review + compile-time privacy
-- **Verification:** ✓ No alternate routing detected
-
-### Guard 2: Outcome Construction Single-Path
-- **Risk:** New outcome construction helper added (e.g., `reuseSkippedOutcome()`)
-- **Enforcement:** Code review + change control
-- **Verification:** ✓ `reuseSuccessOutcome()` remains only construction path
-
-### Guard 3: Test-Only Helper Isolation
-- **Risk:** Production code calls `assertReuseOutcomeConsistency` for logic
-- **Enforcement:** Code review + test coverage
-- **Verification:** ✓ Test helper isolated; no production calls detected
-
-### Guard 4: No Outcome State Mutation
-- **Risk:** Widget or helper code modifies outcome state after production
-- **Enforcement:** Code review + integration tests
-- **Verification:** ✓ Outcome flows directly: eligibility → construction → fold → result
-
-### Guard 5: Transport Field Consistency
-- **Risk:** Transport field computation modified to bypass field guarantees
-- **Enforcement:** Code review + invariant verification
-- **Verification:** ✓ Transport fields deterministic (attachment fields constructed consistently)
-
-### Guard 6: Eligibility Decision Immutability
-- **Risk:** Eligibility check returns one result, but canonical entry re-checks differently
-- **Enforcement:** Code review + outcome construction verification
-- **Verification:** ✓ Eligibility decision determines outcome type (.reused | .skipped) directly
+- **No Alternate Fold Routing:** `foldReuseOutcomeToPresent` private; ✓ No alternate routing
+- **Outcome Construction Single-Path:** `reuseSuccessOutcome()` only path; ✓ Verified
+- **Test-Only Helper Isolation:** `assertReuseOutcomeConsistency()` test-only; ✓ No production calls
+- **No Outcome State Mutation:** Direct flow eligibility → construction → fold → result; ✓ Verified
+- **Transport Field Consistency:** Attachment fields constructed consistently; ✓ Deterministic
+- **Eligibility Decision Immutability:** Decision determines outcome type directly; ✓ No re-evaluation
 
 ## Reuse Path Change Control
 
