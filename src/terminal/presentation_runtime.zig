@@ -223,9 +223,10 @@ fn reuseTransportFromOutcome(
 }
 
 /// **Canonical direct boundary fold route:** folds direct boundary outcome directly through generic result helper.
+/// *Internal:* called only by `directPresentEntry`; widget does not call directly.
 /// *Simplification:* collapses direct boundary transport hop at callsites.
 /// Invariants guaranteed by directTransportFromUpdated construction; no runtime checks needed.
-pub fn foldDirectOutcomeToPresent(
+fn foldDirectOutcomeToPresent(
     outcome_state: DirectPresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
