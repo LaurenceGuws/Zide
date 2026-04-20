@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B71` (in_progress, super-gate `CZH-GATE-125`). Sprint `CZH-S66` review_gate (pending architect board action for atomic-group exception CZH-1175..1178).
+- Current active macro batch: `CZH-B72` (in_progress, super-gate `CZH-GATE-126`). Sprint `CZH-S67` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -29,7 +29,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S63` (`CZH-B68`, `CZH-GATE-122`). Checkpoint: `docs/todo/core/CZH_S63_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S64` (`CZH-B69`, `CZH-GATE-123`). Checkpoint: `docs/todo/core/CZH_S64_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
-- Pending sprint: `CZH-S66` (`CZH-B71`, `CZH-GATE-125`, review_gate pending architect board action). Checkpoint: `docs/todo/core/CZH_S66_CHECKPOINT.md`. Note: CZH-1175..1178 atomic-group exception per CZH-B71-corrective.
+- Accepted sprint: `CZH-S66` (`CZH-B71`, `CZH-GATE-125`). Checkpoint: `docs/todo/core/CZH_S66_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
@@ -4782,7 +4782,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B71` Enforcement Evidence Surface Normalization (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B71` Enforcement Evidence Surface Normalization (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4803,5 +4803,30 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S66_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+### `CZH-B72` Enforcement Claim-to-Lock Trace Matrix Hardening (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- harden claim-to-lock trace matrix so every enforcement claim maps unambiguously to concrete compile/test guards
+
+Acceptance:
+
+- claim-to-lock trace matrix is explicit and unambiguous across refresh/reuse/direct/shared paths
+- no unmapped or multiply-ambiguous enforcement claims remain
+- regression + integration verification confirms matrix completeness
+- docs align with trace-matrix vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-126`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S67_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
