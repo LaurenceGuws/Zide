@@ -171,9 +171,9 @@ pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
 /// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
 /// **conjunction** when supplied (not report snapshot). **Canonical fold helper for all outcome paths**
 /// — all outcome-specific folds route through this function.
-/// *Consolidation:* central hub of fold path composition — `foldRefreshOutcomeToPresent`
-/// and `foldReuseOutcomeToPresent` call this with outcome-specific parameters.
-/// *Hardening:* validates output result consistency across all outcome types.
+/// *Consolidation:* central hub of fold path composition — `foldRefreshOutcomeToPresent`,
+/// `foldReuseOutcomeToPresent`, and `foldDirectOutcomeToPresent` call this directly after validation.
+/// *Hardening:* validates transport field consistency and output result invariants.
 fn presentResultFromOutcomeState(
     fields: FoldTransportFields,
     timing: renderer_presentable_host.TerminalPresentTiming,
@@ -185,7 +185,12 @@ fn presentResultFromOutcomeState(
         .shared_surface_attachment_ready = fields.shared_surface_attachment_ready,
         .timing = timing,
     };
-    // Harden: validate output result consistency across outcome types
+    // Harden: transport fields thread correctly through generic fold
+    std.debug.assert(result.outcome == fields.outcome);
+    std.debug.assert(result.cache_state_advanced == fields.cache_state_advanced);
+    std.debug.assert(result.host_surface_target_available == fields.host_surface_target_available);
+    std.debug.assert(result.shared_surface_attachment_ready == fields.shared_surface_attachment_ready);
+    // Outcome-specific invariants
     if (fields.outcome == .reused) {
         std.debug.assert(result.cache_state_advanced == true);
         std.debug.assert(result.shared_surface_attachment_ready == true);
@@ -193,7 +198,6 @@ fn presentResultFromOutcomeState(
     // Direct outcome: cache always advanced, host target always available
     if (fields.outcome == .updated_and_presented or fields.outcome == .presented) {
         if (fields.cache_state_advanced and fields.host_surface_target_available) {
-            // For direct path, these invariants must hold together
             std.debug.assert(result.outcome == .updated_and_presented or result.outcome == .presented);
         }
     }
@@ -202,7 +206,7 @@ fn presentResultFromOutcomeState(
 
 /// **Canonical outcome fold for refresh path:** uses conjunction carried in outcome state.
 /// *Simplification:* reads `shared_surface_attachment_ready` from outcome state, no separate parameter.
-/// *Hardening:* validates outcome -> result threading and followup propagation.
+/// *Hardening:* validates route-lock consistency, outcome -> result threading, and followup propagation.
 /// *Consolidation:* routes refresh outcomes directly through generic fold with inline followup assignment.
 pub fn foldRefreshOutcomeToPresent(
     outcome_state: RefreshOutcomeState,
@@ -211,7 +215,12 @@ pub fn foldRefreshOutcomeToPresent(
     assertRefreshOutcomeConsistency(outcome_state);
     var result = presentResultFromOutcomeState(outcome_state.transport, timing);
     result.followup = outcome_state.followup;
-    // Harden: verify followup propagates correctly through fold
+    // Harden: verify transport fields remain locked through fold
+    std.debug.assert(result.outcome == outcome_state.outcome);
+    std.debug.assert(result.cache_state_advanced == outcome_state.cache_state_advanced);
+    std.debug.assert(result.host_surface_target_available == outcome_state.host_surface_target_available);
+    std.debug.assert(result.shared_surface_attachment_ready == outcome_state.shared_surface_attachment_ready);
+    // Harden: followup propagates correctly
     if (outcome_state.followup.required) {
         std.debug.assert(result.followup.required == true);
         std.debug.assert(result.followup.reason != .none);
@@ -221,12 +230,19 @@ pub fn foldRefreshOutcomeToPresent(
 
 /// **Canonical reuse boundary helper:** folds reuse-attempt result into host-facing transport.
 /// Widget/runtime boundaries should call this helper when completing reuse attempt transport.
+/// *Hardening:* validates route-lock consistency and outcome -> result threading.
 pub fn foldReuseOutcomeToPresent(
     outcome_state: ReusePresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertReuseOutcomeConsistency(outcome_state);
-    return presentResultFromOutcomeState(outcome_state.transport, timing);
+    const result = presentResultFromOutcomeState(outcome_state.transport, timing);
+    // Harden: verify transport fields remain locked through fold
+    std.debug.assert(result.outcome == outcome_state.outcome);
+    std.debug.assert(result.cache_state_advanced == outcome_state.cache_state_advanced);
+    std.debug.assert(result.host_surface_target_available == outcome_state.host_surface_target_available);
+    std.debug.assert(result.shared_surface_attachment_ready == outcome_state.shared_surface_attachment_ready);
+    return result;
 }
 
 fn reuseTransportFromOutcome(
@@ -245,13 +261,22 @@ fn reuseTransportFromOutcome(
 
 /// **Canonical direct boundary fold route:** folds direct boundary outcome directly through generic result helper.
 /// *Simplification:* collapses direct boundary transport hop at callsites.
-/// *Hardening:* validates direct boundary invariants before folding.
+/// *Hardening:* validates direct boundary invariants and route-lock consistency through fold.
 pub fn foldDirectOutcomeToPresent(
     outcome_state: DirectPresentOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     assertDirectPresentOutcomeConsistency(outcome_state);
-    return presentResultFromOutcomeState(outcome_state.transport, timing);
+    const result = presentResultFromOutcomeState(outcome_state.transport, timing);
+    // Harden: verify direct boundary invariants propagate through fold
+    std.debug.assert(result.outcome == outcome_state.outcome);
+    std.debug.assert(result.cache_state_advanced == outcome_state.cache_state_advanced);
+    std.debug.assert(result.host_surface_target_available == outcome_state.host_surface_target_available);
+    std.debug.assert(result.shared_surface_attachment_ready == outcome_state.shared_surface_attachment_ready);
+    std.debug.assert(result.cache_state_advanced == true);
+    std.debug.assert(result.host_surface_target_available == true);
+    std.debug.assert(result.shared_surface_attachment_ready == false);
+    return result;
 }
 
 fn directTransportFromUpdated(updated: bool) FoldTransportFields {
