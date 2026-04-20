@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B62` (in_progress, super-gate `CZH-GATE-116`). Sprint `CZH-S57` in progress.
+- Current active macro batch: `CZH-B63` (in_progress, super-gate `CZH-GATE-117`). Sprint `CZH-S58` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -20,6 +20,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S55` (`CZH-B60`, `CZH-GATE-114`). Checkpoint: `docs/todo/core/CZH_S55_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S56` (`CZH-B61`, `CZH-GATE-115`). Checkpoint: `docs/todo/core/CZH_S56_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S57` (`CZH-B62`, `CZH-GATE-116`). Checkpoint: `docs/todo/core/CZH_S57_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S53` (`CZH-B58`, `CZH-GATE-112`). Checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`.
@@ -4520,7 +4521,7 @@ Owner docs:
 - Production entry routing remains canonical-only across refresh/reuse/direct flows.
 - Helper exposure remains controlled; no secondary production entry surfaces were introduced.
 
-### `CZH-B62` Contract-Only Production Surface Audit + Exposure Lock (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B62` Contract-Only Production Surface Audit + Exposure Lock (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4541,6 +4542,36 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S57_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+`Verdict: accepted`
+
+- Architect review confirmed contract-only production surface lock remained behavior-neutral and ABI-stable.
+- Canonical production-callable boundary remained minimal and no-bypass invariants stayed intact.
+
+### `CZH-B63` Entry Contract Compression + Assertion Surface Trim (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- compress canonical entry contract surface and trim non-essential assertion/exposure layers while preserving behavior and ABI
+
+Acceptance:
+
+- production canonical entry surface remains single-route per flow with no helper leakage
+- non-essential assertion/exposure layers are removed or explicitly scoped
+- helper + integration invariants lock no-bypass and parity guarantees after trim
+- docs align with compressed contract vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-117`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S58_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
