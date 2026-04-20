@@ -210,6 +210,14 @@ test "Helper contraction keeps collapsed refresh and direct transport surface" {
     }
 }
 
+test "Helper contraction removes boundary mapping helper callsites" {
+    comptime {
+        std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromRefreshOutcome"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromReuseOutcome"));
+        std.debug.assert(!@hasDecl(presentation_runtime, "foldFieldsFromDirectOutcome"));
+    }
+}
+
 test "Unified fold transport fields map through canonical reuse fold helper" {
     const timing = renderer_presentable_host.TerminalPresentTiming{
         .background_ms = 0.25,
@@ -266,6 +274,20 @@ test "Outcome carriers keep locked canonical field shapes" {
                 if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) attachment += 1;
             }
             std.debug.assert(outcome == 1 and cache == 1 and host == 1 and attachment == 1);
+        }
+        {
+            var transport_count: usize = 0;
+            for (@typeInfo(presentation_runtime.ReusePresentOutcomeState).@"struct".fields) |f| {
+                if (std.mem.eql(u8, f.name, "transport")) transport_count += 1;
+            }
+            std.debug.assert(transport_count == 1);
+        }
+        {
+            var transport_count: usize = 0;
+            for (@typeInfo(presentation_runtime.DirectPresentOutcomeState).@"struct".fields) |f| {
+                if (std.mem.eql(u8, f.name, "transport")) transport_count += 1;
+            }
+            std.debug.assert(transport_count == 1);
         }
     }
 }
