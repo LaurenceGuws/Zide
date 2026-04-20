@@ -11,14 +11,15 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B58` (in_progress, super-gate `CZH-GATE-112`). Sprint `CZH-S53` in progress.
+- Current active macro batch: `CZH-B59` (in_progress, super-gate `CZH-GATE-113`). Sprint `CZH-S54` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S37` (`CZH-B42`, `CZH-GATE-96`). Checkpoint: `docs/todo/core/CZH_S37_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S38` (`CZH-B43`, `CZH-GATE-97`). Checkpoint: `docs/todo/core/CZH_S38_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S39` (`CZH-B44`, `CZH-GATE-98`). Checkpoint: `docs/todo/core/CZH_S39_CHECKPOINT.md`.
-- Active sprint: `CZH-S53`. Ticket source: `docs/todo/core/CZH_S53_TICKETS.md`.
+- Active sprint: `CZH-S54`. Ticket source: `docs/todo/core/CZH_S54_TICKETS.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S53` (`CZH-B58`, `CZH-GATE-112`). Checkpoint: `docs/todo/core/CZH_S53_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S51` (`CZH-B56`, `CZH-GATE-110`). Checkpoint: `docs/todo/core/CZH_S51_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S50` (`CZH-B55`, `CZH-GATE-109`). Checkpoint: `docs/todo/core/CZH_S50_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S49` (`CZH-B54`, `CZH-GATE-108`). Checkpoint: `docs/todo/core/CZH_S49_CHECKPOINT.md`.
@@ -4378,7 +4379,7 @@ Owner docs:
 - Widget layer remains a façade for orchestration/integration; terminal layer owns fold construction/validation.
 - Linux ladder + bounded GUI smoke + Android deploy/log smoke remained green through `CZH-GATE-111`.
 
-### `CZH-B58` Outcome-State/Internal API Contraction (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B58` Outcome-State/Internal API Contraction (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4399,6 +4400,36 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S53_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+`Verdict: accepted`
+
+- Architect review confirmed result-only widget boundary and terminal-internal outcome-state ownership remained behavior-neutral and ABI-stable.
+- Reuse production flow now constructs outcome state in terminal runtime via `reuseEligibilityEntry(...)`; widget no longer constructs outcome carriers.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke remained green through `CZH-GATE-112`.
+
+### `CZH-B59` Canonical Entry/Eligibility Unification (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- unify remaining entry/eligibility helper surfaces into one canonical per-flow terminal entry contract and remove non-essential boundary glue while preserving behavior
+
+Acceptance:
+
+- refresh/reuse/direct production paths each use one canonical terminal entry with no duplicate boundary helper glue
+- eligibility-to-result mapping is terminal-owned and consistent across reuse/direct flows
+- helper + integration tests lock canonical-entry parity and boundary non-bypass invariants
+- docs reflect unified entry vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-113`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S54_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
