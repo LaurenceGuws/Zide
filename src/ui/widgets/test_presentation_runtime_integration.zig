@@ -434,6 +434,8 @@ test "Integration hygiene: terminal/runtime boundary exposes collapsed transport
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldReuseOutcomeToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "foldDirectOutcomeToPresent"));
         std.debug.assert(@hasDecl(terminal_presentation_runtime, "FoldTransportFields"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "presentResultFromOutcomeState"));
+        std.debug.assert(!@hasDecl(terminal_presentation_runtime, "applyOutcomeSpecificFields"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "refreshedPresentationResultFromCycle"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "directPresentTimingResult"));
         std.debug.assert(!@hasDecl(terminal_presentation_runtime, "presentResultFromRefreshOutcomeState"));
@@ -446,6 +448,23 @@ test "Integration invariant: refresh outcome followup carrier is contracted fiel
     const unavailable = terminal_presentation_runtime.classifyRefreshOutcome(.target_unavailable, false);
     try std.testing.expect(unavailable.followup.required == true);
     try std.testing.expect(unavailable.followup.reason == .target_unavailable);
+}
+
+test "Integration invariant: canonical fold transport field shape remains locked" {
+    comptime {
+        const fields = @typeInfo(terminal_presentation_runtime.FoldTransportFields).@"struct".fields;
+        var outcome: usize = 0;
+        var cache: usize = 0;
+        var host: usize = 0;
+        var attachment: usize = 0;
+        for (fields) |f| {
+            if (std.mem.eql(u8, f.name, "outcome")) outcome += 1;
+            if (std.mem.eql(u8, f.name, "cache_state_advanced")) cache += 1;
+            if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) attachment += 1;
+        }
+        std.debug.assert(outcome == 1 and cache == 1 and host == 1 and attachment == 1);
+    }
 }
 
 test "Integration invariant: refresh inline carrier semantics are preserved through fold" {
