@@ -4099,6 +4099,36 @@ Owner docs:
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
+#### `CZH-B51` engineer validation record (2026-04-20)
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `timeout 3s zig build run -- --mode terminal` — PASS (bounded smoke; startup banner observed; timeout exit expected for bounded run)
+- Android regression guard (connected device `RF8M74JDWEK`) — PASS
+  - `python3 ops/android_terminal_host.py deploy`
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+
+#### `CZH-B51` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B51`
+- `Verdict: review_gate`
+- `Scope summary:` fold/result struct contraction + boundary callsite collapse landed as behavior-neutral seam tightening:
+  - `CZH-1001` added explicit struct/callsite contraction audit map and ordered cut plan (`docs/todo/core/CZH_1001_STRUCT_CALLSITE_CONTRACTION_AUDIT_MAP.md`)
+  - `CZH-1002` tightened authority wording in `TERMINAL_SURFACE_CONTRACT.md` to contracted fold/result carriers and collapsed boundary callsites
+  - `CZH-1003` contracted refresh outcome carrier around canonical transport sub-struct while preserving behavior-neutral field routing
+  - `CZH-1004` contracted reuse outcome carrier to include canonical transport sub-struct
+  - `CZH-1005` contracted direct outcome carrier to include canonical transport sub-struct
+  - `CZH-1006` collapsed widget boundary callsites to direct terminal-runtime canonical route usage (reduced local alias glue)
+  - `CZH-1007` collapsed terminal boundary mapping callsites by removing dedicated boundary mapping helpers
+  - `CZH-1008` added helper-level invariants for contracted struct/callsite surface and removed mapping-helper declaration exposure
+  - `CZH-1009` added integration invariants + hygiene locks for contracted carrier exposure and collapsed callsite surface
+- `Engineer commits reviewed:` `a56fe953`, `13a0cf9b`, `b4788537`, `7c6b3f21`, `b8ca9087`, `d57e820f`, `fd89240e`, `918a5397`, `c35ce99a`
+- `Residual risks / follow-ups:`
+  - Sprint board/checkpoint transition to accepted remains architect-owned after `CZH-GATE-105` review
+- `Architect validation request:` validate behavior-neutral fold/result struct contraction and boundary callsite collapse against `CZH-GATE-105`; confirm sprint closure if accepted.
+
 ## Response Contract
 
 Every batch update must include:
