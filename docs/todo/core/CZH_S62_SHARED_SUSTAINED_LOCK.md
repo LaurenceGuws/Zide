@@ -103,75 +103,23 @@ Scope: Consolidated governance + enforcement + integration for all shared helper
 
 ## Shared Enforcement Layers (CZH-S61 Verified)
 
-### 1. Compile-Time Enforcement (Type System)
-- **Owner:** Zig type system + module visibility
-- **Responsibility:** Prevent invalid function calls at compile time
-- **Enforcement:** Private fold helpers and generic composition prevent widget from calling
-- **Verification:** ✓ `presentResultFromOutcomeState()` private; all fold helpers private
-- **Test Binding:** `test_presentation_runtime.zig:193-211` "Helper contraction keeps canonical declarations"
-- **Status:** ✓ LOCKED
+See TERMINAL_SURFACE_CONTRACT.md "Enforcement Layers" matrix for layer definitions.
 
-### 2. Runtime Enforcement (Field Guarantees)
-- **Owner:** Fold helper implementation
-- **Responsibility:** Ensure transport fields deterministic and immutable
-- **Enforcement:** All fields set deterministically; no post-production mutations
-- **Verification:** ✓ Transport fields immutable; no conditional logic
-- **Test Binding:** `test_presentation_runtime.zig:49-62` "Outcome folding produces consistent results"
-- **Test Binding:** `test_presentation_runtime.zig:227-247` "Fold routes consume contracted transport carrier"
-- **Status:** ✓ LOCKED
+**Per-Path Verification:**
 
-### 3. Test Enforcement (Test Coverage)
-- **Owner:** Unit test suite (zig build test)
-- **Responsibility:** Detect shared helper regressions and test surface isolation
-- **Enforcement:** Tests verify path-specific isolation, no shared test surface
-- **Verification:** ✓ Test assertions path-specific; no production calls to test surface
-- **Test Binding:** `test_presentation_runtime.zig:200-225` "Helper contraction keeps collapsed transport surface"
-- **Status:** ✓ LOCKED
-
-### 4. Code Review Enforcement (Architecture)
-- **Owner:** Architect approval for shared changes
-- **Responsibility:** Block new shared helpers, result type changes, composition changes
-- **Enforcement:** All changes to shared surface require architect approval
-- **Verification:** ✓ Result type unified across all paths; transport immutable
-- **Status:** ✓ LOCKED
+- **Compile-Time:** ✓ `presentResultFromOutcomeState()` private; all fold helpers private (test: "helper contraction keeps canonical")
+- **Runtime:** ✓ Transport fields deterministic, immutable; no conditional logic (test: "outcome folding consistent", "fold routes consume carrier")
+- **Test:** ✓ Test assertions path-specific; no shared test surface (test: "helper contraction keeps collapsed surface")
+- **Code Review:** ✓ Architect approval gates for shared surface changes
 
 ## Integration Enforcement Locks
 
-### Integration Lock 1: Test-Only Surface Leak Prevention
-- **Risk:** Production code imports or calls test assertions
-- **Guard:** Test assertions isolated; code review enforces isolation
-- **Verification:** ✓ No production calls to test helpers detected
-- **Status:** ✓ LOCKED
-
-### Integration Lock 2: Outcome State Mutation Prevention
-- **Risk:** Outcome state modified after classification or between fold steps
-- **Guard:** Private fold helpers enforce direct flow; type system prevents mutations
-- **Verification:** ✓ Outcome flows directly: classify → fold → result
-- **Status:** ✓ LOCKED
-
-### Integration Lock 3: Widget Bypass Prevention
-- **Risk:** Widget constructs outcomes or calls fold helpers directly
-- **Guard:** Outcome types internal; fold helpers private
-- **Verification:** ✓ Compile-time prevents outcome construction; fold helpers not callable
-- **Status:** ✓ LOCKED
-
-### Integration Lock 4: No-Bypass Invariant Maintenance
-- **Risk:** Widget finds alternate path to bypass canonical entries
-- **Guard:** All canonical entries called from verified sites; private fold helpers lock routes
-- **Verification:** ✓ Code review verified single-site calls per path
-- **Status:** ✓ LOCKED
-
-### Integration Lock 5: Attachment State Consistency
-- **Risk:** Widget re-derives attachment state instead of using canonical path
-- **Guard:** `computeHostSurfaceAttachmentState()` is only attachment computation
-- **Verification:** ✓ Single-path computation enforced; code review verified
-- **Status:** ✓ LOCKED
-
-### Integration Lock 6: Transport Routing Immutability
-- **Risk:** Transport fields made conditional or modified post-production
-- **Guard:** Private fold helpers with deterministic field logic
-- **Verification:** ✓ All transport fields set deterministically; no conditional logic
-- **Status:** ✓ LOCKED
+- **Test-Only Surface Leak Prevention:** Test assertions isolated; ✓ No production calls detected
+- **Outcome State Mutation Prevention:** Direct flow classify → fold → result; ✓ No mutations possible
+- **Widget Bypass Prevention:** Outcome types internal, fold helpers private; ✓ Compile-time prevents calls
+- **No-Bypass Invariant Maintenance:** All canonical entries single-site; ✓ Code review verified
+- **Attachment State Consistency:** `computeHostSurfaceAttachmentState()` is only path; ✓ Single-path enforced
+- **Transport Routing Immutability:** All fields set deterministically; ✓ No conditional logic
 
 ## Shared Change Control
 
