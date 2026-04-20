@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B72` — **`in_progress`** toward **`CZH-GATE-126`** (sprint `CZH-S67`):
-  claim-to-lock trace matrix hardening: ensure every enforcement claim maps unambiguously to concrete guards.
-  Ticket source: `docs/todo/core/CZH_S67_TICKETS.md`.
+- `CZH-B73` — **`in_progress`** toward **`CZH-GATE-127`** (sprint `CZH-S68`):
+  enforcement matrix determinism hardening: keep claim-to-lock mappings stable, ordered, and unambiguous under maintenance.
+  Ticket source: `docs/todo/core/CZH_S68_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,9 +46,10 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S67` tickets `CZH-1181`..`CZH-1188` are active; run to
-  **`CZH-GATE-126`** unless blocked.
+- Sprint `CZH-S68` tickets `CZH-1189`..`CZH-1196` are active; run to
+  **`CZH-GATE-127`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
+- Atomic-group commits are forbidden unless explicitly pre-approved by Architect in writing before execution.
 
 ## Validation Ladder
 

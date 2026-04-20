@@ -11,8 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B72` (in_progress, super-gate `CZH-GATE-126`). Sprint `CZH-S67` review_gate (awaiting architect decision).
-  - **Governance note:** CZH-1183..1186 consolidated as architect-approved atomic-group exception (rationale: per-path hardening requires cross-path consistency verification). Board status marked; sprint review_gate pending architect decision on exception acceptance.
+- Current active macro batch: `CZH-B73` (in_progress, super-gate `CZH-GATE-127`). Sprint `CZH-S68` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -31,6 +30,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S64` (`CZH-B69`, `CZH-GATE-123`). Checkpoint: `docs/todo/core/CZH_S64_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S66` (`CZH-B71`, `CZH-GATE-125`). Checkpoint: `docs/todo/core/CZH_S66_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S67` (`CZH-B72`, `CZH-GATE-126`). Checkpoint: `docs/todo/core/CZH_S67_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
@@ -4808,7 +4808,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B72` Enforcement Claim-to-Lock Trace Matrix Hardening (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B72` Enforcement Claim-to-Lock Trace Matrix Hardening (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4829,5 +4829,30 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S67_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+### `CZH-B73` Enforcement Matrix Determinism Hardening (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- harden enforcement matrix determinism so claim-to-lock mappings remain stable, ordered, and unambiguous under ongoing maintenance
+
+Acceptance:
+
+- claim-to-lock mappings are deterministic and consistently ordered across refresh/reuse/direct/shared paths
+- no ambiguity or ordering drift remains in enforcement matrix representations
+- regression + integration verification confirms determinism preservation
+- docs align with determinism vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-127`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S68_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
