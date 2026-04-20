@@ -142,21 +142,25 @@ that manages all semantic presentation logic:
   - Refresh classification carries `shared_surface_attachment_ready` inline in `RefreshOutcomeState` (no separate conjunction transport parameter)
   - All hardening assertions validate semantic consistency (no behavior changes)
   
-- **Outcome folding** (pure computation): `presentResultFromRefreshOutcomeState()`, `presentResultFromReuseOutcomeState()`
+- **Outcome folding** (pure computation): `presentResultFromRefreshOutcomeState()`, `presentResultFromReuseOutcomeState()`, `presentResultFromDirectPresentOutcomeState()`
   - Fold outcome state + timing into host-facing result structs
   - Refresh fold consumes conjunction from `RefreshOutcomeState.shared_surface_attachment_ready` (no separate fold argument)
+  - Direct-present fold must route through `presentResultFromDirectPresentOutcomeState()` as the canonical host-facing direct result path
   - Propagate conjunction state (attachment readiness) through folding
   
 - **Orchestration coordination** (pure except for integration seams):
   - **Refresh path:** `runPresentableRefreshCycle()`, `runRefreshedPresentablePresentation()`, `executeRefreshPresentFlow()`
     - Drive refresh cycle outcome classification and result folding
     - Refresh transport is single-carrier: `runRefreshedPresentablePresentation` supplies conjunction once, `classifyRefreshOutcome` stores it inline, and fold reads from outcome state
+    - Refresh execution carriers may remain integration-local, but terminal fold entry is the canonical transport boundary for host-facing result composition
     - No renderer/shell calls; coordinates pure decision paths
   - **Reuse path:** `tryFastPresentExisting()`, `runFastPresentIfAvailable()`
     - Reuse eligibility decision based on generation pairing
     - Outcome classification and result folding for cached frames
+    - Canonical success signal remains `outcome == .reused`; no duplicate success transport flags
   - **Direct path:** `directPresent()`
     - Direct present path outcome classification and result folding
+    - Host-facing direct result transport must terminate at `presentResultFromDirectPresentOutcomeState()` (no alternate direct fold composition path)
   - **High-level coordination:** `runPresentation()`, `refreshPresentState()`, `planUpdate()`
     - Top-level orchestration that calls phase-specific helpers
     - Planning surface update modes based on presentation state
@@ -177,7 +181,8 @@ The widget layer remains a thin facade that:
 - Keeps no presentation logic, only integration and GPU operations
 
 **No re-derivation rule:** Widget layer never recomputes outcomes, folding, or orchestration decisions.
-All semantic logic is owned by terminal layer and called through defined interfaces.
+All semantic logic is owned by terminal layer and called through defined interfaces.  
+Execution-local timing/update carriers in widget runtime must not become alternate host-facing result contracts; host-facing result composition remains terminal-owned fold authority.
 
 **Canonical orchestration entry point:** `runPresentation()` in terminal runtime is the single
 orchestration function called by widget facade. All refresh/reuse/direct paths flow through this
