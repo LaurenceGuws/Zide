@@ -63,7 +63,6 @@ pub const DirectPresentOutcomeState = struct {
 
 /// **Outcome snapshot from reuse path:** carries result of the reuse attempt.
 pub const ReusePresentOutcomeState = struct {
-    reused: bool = false,
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,
     /// **Leg only** — host drawable-target (renderer `terminalPresentableInfo`); not conjunction.
@@ -110,7 +109,6 @@ pub fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
 /// Invariant: outcome == .reused requires cache_state_advanced && host_surface_target_available && shared_surface_attachment_ready.
 pub fn reuseSuccessOutcome() ReusePresentOutcomeState {
     const outcome: ReusePresentOutcomeState = .{
-        .reused = true,
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
@@ -189,8 +187,7 @@ pub fn presentResultFromReuseOutcomeState(
     timing: renderer_presentable_host.TerminalPresentTiming,
 ) TerminalPresentResult {
     // Harden: validate input state before folding
-    if (outcome_state.reused) {
-        std.debug.assert(outcome_state.outcome == .reused);
+    if (outcome_state.outcome == .reused) {
         std.debug.assert(outcome_state.cache_state_advanced == true);
         std.debug.assert(outcome_state.host_surface_target_available == true);
         std.debug.assert(outcome_state.shared_surface_attachment_ready == true);
@@ -206,7 +203,7 @@ pub fn presentResultFromReuseOutcomeState(
 
 /// **Validate reuse outcome consistency:** hardening check that reuse outcome state has correct field values.
 pub fn assertReuseOutcomeConsistency(state: ReusePresentOutcomeState) void {
-    if (state.reused) {
+    if (state.outcome == .reused) {
         std.debug.assert(state.cache_state_advanced == true);
         std.debug.assert(state.host_surface_target_available == true);
         std.debug.assert(state.shared_surface_attachment_ready == true);

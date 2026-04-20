@@ -32,7 +32,7 @@ test "Widget layer re-exports terminal presentation types" {
 
 test "Widget layer uses terminal outcome classification" {
     // Widget should be using terminal-layer classifyRefreshOutcome
-    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     try std.testing.expect(outcome.outcome == .updated_and_presented);
     try std.testing.expect(outcome.cache_state_advanced == true);
 }
@@ -47,13 +47,13 @@ test "Widget layer uses terminal geometry computation" {
 test "Widget layer outcome validation uses terminal assertions" {
     const outcome = terminal_widget_presentation_runtime.reuseSuccessOutcome();
     terminal_widget_presentation_runtime.assertReuseOutcomeConsistency(outcome);
-    try std.testing.expect(outcome.reused == true);
+    try std.testing.expect(outcome.outcome == .reused);
 }
 
 test "Widget layer outcome folding uses terminal helpers" {
-    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented);
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, false);
     const timing = .{ .background_ms = 0.5, .glyph_ms = 0.0, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, false);
+    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
     try std.testing.expect(result.outcome == .presented);
 }
 
@@ -76,9 +76,9 @@ test "PresentationGeometry is accessible in widget layer" {
 
 test "All outcome classification paths work in widget context" {
     // Refresh outcomes
-    const refreshed = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
-    const presented = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented);
-    const unavailable = terminal_widget_presentation_runtime.classifyRefreshOutcome(.target_unavailable);
+    const refreshed = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
+    const presented = terminal_widget_presentation_runtime.classifyRefreshOutcome(.presented, false);
+    const unavailable = terminal_widget_presentation_runtime.classifyRefreshOutcome(.target_unavailable, false);
 
     try std.testing.expect(refreshed.outcome == .updated_and_presented);
     try std.testing.expect(presented.outcome == .presented);
@@ -97,9 +97,9 @@ test "All outcome classification paths work in widget context" {
 }
 
 test "Widget layer delegates outcome folding without re-derivation" {
-    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, false);
     const timing = .{ .background_ms = 1.5, .glyph_ms = 2.5, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, false);
+    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
 
     try std.testing.expect(result.outcome == .updated_and_presented);
     try std.testing.expect(result.timing.background_ms == 1.5);
@@ -115,7 +115,7 @@ test "Widget layer reuse delegation preserves outcome semantics" {
 }
 
 test "Widget layer assertions validate outcome consistency" {
-    const refresh = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const refresh = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     terminal_widget_presentation_runtime.assertRefreshOutcomeConsistency(refresh);
 
     const direct = terminal_widget_presentation_runtime.classifyDirectPresentOutcome(true);
@@ -163,17 +163,17 @@ test "Integration boundary: widget viewport state matches terminal" {
 }
 
 test "Integration boundary: outcome classification produces consistent results widget-side" {
-    const outcome_widget = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
-    const outcome_terminal = terminal_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome_widget = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
+    const outcome_terminal = terminal_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
 
     try std.testing.expect(outcome_widget.outcome == outcome_terminal.outcome);
     try std.testing.expect(outcome_widget.cache_state_advanced == outcome_terminal.cache_state_advanced);
 }
 
 test "Integration boundary: no outcome re-derivation in widget folding" {
-    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     const timing = .{ .background_ms = 1.0, .glyph_ms = 2.0, .kitty_ms = 0.0 };
-    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing, true);
+    const result = terminal_widget_presentation_runtime.presentResultFromRefreshOutcomeState(outcome, timing);
 
     // Verify that the result's outcome matches input outcome (no re-derivation)
     try std.testing.expect(result.outcome == outcome.outcome);
@@ -205,7 +205,7 @@ test "Callback contract: reuse eligibility check integrates with outcome generat
         terminal_widget_presentation_runtime.ReusePresentOutcomeState{};
 
     // Verify outcome matches eligibility decision
-    try std.testing.expect(eligible == (outcome.reused == true));
+    try std.testing.expect(eligible == (outcome.outcome == .reused));
 }
 
 test "Callback contract: direct eligibility check integrates with GPU execution path" {
@@ -280,12 +280,12 @@ test "Callback contract: eligibility decision is terminal-owned, execution is wi
 
     // Verify clean boundary
     try std.testing.expect(eligible == true);
-    try std.testing.expect(outcome.reused == true);
+    try std.testing.expect(outcome.outcome == .reused);
 }
 
 test "Callback contract: terminal classification used regardless of widget execution path" {
     // Refresh path uses terminal classification
-    const refresh_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed);
+    const refresh_outcome = terminal_widget_presentation_runtime.classifyRefreshOutcome(.refreshed, true);
     try std.testing.expect(refresh_outcome.outcome == .updated_and_presented);
 
     // Direct path uses terminal classification

@@ -39,7 +39,6 @@ test "Direct present outcome classification is pure" {
 
 test "Reuse success outcome invariants hold" {
     const outcome = presentation_runtime.reuseSuccessOutcome();
-    try std.testing.expect(outcome.reused == true);
     try std.testing.expect(outcome.outcome == .reused);
     try std.testing.expect(outcome.cache_state_advanced == true);
     try std.testing.expect(outcome.host_surface_target_available == true);

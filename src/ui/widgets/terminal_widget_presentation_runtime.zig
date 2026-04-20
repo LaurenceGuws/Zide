@@ -1551,7 +1551,7 @@ pub fn runFastPresentIfAvailable(
         note_present_ctx,
         note_present,
     );
-    if (!outcome_state.reused) return .{};
+    if (outcome_state.outcome != .reused) return .{};
     return presentResultFromReuseOutcomeState(outcome_state, .{});
 }
 
@@ -2117,7 +2117,6 @@ test "helper consolidation reuseSuccessOutcome constructs correct outcome state"
     // Verify the consolidation helper produces the expected outcome state for successful reuse.
     // This locks the pattern: successful reuse always has both legs and conjunction true.
     const outcome = reuseSuccessOutcome();
-    try std.testing.expect(outcome.reused == true);
     try std.testing.expectEqual(outcome.outcome, TerminalPresentOutcome.reused);
     try std.testing.expect(outcome.cache_state_advanced == true);
     try std.testing.expect(outcome.host_surface_target_available == true);
@@ -2133,7 +2132,6 @@ test "helper hardening reuse outcome assertion validates consistency" {
 
     // Non-reused state should not trigger assertions
     const non_reused: ReusePresentOutcomeState = .{
-        .reused = false,
         .outcome = .skipped,
     };
     assertReuseOutcomeConsistency(non_reused);
@@ -2173,7 +2171,6 @@ test "integration lock PresentationPresentState conjunction equals outcome conju
 
 test "integration lock result fold preserves outcome conjunction" {
     const outcome = ReusePresentOutcomeState{
-        .reused = true,
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
@@ -2197,19 +2194,19 @@ test "integration lock direct present outcome has correct leg/conjunction separa
 test "integration lock consolidated outcome states fold correctly" {
     // Verify that all three outcome state types produce consistent results when folded.
 
-    // RefreshOutcomeState: conjunction passed separately
+    // RefreshOutcomeState: conjunction carried inline
     const refresh_outcome = RefreshOutcomeState{
         .outcome = .updated_and_presented,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
+        .shared_surface_attachment_ready = true,
     };
-    const refresh_result = presentResultFromRefreshOutcomeState(refresh_outcome, .{}, true);
+    const refresh_result = presentResultFromRefreshOutcomeState(refresh_outcome, .{});
     try std.testing.expectEqual(refresh_result.outcome, TerminalPresentOutcome.updated_and_presented);
     try std.testing.expect(refresh_result.shared_surface_attachment_ready == true);
 
     // ReusePresentOutcomeState: conjunction as field
     const reuse_outcome = ReusePresentOutcomeState{
-        .reused = true,
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
@@ -2252,10 +2249,11 @@ test "integration hardening fold paths harden outcome consistency" {
         .outcome = .presented,
         .cache_state_advanced = false,
         .host_surface_target_available = false,
+        .shared_surface_attachment_ready = false,
         .followup_required = true,
         .followup_reason = .target_unavailable,
     };
-    const refresh_result = presentResultFromRefreshOutcomeState(refresh_unavailable, .{}, false);
+    const refresh_result = presentResultFromRefreshOutcomeState(refresh_unavailable, .{});
     try std.testing.expect(refresh_result.followup.required == true);
     try std.testing.expectEqual(refresh_result.followup.reason, .target_unavailable);
 }
@@ -2265,16 +2263,16 @@ test "integration follow-through refresh classification validates followup coupl
     // When followup_required is true, followup_reason must be non-.none.
 
     // Test: unavailable refresh sets both followup_required and followup_reason
-    const refresh_with_followup = classifyRefreshOutcome(.target_unavailable);
+    const refresh_with_followup = classifyRefreshOutcome(.target_unavailable, false);
     try std.testing.expect(refresh_with_followup.followup_required == true);
     try std.testing.expect(refresh_with_followup.followup_reason != .none);
 
     // Test: successful/presented refresh has both followup fields neutral
-    const refresh_success = classifyRefreshOutcome(.refreshed);
+    const refresh_success = classifyRefreshOutcome(.refreshed, true);
     try std.testing.expect(refresh_success.followup_required == false);
     try std.testing.expectEqual(refresh_success.followup_reason, .none);
 
-    const refresh_presented = classifyRefreshOutcome(.presented);
+    const refresh_presented = classifyRefreshOutcome(.presented, true);
     try std.testing.expect(refresh_presented.followup_required == false);
     try std.testing.expectEqual(refresh_presented.followup_reason, .none);
 }
@@ -2355,10 +2353,11 @@ test "integration consolidation all fold paths route through canonical generic f
         .outcome = .updated_and_presented,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
+        .shared_surface_attachment_ready = true,
         .followup_required = false,
         .followup_reason = .none,
     };
-    const refresh_result = presentResultFromRefreshOutcomeState(refresh_outcome, timing, true);
+    const refresh_result = presentResultFromRefreshOutcomeState(refresh_outcome, timing);
     try std.testing.expectEqual(refresh_result.outcome, .updated_and_presented);
     try std.testing.expect(refresh_result.cache_state_advanced == true);
     try std.testing.expect(refresh_result.followup.required == false);
