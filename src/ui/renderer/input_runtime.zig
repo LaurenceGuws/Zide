@@ -76,16 +76,16 @@ fn handleEvent(
             domain.app_host.noteTerminationRequested();
         },
         sdl_api.EVENT_APP_WILL_ENTER_FOREGROUND => {
-            host_lifecycle_runtime.noteWillEnterForeground(domain.app_host);
+            host_lifecycle_runtime.onWillEnterForeground(domain.app_host);
         },
         sdl_api.EVENT_APP_DID_ENTER_FOREGROUND => {
-            host_lifecycle_runtime.noteDidEnterForeground(domain.app_host, domain.render_host);
+            host_lifecycle_runtime.onDidEnterForeground(domain.app_host, domain.render_host);
         },
         sdl_api.EVENT_APP_WILL_ENTER_BACKGROUND => {
-            host_lifecycle_runtime.noteWillEnterBackground(domain.app_host);
+            host_lifecycle_runtime.onWillEnterBackground(domain.app_host);
         },
         sdl_api.EVENT_APP_DID_ENTER_BACKGROUND => {
-            host_lifecycle_runtime.noteDidEnterBackground(domain.app_host);
+            host_lifecycle_runtime.onDidEnterBackground(domain.app_host);
         },
         sdl_api.EVENT_APP_TERMINATING => {
             domain.should_close_flag.* = true;
@@ -270,10 +270,10 @@ fn applyWindowFocusState(
     if (focused) {
         sdl_api.startTextInput(domain.window);
         text_input.reapplyRect(domain.text_input_state, domain.window);
-        host_lifecycle_runtime.noteWindowFocusFromInputRuntime(domain.app_host, true);
+        host_lifecycle_runtime.onWindowFocusChanged(domain.app_host, true);
     } else {
         sdl_api.stopTextInput(domain.window);
-        host_lifecycle_runtime.noteWindowFocusFromInputRuntime(domain.app_host, false);
+        host_lifecycle_runtime.onWindowFocusChanged(domain.app_host, false);
     }
     domain.window_focused.* = focused;
     window_log.logf(.info, "window focus source={s} focused={d}", .{
@@ -315,7 +315,7 @@ fn handleWindowEvent(
     if (change.any()) {
         window_changes.merge(change);
         if (change.affectsWindowRefresh()) {
-            if (!host_lifecycle_runtime.noteSdlWindowRefresh(app_host, render_host, window)) {
+            if (!host_lifecycle_runtime.onWindowRefresh(app_host, render_host, window)) {
                 render_host.noteSurfaceAvailable(sdl_native_host.captureWindowSurfaceMetrics(window));
                 render_host.noteRedrawRequested();
             }

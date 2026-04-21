@@ -97,32 +97,32 @@ pub fn onCreate() u64 {
 }
 
 pub fn onStart() u64 {
-    host_lifecycle_runtime.noteWillEnterForeground(&bridge_state.app_host);
+    host_lifecycle_runtime.onWillEnterForeground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onResume() u64 {
-    host_lifecycle_runtime.noteDidEnterForeground(&bridge_state.app_host, &bridge_state.render_host);
+    host_lifecycle_runtime.onDidEnterForeground(&bridge_state.app_host, &bridge_state.render_host);
     return nextSequence();
 }
 
 pub fn onPause() u64 {
-    host_lifecycle_runtime.noteWillEnterBackground(&bridge_state.app_host);
+    host_lifecycle_runtime.onWillEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onStop() u64 {
-    host_lifecycle_runtime.noteDidEnterBackground(&bridge_state.app_host);
+    host_lifecycle_runtime.onDidEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onWindowFocusChanged(focused: bool) u64 {
-    host_lifecycle_runtime.noteWindowFocusFromInputRuntime(&bridge_state.app_host, focused);
+    host_lifecycle_runtime.onWindowFocusChanged(&bridge_state.app_host, focused);
     return nextSequence();
 }
 
 pub fn onSurfaceAvailable(width: i32, height: i32) u64 {
-    host_lifecycle_runtime.noteSurfaceMetrics(&bridge_state.render_host, .{
+    host_lifecycle_runtime.onSurfaceMetricsChanged(&bridge_state.render_host, .{
         .logical_width = width,
         .logical_height = height,
         .drawable_width = width,
@@ -201,7 +201,7 @@ pub fn onSurfaceAvailableFromJava(
 
 pub fn onSurfaceDestroyed() u64 {
     swapNativeWindow(null);
-    host_lifecycle_runtime.noteSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
+    host_lifecycle_runtime.onSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
     if (bridge_state.renderer) |renderer| {
         renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
     }

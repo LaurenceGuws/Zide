@@ -2,15 +2,15 @@ const native_host = @import("native_host.zig");
 const sdl_api = @import("sdl_api.zig");
 const sdl_native_host = @import("sdl_native_host.zig");
 
-pub fn usesAndroidActivityHost(app_host: native_host.PlatformAppHost) bool {
+pub fn isAndroidActivityHost(app_host: native_host.PlatformAppHost) bool {
     return app_host.kind == .android_activity;
 }
 
-pub fn noteWillEnterForeground(app_host: *native_host.PlatformAppHost) void {
+pub fn onWillEnterForeground(app_host: *native_host.PlatformAppHost) void {
     app_host.noteStarted();
 }
 
-pub fn noteDidEnterForeground(
+pub fn onDidEnterForeground(
     app_host: *native_host.PlatformAppHost,
     render_host: *native_host.PlatformRenderHost,
 ) void {
@@ -18,15 +18,15 @@ pub fn noteDidEnterForeground(
     render_host.noteRedrawRequested();
 }
 
-pub fn noteWillEnterBackground(app_host: *native_host.PlatformAppHost) void {
+pub fn onWillEnterBackground(app_host: *native_host.PlatformAppHost) void {
     app_host.notePaused();
 }
 
-pub fn noteDidEnterBackground(app_host: *native_host.PlatformAppHost) void {
+pub fn onDidEnterBackground(app_host: *native_host.PlatformAppHost) void {
     app_host.noteStopped();
 }
 
-pub fn noteSurfaceMetrics(
+pub fn onSurfaceMetricsChanged(
     render_host: *native_host.PlatformRenderHost,
     metrics: native_host.RenderSurfaceMetrics,
 ) void {
@@ -34,7 +34,7 @@ pub fn noteSurfaceMetrics(
     render_host.noteRedrawRequested();
 }
 
-pub fn noteSurfaceDestroyed(
+pub fn onSurfaceDestroyed(
     app_host: *native_host.PlatformAppHost,
     render_host: *native_host.PlatformRenderHost,
 ) void {
@@ -43,23 +43,23 @@ pub fn noteSurfaceDestroyed(
     app_host.noteTextInputActive(false);
 }
 
-pub fn noteWindowFocusFromInputRuntime(
+pub fn onWindowFocusChanged(
     app_host: *native_host.PlatformAppHost,
     focused: bool,
 ) void {
     app_host.noteSurfaceFocused(focused);
-    if (focused and !usesAndroidActivityHost(app_host.*)) {
+    if (focused and !isAndroidActivityHost(app_host.*)) {
         app_host.noteTextInputActive(true);
     }
 }
 
-pub fn noteSdlWindowRefresh(
+pub fn onWindowRefresh(
     app_host: *native_host.PlatformAppHost,
     render_host: *native_host.PlatformRenderHost,
     window: *sdl_api.c.SDL_Window,
 ) bool {
-    if (!usesAndroidActivityHost(app_host.*)) return false;
-    noteSurfaceMetrics(render_host, sdl_native_host.captureWindowSurfaceMetrics(window));
+    if (!isAndroidActivityHost(app_host.*)) return false;
+    onSurfaceMetricsChanged(render_host, sdl_native_host.captureWindowSurfaceMetrics(window));
     return true;
 }
 
@@ -70,7 +70,7 @@ test "focus policy keeps android text input host-driven on gain" {
         .kind = .android_activity,
         .lifecycle_state = .started,
     };
-    noteWindowFocusFromInputRuntime(&android_host, true);
+    onWindowFocusChanged(&android_host, true);
     try std.testing.expect(android_host.surface_focused);
     try std.testing.expect(!android_host.text_input_active);
 
@@ -78,7 +78,7 @@ test "focus policy keeps android text input host-driven on gain" {
         .kind = .sdl_desktop,
         .lifecycle_state = .started,
     };
-    noteWindowFocusFromInputRuntime(&desktop_host, true);
+    onWindowFocusChanged(&desktop_host, true);
     try std.testing.expect(desktop_host.surface_focused);
     try std.testing.expect(desktop_host.text_input_active);
 }
@@ -108,7 +108,7 @@ test "surface destruction clears host and render state" {
         },
     };
 
-    noteSurfaceDestroyed(&app_host, &render_host);
+    onSurfaceDestroyed(&app_host, &render_host);
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, render_host.surface_availability);
     try std.testing.expect(!app_host.surface_focused);
     try std.testing.expect(!app_host.text_input_active);
@@ -128,15 +128,15 @@ test "lifecycle transition helpers update app and render host state" {
         .native_handles = .{},
     };
 
-    noteWillEnterForeground(&app_host);
+    onWillEnterForeground(&app_host);
     try std.testing.expectEqual(native_host.AppLifecycleState.started, app_host.lifecycle_state);
 
-    noteDidEnterForeground(&app_host, &render_host);
+    onDidEnterForeground(&app_host, &render_host);
     try std.testing.expectEqual(native_host.AppLifecycleState.resumed, app_host.lifecycle_state);
     try std.testing.expect(render_host.redraw_requested);
 
     render_host.clearRedrawRequested();
-    noteSurfaceMetrics(&render_host, .{
+    onSurfaceMetricsChanged(&render_host, .{
         .logical_width = 120,
         .logical_height = 80,
         .drawable_width = 240,
@@ -147,21 +147,21 @@ test "lifecycle transition helpers update app and render host state" {
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, render_host.surface_availability);
     try std.testing.expect(render_host.redraw_requested);
 
-    noteWindowFocusFromInputRuntime(&app_host, true);
+    onWindowFocusChanged(&app_host, true);
     try std.testing.expect(app_host.surface_focused);
     try std.testing.expect(!app_host.text_input_active);
 
     app_host.noteTextInputActive(true);
     try std.testing.expect(app_host.text_input_active);
 
-    noteWindowFocusFromInputRuntime(&app_host, false);
+    onWindowFocusChanged(&app_host, false);
     try std.testing.expect(!app_host.surface_focused);
     try std.testing.expect(!app_host.text_input_active);
 
-    noteWillEnterBackground(&app_host);
+    onWillEnterBackground(&app_host);
     try std.testing.expectEqual(native_host.AppLifecycleState.paused, app_host.lifecycle_state);
 
-    noteDidEnterBackground(&app_host);
+    onDidEnterBackground(&app_host);
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, app_host.lifecycle_state);
     try std.testing.expect(!app_host.surface_focused);
     try std.testing.expect(!app_host.text_input_active);
