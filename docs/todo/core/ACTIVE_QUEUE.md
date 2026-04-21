@@ -19,7 +19,7 @@ files, not here.
 - Lane: Android-to-core consolidation, phase 2.
 - Optional tracking IDs: `CZH-B81` / `CZH-S76`
 - Active work source: `docs/todo/core/CZH_S76_TICKETS.md`
-- Current step: `CZH-1245`
+- Current step: `CZH-1246`
 
 ## Goal Tags
 
@@ -56,8 +56,8 @@ Status meanings:
 
 | ID | Status | Intent | Primary files | Exit |
 | --- | --- | --- | --- | --- |
-| `CZH-1245` | `doing` | Remove or justify residual Android lifecycle wrappers. | `src/platform/android_host.zig`, `src/platform/sdl_android_host.zig`, `src/platform/host_lifecycle_runtime.zig` | Direct users route through the shared owner, or wrapper ownership is explicitly justified. |
-| `CZH-1246` | `ready` | Normalize shared lifecycle API names so they describe owned behavior, not caller context. | `src/platform/host_lifecycle_runtime.zig`, migrated callsites | Shared API names are owner-driven and tests pass. |
+| `CZH-1245` | `done` | Remove or justify residual Android lifecycle wrappers. | `src/platform/android_host.zig`, `src/platform/sdl_android_host.zig`, `src/platform/host_lifecycle_runtime.zig` | Direct users route through the shared owner, or wrapper ownership is explicitly justified. |
+| `CZH-1246` | `doing` | Normalize shared lifecycle API names so they describe owned behavior, not caller context. | `src/platform/host_lifecycle_runtime.zig`, migrated callsites | Shared API names are owner-driven and tests pass. |
 | `CZH-1247` | `ready` | Thin one platform-agnostic responsibility out of `android_runtime_bridge.zig`. | `src/platform/android_runtime_bridge.zig`, selected shared owner | Bridge loses one non-platform responsibility without behavior or ABI drift. |
 | `CZH-1248` | `ready` | Validate and leave the next queue state clear. | active queue, handoff if next focus changes | Validation recorded briefly; no historical ledger update. |
 

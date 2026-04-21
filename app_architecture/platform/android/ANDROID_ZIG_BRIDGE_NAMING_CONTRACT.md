@@ -7,7 +7,8 @@ Scope:
 
 - `src/android_bridge_exports/*.zig`
 - `src/platform/android_runtime_bridge.zig`
-- Android-owned bridge adapters such as `src/platform/android_host.zig` and
+- Android-owned bridge/runtime adapters such as
+  `src/platform/host_lifecycle_runtime.zig` and
   `src/platform/android_gles_surface_status.zig`
 
 This is naming authority only. It complements Android architecture/ownership

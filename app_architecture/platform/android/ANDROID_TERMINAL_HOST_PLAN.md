@@ -34,7 +34,7 @@ The terminal host lane should prove these four things:
 2. that app can load a repo-built native Zig library
 3. Android lifecycle and surface callbacks can cross the Java/native bridge
 4. after native loading is proven, those callbacks can be moved into
-   `src/platform/android_host.zig` / `src/platform/native_host.zig` truth
+   `src/platform/host_lifecycle_runtime.zig` / `src/platform/native_host.zig` truth
    rather than being trapped in Java glue or a freestanding bridge stub
 
 ## Preferred Bridge Direction

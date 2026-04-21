@@ -113,3 +113,56 @@ test "surface destruction clears host and render state" {
     try std.testing.expect(!app_host.surface_focused);
     try std.testing.expect(!app_host.text_input_active);
 }
+
+test "lifecycle transition helpers update app and render host state" {
+    const std = @import("std");
+
+    var app_host = native_host.PlatformAppHost{
+        .kind = .android_activity,
+        .lifecycle_state = .started,
+    };
+    var render_host = native_host.PlatformRenderHost{
+        .binding = .none,
+        .surface_availability = .unavailable,
+        .surface_metrics = .{},
+        .native_handles = .{},
+    };
+
+    noteWillEnterForeground(&app_host);
+    try std.testing.expectEqual(native_host.AppLifecycleState.started, app_host.lifecycle_state);
+
+    noteDidEnterForeground(&app_host, &render_host);
+    try std.testing.expectEqual(native_host.AppLifecycleState.resumed, app_host.lifecycle_state);
+    try std.testing.expect(render_host.redraw_requested);
+
+    render_host.clearRedrawRequested();
+    noteSurfaceMetrics(&render_host, .{
+        .logical_width = 120,
+        .logical_height = 80,
+        .drawable_width = 240,
+        .drawable_height = 160,
+        .display_scale = 2.0,
+        .pixel_density = 2.0,
+    });
+    try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, render_host.surface_availability);
+    try std.testing.expect(render_host.redraw_requested);
+
+    noteWindowFocusFromInputRuntime(&app_host, true);
+    try std.testing.expect(app_host.surface_focused);
+    try std.testing.expect(!app_host.text_input_active);
+
+    app_host.noteTextInputActive(true);
+    try std.testing.expect(app_host.text_input_active);
+
+    noteWindowFocusFromInputRuntime(&app_host, false);
+    try std.testing.expect(!app_host.surface_focused);
+    try std.testing.expect(!app_host.text_input_active);
+
+    noteWillEnterBackground(&app_host);
+    try std.testing.expectEqual(native_host.AppLifecycleState.paused, app_host.lifecycle_state);
+
+    noteDidEnterBackground(&app_host);
+    try std.testing.expectEqual(native_host.AppLifecycleState.stopped, app_host.lifecycle_state);
+    try std.testing.expect(!app_host.surface_focused);
+    try std.testing.expect(!app_host.text_input_active);
+}

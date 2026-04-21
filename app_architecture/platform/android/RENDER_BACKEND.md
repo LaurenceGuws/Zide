@@ -187,8 +187,9 @@ The shared host seam now carries full Android truth:
 - `src/platform/native_host.zig` carries surface availability, size, density,
   redraw-requested, and Android native-window identity with epoch-based
   transition tracking
-- `src/platform/android_host.zig` owns Android lifecycle/surface semantics;
-  shared code delegates there instead of embedding Android logic in SDL paths
+- `src/platform/host_lifecycle_runtime.zig` owns shared lifecycle/surface
+  runtime semantics for Android and desktop host paths; shared code delegates
+  there instead of embedding Android logic in SDL paths
 - `android/terminal-host/` is the active Android host app for native runtime,
   shell, surface, and product work
 
@@ -271,9 +272,10 @@ What is still not allowed:
 Current Android-native state (see owning plan docs for full evidence):
 
 - `AH-A4` terminal-host bridge: met — `android/terminal-host/` loads the repo
-  Zig library, lifecycle/surface callbacks route through `android_host.zig` and
-  shared host state, surface identity transitions (`acquired`, `unchanged`,
-  `replaced`, `retired`) are real on the Note10
+  Zig library, lifecycle/surface callbacks route through
+  `host_lifecycle_runtime.zig` and shared host state, surface identity
+  transitions (`acquired`, `unchanged`, `replaced`, `retired`) are real on the
+  Note10
 - `AP-A1` PTY lifetime: met — disposable app-process-owned PTY lifetime is the
   Android terminal baseline; the live shell path in `android/terminal-host/`
   has replaced the earlier probe UI
