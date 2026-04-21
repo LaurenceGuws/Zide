@@ -31,39 +31,15 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** Outcome classification depends only on the `updated` boolean flag; no other state influences the classification.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Runtime | `classifyDirectPresentOutcome():103-115` | Pure function classification logic depends only on updated parameter |
-| Test | test_presentation_runtime.zig:30-39 | "Direct present outcome classification is pure" validates determinism |
-
-**Enforcement verification:** ✓ VERIFIED
-- Runtime: Classification function is pure (no state dependence)
-- Test: Purity test confirms classification determinism
-- Code-review: Logic changes must maintain purity property
-
-**Ambiguity status:** ✓ NONE (2/4 layers: RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 9 (Direct: RT+Test, classifyDirectPresentOutcome():103-115).
 
 ---
 
 ### Claim 10: Field Guarantees (Direct Variant)
 
-**Statement:** Result fields `cache_state_advanced` (always true), `host_surface_target_available` (always true), `shared_surface_attachment_ready` (always false for direct path) are guaranteed to be present and correct in all outcomes.
+**Statement:** Result fields are guaranteed to be present and correct in all outcomes (cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready).
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `TerminalPresentResult[field_set]` | Result struct requires all 3 fields by type definition |
-| Runtime | `directTransportFromUpdated():140-165` | Field assignment logic deterministically computes all fields based on updated flag |
-| Test | test_presentation_runtime.zig:80-93 | "field preservation test validates all three" confirms field guarantees |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Struct type requires all fields (compile error if missing)
-- Runtime: Transport mapping deterministically sets all fields with correct values
-- Test: Field preservation test validates all 3 fields present and correct
-- Code-review: Field mapping changes require validation
-
-**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 10 (Direct: CT+RT+Test, TerminalPresentResult[field_set]).
 
 ---
 
@@ -71,18 +47,7 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** Direct outcome type set is frozen at compile-time to `.updated_and_presented | .presented`.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `DirectPresentOutcomeState[enum_frozen]` | Zig enum type definition (outcome variant set immutable) |
-| Test | test_presentation_runtime.zig:30-39 | "Direct present outcome classification is pure" validates outcome types |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Enum definition locked by type system
-- Test: Classification test confirms only valid types produced
-- Code-review: Type changes require architect approval
-
-**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 11 (Direct variant: .updated_and_presented | .presented, CT+Test).
 
 ---
 
