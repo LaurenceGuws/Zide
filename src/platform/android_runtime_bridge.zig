@@ -208,67 +208,84 @@ pub fn currentRendererStatus() RendererStatus {
     return bridge_state.last_renderer_status;
 }
 
+fn runtimeMetricOrFallback(comptime T: type, runtime_metric: ?T, fallback: T) T {
+    return runtime_metric orelse fallback;
+}
+
+fn fallbackWhenRendererPresent(comptime T: type, present_value: T, fallback: T) T {
+    return if (bridge_state.renderer != null) present_value else fallback;
+}
+
 pub fn currentRendererSwapCount() u32 {
-    if (bridge_state.renderer) |renderer| {
-        return renderer.backend.runtime.androidGlesState().runtime.swap_count;
-    }
-    return android_gles_surface_status.currentSwapCount();
+    return runtimeMetricOrFallback(
+        u32,
+        if (bridge_state.renderer) |renderer|
+            renderer.backend.runtime.androidGlesState().runtime.swap_count
+        else
+            null,
+        android_gles_surface_status.currentSwapCount(),
+    );
 }
 
 pub fn currentRendererBoundEpoch() u64 {
-    if (bridge_state.renderer) |renderer| {
-        return renderer.backend.runtime.androidGlesState().runtime.bound_epoch;
-    }
-    return android_gles_surface_status.currentBoundEpoch();
+    return runtimeMetricOrFallback(
+        u64,
+        if (bridge_state.renderer) |renderer|
+            renderer.backend.runtime.androidGlesState().runtime.bound_epoch
+        else
+            null,
+        android_gles_surface_status.currentBoundEpoch(),
+    );
 }
 
 pub fn currentRendererContextCreateCount() u32 {
-    if (bridge_state.renderer) |renderer| {
-        return renderer.backend.runtime.androidGlesState().runtime.context_create_count;
-    }
-    return android_gles_surface_status.currentContextCreateCount();
+    return runtimeMetricOrFallback(
+        u32,
+        if (bridge_state.renderer) |renderer|
+            renderer.backend.runtime.androidGlesState().runtime.context_create_count
+        else
+            null,
+        android_gles_surface_status.currentContextCreateCount(),
+    );
 }
 
 pub fn currentRendererSurfaceCreateCount() u32 {
-    if (bridge_state.renderer) |renderer| {
-        return renderer.backend.runtime.androidGlesState().runtime.surface_create_count;
-    }
-    return android_gles_surface_status.currentSurfaceCreateCount();
+    return runtimeMetricOrFallback(
+        u32,
+        if (bridge_state.renderer) |renderer|
+            renderer.backend.runtime.androidGlesState().runtime.surface_create_count
+        else
+            null,
+        android_gles_surface_status.currentSurfaceCreateCount(),
+    );
 }
 
 pub fn currentRendererTextureCreateCount() u32 {
-    if (bridge_state.renderer != null) return 0;
-    return android_gles_surface_status.currentTextureCreateCount();
+    return fallbackWhenRendererPresent(u32, 0, android_gles_surface_status.currentTextureCreateCount());
 }
 
 pub fn currentRendererTextureAlive() bool {
-    if (bridge_state.renderer != null) return false;
-    return android_gles_surface_status.currentTextureAlive();
+    return fallbackWhenRendererPresent(bool, false, android_gles_surface_status.currentTextureAlive());
 }
 
 pub fn currentRendererTextureUploadCount() u32 {
-    if (bridge_state.renderer != null) return 0;
-    return android_gles_surface_status.currentTextureUploadCount();
+    return fallbackWhenRendererPresent(u32, 0, android_gles_surface_status.currentTextureUploadCount());
 }
 
 pub fn currentRendererTextureUpdateCount() u32 {
-    if (bridge_state.renderer != null) return 0;
-    return android_gles_surface_status.currentTextureUpdateCount();
+    return fallbackWhenRendererPresent(u32, 0, android_gles_surface_status.currentTextureUpdateCount());
 }
 
 pub fn currentRendererTextureResizeCount() u32 {
-    if (bridge_state.renderer != null) return 0;
-    return android_gles_surface_status.currentTextureResizeCount();
+    return fallbackWhenRendererPresent(u32, 0, android_gles_surface_status.currentTextureResizeCount());
 }
 
 pub fn currentRendererTextureWidth() i32 {
-    if (bridge_state.renderer != null) return 0;
-    return android_gles_surface_status.currentTextureWidth();
+    return fallbackWhenRendererPresent(i32, 0, android_gles_surface_status.currentTextureWidth());
 }
 
 pub fn currentRendererTextureHeight() i32 {
-    if (bridge_state.renderer != null) return 0;
-    return android_gles_surface_status.currentTextureHeight();
+    return fallbackWhenRendererPresent(i32, 0, android_gles_surface_status.currentTextureHeight());
 }
 
 pub fn restartSession() i32 {

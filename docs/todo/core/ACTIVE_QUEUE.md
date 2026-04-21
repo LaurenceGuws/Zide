@@ -19,7 +19,7 @@ files, not here.
 - Lane: Android-to-core consolidation, phase 2.
 - Optional tracking IDs: `CZH-B81` / `CZH-S76`
 - Active work source: `docs/todo/core/CZH_S76_TICKETS.md`
-- Current step: `CZH-1254` (proposed)
+- Current step: `CZH-1255`
 
 ## Goal Tags
 
@@ -65,8 +65,8 @@ Status meanings:
 | `CZH-1251` | `done` | Re-audit Android bridge public API and move one more platform-agnostic lifecycle/presentation operation to shared owner if present. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded ownership extraction or explicit no-op proof with references. |
 | `CZH-1252` | `done` | Consolidate Android bridge presentation-geometry invalidation + redraw request into one local owner helper to remove duplicate callsites. | `src/platform/android_runtime_bridge.zig` | Geometry invalidation/redraw logic is single-owner with no behavior drift. |
 | `CZH-1253` | `done` | Run focused bridge API ownership audit and map any remaining extractable non-platform seams into a bounded next batch. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig`, `docs/todo/core/CZH_S76_TICKETS.md` | Next extraction batch is code-targeted and bounded; no doc-only drift. |
-| `CZH-1254` | `ready` | Consolidate repeated renderer status null-fallback checks in Android bridge query API into one local helper seam. | `src/platform/android_runtime_bridge.zig` | Renderer query API keeps behavior but removes repeated fallback ownership code. |
-| `CZH-1255` | `ready` | Evaluate and extract one more platform-agnostic lifecycle/presentation primitive into shared owner, or close phase with explicit no-op proof. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded extraction or explicit closure proof with callsite references. |
+| `CZH-1254` | `done` | Consolidate repeated renderer status null-fallback checks in Android bridge query API into one local helper seam. | `src/platform/android_runtime_bridge.zig` | Renderer query API keeps behavior but removes repeated fallback ownership code. |
+| `CZH-1255` | `doing` | Evaluate and extract one more platform-agnostic lifecycle/presentation primitive into shared owner, or close phase with explicit no-op proof. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded extraction or explicit closure proof with callsite references. |
 
 ## Work Item Rules
 
