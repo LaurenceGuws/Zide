@@ -19,7 +19,7 @@ files, not here.
 - Lane: Android-to-core consolidation, phase 2.
 - Optional tracking IDs: `CZH-B81` / `CZH-S76`
 - Active work source: `docs/todo/core/CZH_S76_TICKETS.md`
-- Current step: `CZH-1251`
+- Current step: `CZH-1252` (proposed)
 
 ## Goal Tags
 
@@ -62,7 +62,9 @@ Status meanings:
 | `CZH-1248` | `done` | Validate and leave the next queue state clear. | active queue, handoff if next focus changes | Validation recorded briefly; no historical ledger update. |
 | `CZH-1249` | `done` | Consolidate repeated terminal-surface invalidation helpers into one shared local owner in Android bridge runtime flow. | `src/platform/android_runtime_bridge.zig` | Duplicate invalidation helper code removed without behavior drift. |
 | `CZH-1250` | `done` | Extract Android bridge grid-fit dirty mutation toggles behind a single bridge-local owner API for clearer shell responsibilities. | `src/platform/android_runtime_bridge.zig` | Dirty-flag ownership is explicit; callsites no longer set the flag ad hoc. |
-| `CZH-1251` | `doing` | Re-audit Android bridge public API and move one more platform-agnostic lifecycle/presentation operation to shared owner if present. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded ownership extraction or explicit no-op proof with references. |
+| `CZH-1251` | `done` | Re-audit Android bridge public API and move one more platform-agnostic lifecycle/presentation operation to shared owner if present. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded ownership extraction or explicit no-op proof with references. |
+| `CZH-1252` | `ready` | Consolidate Android bridge presentation-geometry invalidation + redraw request into one local owner helper to remove duplicate callsites. | `src/platform/android_runtime_bridge.zig` | Geometry invalidation/redraw logic is single-owner with no behavior drift. |
+| `CZH-1253` | `ready` | Run focused bridge API ownership audit and map any remaining extractable non-platform seams into a bounded next batch. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig`, `docs/todo/core/CZH_S76_TICKETS.md` | Next extraction batch is code-targeted and bounded; no doc-only drift. |
 
 ## Work Item Rules
 
@@ -115,7 +117,7 @@ Required before closing this slice:
 Run Android deploy/log smoke only when the change touches Android runtime,
 bridge, Java/Kotlin host code, or shared Android-proving behavior.
 
-Latest validation checkpoint (`CZH-1248`, 2026-04-21):
+Latest validation checkpoint (`CZH-1251`, 2026-04-21):
 
 - `zig build` passed
 - `zig build test` passed
@@ -125,6 +127,11 @@ Latest validation checkpoint (`CZH-1248`, 2026-04-21):
   - `f42306c8` (`CZH-1245`)
   - `9b2812d7` (`CZH-1246`)
   - `97a51d32` (`CZH-1247`)
+  - `190c6b47` (`CZH-1249`)
+  - `f4e6c0a7` (`CZH-1250`)
+- Android startup sanity:
+  - `python3 ops/android_terminal_host.py deploy` passed
+  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` showed no runtime crash entries
 
 ## Archive
 

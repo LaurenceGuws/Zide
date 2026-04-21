@@ -118,14 +118,7 @@ pub fn onWindowFocusChanged(focused: bool) u64 {
 }
 
 pub fn onSurfaceAvailable(width: i32, height: i32) u64 {
-    host_lifecycle_runtime.onSurfaceMetricsChanged(&bridge_state.render_host, .{
-        .logical_width = width,
-        .logical_height = height,
-        .drawable_width = width,
-        .drawable_height = height,
-        .display_scale = 1.0,
-        .pixel_density = 1.0,
-    });
+    host_lifecycle_runtime.onSurfaceAvailableLogicalPixels(&bridge_state.render_host, width, height);
     markProductFitGridDirty();
     return nextSequence();
 }

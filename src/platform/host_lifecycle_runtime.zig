@@ -34,6 +34,21 @@ pub fn onSurfaceMetricsChanged(
     render_host.noteRedrawRequested();
 }
 
+pub fn onSurfaceAvailableLogicalPixels(
+    render_host: *native_host.PlatformRenderHost,
+    width: i32,
+    height: i32,
+) void {
+    onSurfaceMetricsChanged(render_host, .{
+        .logical_width = width,
+        .logical_height = height,
+        .drawable_width = width,
+        .drawable_height = height,
+        .display_scale = 1.0,
+        .pixel_density = 1.0,
+    });
+}
+
 pub fn onSurfaceDestroyed(
     app_host: *native_host.PlatformAppHost,
     render_host: *native_host.PlatformRenderHost,
@@ -219,4 +234,23 @@ test "visible viewport updates host-visible metrics and redraw request" {
     try std.testing.expectEqual(@as(i32, 120), render_host.visible_viewport_metrics.logical_height);
     try std.testing.expectEqual(@as(f32, 2.0), render_host.visible_viewport_metrics.display_scale);
     try std.testing.expectEqual(@as(f32, 2.0), render_host.visible_viewport_metrics.pixel_density);
+}
+
+test "surface available logical pixels updates shared surface metrics and redraw" {
+    const std = @import("std");
+
+    var render_host = native_host.PlatformRenderHost{
+        .binding = .none,
+        .surface_availability = .unavailable,
+        .surface_metrics = .{},
+        .native_handles = .{},
+    };
+
+    onSurfaceAvailableLogicalPixels(&render_host, 320, 180);
+    try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, render_host.surface_availability);
+    try std.testing.expect(render_host.redraw_requested);
+    try std.testing.expectEqual(@as(i32, 320), render_host.surface_metrics.logical_width);
+    try std.testing.expectEqual(@as(i32, 180), render_host.surface_metrics.logical_height);
+    try std.testing.expectEqual(@as(f32, 1.0), render_host.surface_metrics.display_scale);
+    try std.testing.expectEqual(@as(f32, 1.0), render_host.surface_metrics.pixel_density);
 }
