@@ -1,5 +1,35 @@
 # Agent Workflow (Zide)
 
+## ZIDE REPO FREEZE / HOWL EXTRACTION RULE
+
+THIS REPO IS FROZEN AS A REFERENCE COPYBOOK FOR THE HOWL REBUILD.
+
+DO NOT TREAT ZIDE AS THE PRODUCT AUTHORITY FOR NEW WORK.
+DO NOT ADD NEW PRODUCT FEATURES HERE.
+DO NOT ADD COMPATIBILITY SHIMS FOR HOWL.
+DO NOT PRESERVE `zide_*`, `Zide*`, `ZIDE_*`, PACKAGE IDS, ABI NAMES, OR
+LEGACY PATHS WHEN MOVING IDEAS INTO HOWL.
+
+HOWL IS THE NEW PRODUCT FAMILY. THE OLD ZIDE REPO MAY BE READ FOR PRIOR ART,
+IMPLEMENTATION DETAILS, TEST IDEAS, AND BUG HISTORY, BUT IT IS NOT A BIBLE.
+MOVED CODE MUST BE PURPOSE-CHECKED, RENAMED CLEANLY, AND FIT THE NEW HOWL
+ARCHITECTURE.
+
+PRIMARY DIRECTION:
+
+- `Howl-terminal`: portable terminal engine, VT core, runtime, tests, and clean
+  public API.
+- `Howl-hosts`: GUI hosts, Android host code, platform bridge code, JNI/export
+  surfaces, app lifecycle, surfaces, input, and packaging.
+- `Howl-editor`: future editor engine; do not let it distract from terminal
+  extraction.
+- `Howl-shared`: independent reusable engines/dependencies only; not a dumping
+  ground for old Zide leftovers.
+
+Before making any change in this repo, ask whether the work should happen in
+Howl instead. The default answer is yes unless the user explicitly asks to
+preserve, inspect, or checkpoint the frozen Zide source.
+
 ## About the App
 
 Zide aims to implement an IDE fully in Zig to the furthest extent possible that makes sense for our goals. The goal is a modern IDE for revamped workspace and micro-service development. A key driver: opening many microservices in a single workspace (e.g., 8 Java LSPs) can consume ~16GB RAM and slow everything down.
