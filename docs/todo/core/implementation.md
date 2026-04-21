@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B79` (in_progress, super-gate `CZH-GATE-133`). Sprint `CZH-S74` in progress.
+- Current active macro batch: `CZH-B80` (in_progress, super-gate `CZH-GATE-134`). Sprint `CZH-S75` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -5022,7 +5022,7 @@ Anti-drift gate:
 - `Scope disposition:` `CZH-1231`..`CZH-1234` closed without execution for this batch; moved to next-phase planning as needed.
 - `Next batch opened:` `CZH-B79` / `CZH-S74` for naming and module-topology normalization.
 
-### `CZH-B79` Naming + Module Topology Normalization (`in_progress`)
+### `CZH-B79` Naming + Module Topology Normalization (`accepted`)
 
 Queue line (exact):
 
@@ -5067,4 +5067,53 @@ Owner docs:
 - CZH-1239: ✓ done (regression lock + callsite cleanup)
 - CZH-1240: ✓ done (validation packet + gate handoff)
 
-**Architect gate ready: `CZH-GATE-133` (`CZH-B79`)**
+#### Architect closure (`CZH-B79` / `CZH-GATE-133`)
+
+- `Verdict: accepted`
+- `Reason:` naming/topology normalization goals were completed with bounded behavior-neutral cuts and green validation ladder.
+- `Mode finding:` several cuts were patch-sized; default execution mode is now single operation for patch work. Dual-agent mode remains for sprint-scale batches only.
+- `Next batch opened:` `CZH-B80` / `CZH-S75` for Android-to-core consolidation kickoff.
+
+### `CZH-B80` Android-to-Core Consolidation Kickoff (`in_progress`)
+
+Queue line (exact):
+
+- consolidate Android-proven runtime/presentation contracts into shared core seams so Android progress hardens core maturity instead of platform specialization
+
+Acceptance:
+
+- one bounded architect-approved map ticket may be doc-only; remaining tickets are code/test movement
+- each consolidation cut moves ownership from Android-specialized seams to shared contracts where behavior is already proven
+- no behavior or ABI changes unless a correctness bug is identified and explicitly scoped
+- no Android-only workaround duplication remains where shared ownership exists
+- validation ladder stays green through `CZH-GATE-134`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S75_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+#### Execution status update (`CZH-S75`)
+
+- `CZH-1241` completed: seam map published with exact executable targets in `docs/todo/core/CZH_1241_ANDROID_CORE_SEAM_MAP.md`.
+- `CZH-1242` completed: shared lifecycle seam extracted to `src/platform/host_lifecycle_runtime.zig`; input/runtime bridge callsites migrated.
+- `CZH-1243` completed: remaining Android-specialized SDL refresh callsite path consolidated under shared lifecycle seam; Android wrapper modules aligned to shared ownership.
+- `CZH-1244` completed: validation ladder executed and board moved to `done` for single-mode execution.
+
+#### Validation Results (`CZH-S75`)
+
+**Validation Ladder (`CZH-1244`):**
+- ✓ `zig build` passed
+- ✓ `zig build test` passed
+- ✓ `zig build -Dmode=terminal` passed
+- ✓ `zig build -Dmode=editor` passed
+
+**Sprint Completion Status:**
+- `CZH-1241`: ✓ done (doc-only seam map)
+- `CZH-1242`: ✓ done (shared lifecycle seam extraction + callsite migration)
+- `CZH-1243`: ✓ done (SDL refresh callsite consolidation + wrapper alignment)
+- `CZH-1244`: ✓ done (validation packet + board completion)
+
+**Single-mode status:** `CZH-B80` / `CZH-S75` execution complete (no dual-mode review gate in this run)
