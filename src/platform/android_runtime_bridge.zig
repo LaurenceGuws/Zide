@@ -142,10 +142,7 @@ pub fn applyPinchZoom(scale_factor: f32) i32 {
     const changed = renderer.applyPinchZoomForExternalHost(scale_factor, now) catch return 2;
     if (changed) {
         markProductFitGridDirty();
-        if (bridge_state.terminal_widget) |*widget| {
-            widget.invalidatePresentationGeometry();
-        }
-        bridge_state.render_host.noteRedrawRequested();
+        invalidatePresentationGeometryAndRequestRedraw();
     }
     return 0;
 }
@@ -158,10 +155,7 @@ pub fn setPinchActive(active: bool) i32 {
                 markProductFitGridDirty();
             }
         }
-        if (bridge_state.terminal_widget) |*widget| {
-            widget.invalidatePresentationGeometry();
-        }
-        bridge_state.render_host.noteRedrawRequested();
+        invalidatePresentationGeometryAndRequestRedraw();
     }
     return 0;
 }
@@ -306,16 +300,10 @@ pub fn tickFrame() i32 {
             }
             if (renderer.settleExternalHostTerminalFontScale()) {
                 markProductFitGridDirty();
-                if (bridge_state.terminal_widget) |*widget| {
-                    widget.invalidatePresentationGeometry();
-                }
-                bridge_state.render_host.noteRedrawRequested();
+                invalidatePresentationGeometryAndRequestRedraw();
             }
             if (pending_zoom_changed) {
-                if (bridge_state.terminal_widget) |*widget| {
-                    widget.invalidatePresentationGeometry();
-                }
-                bridge_state.render_host.noteRedrawRequested();
+                invalidatePresentationGeometryAndRequestRedraw();
             }
         }
     }
@@ -499,6 +487,13 @@ fn refreshShellSurfaceAfterSelectionChange() void {
 fn invalidateWidgetPresentationCacheAndRequestRedraw() void {
     if (bridge_state.terminal_widget) |*widget| {
         widget.invalidatePresentationCache();
+    }
+    bridge_state.render_host.noteRedrawRequested();
+}
+
+fn invalidatePresentationGeometryAndRequestRedraw() void {
+    if (bridge_state.terminal_widget) |*widget| {
+        widget.invalidatePresentationGeometry();
     }
     bridge_state.render_host.noteRedrawRequested();
 }
