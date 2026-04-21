@@ -5047,3 +5047,24 @@ Owner docs:
 
 - `CZH-1235` accepted: widget naming/topology map is concrete and executable after import-site correction.
 - `CZH-1236` opened as active execution ticket.
+- `CZH-1237` accepted: presentation naming disambiguation landed with clean code-only scope.
+- `CZH-1238` accepted: command-subsystem topology cut landed with clean scope.
+- `CZH-1239` completed: regression lock + callsite cleanup for renamed/moved seams (documentation updated).
+
+#### Validation Results (`CZH-S74`)
+
+**Validation Ladder (CZH-1240):**
+- ✓ `zig build` passed
+- ✓ `zig build test` passed  
+- ✓ `zig build -Dmode=terminal` passed
+- ✓ `zig build -Dmode=editor` passed
+
+**Sprint Completion Status:**
+- CZH-1235: ✓ done (doc-only; widget naming/topology cut map)
+- CZH-1236: ✓ done (first naming normalization cut; input subsystem)
+- CZH-1237: ✓ done (second naming normalization cut; presentation subsystem)
+- CZH-1238: ✓ done (first topology normalization cut; command subsystem)
+- CZH-1239: ✓ done (regression lock + callsite cleanup)
+- CZH-1240: ✓ done (validation packet + gate handoff)
+
+**Architect gate ready: `CZH-GATE-133` (`CZH-B79`)**

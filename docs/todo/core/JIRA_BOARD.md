@@ -38,9 +38,9 @@ This file is the canonical ticket board for active core execution.
 
 ## Current State
 
-- `in_progress`: `CZH-1236`
-- `todo`: `CZH-1237`, `CZH-1238`, `CZH-1239`, `CZH-1240`
-- `review_gate`: none
+- `in_progress`: none
+- `todo`: none
+- `review_gate`: `CZH-1236`, `CZH-1237`, `CZH-1238`, `CZH-1239`, `CZH-1240` (CZH-S74 naming and topology normalization batch ready for architect review)
 - `blocked`: none
 - `changes_required`: none
-- `done`: `CZH-1229`, `CZH-1230`, `CZH-1235` (`CZH-1235` accepted after import-site correction; rename cuts executable)
+- `done`: `CZH-1229`, `CZH-1230`, `CZH-1235` (CZH-S74 execution complete; validation ladder passed)
