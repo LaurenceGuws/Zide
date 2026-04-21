@@ -220,3 +220,49 @@ All 8 drift-guard standards (per TERMINAL_SURFACE_CONTRACT.md "Drift-Guard Refer
 - **Guard 8 (Test Staleness):** Shared test changes require simultaneous updates across all per-path claim citations that reference shared helpers
 
 **Maintenance gate:** Code review checklist (8 guards) required before any shared claim addition/modification.
+
+## Shared Path Invariant-Lock Tightening (CZH-S72)
+
+Per TERMINAL_SURFACE_CONTRACT.md "Invariant-Lock Tightening Requirements", the following gap categories apply to shared:
+
+**Gap 1: Outcome Type Assertions (NOT APPLICABLE - ENFORCED AT PATHS)**
+- Status: ✓ Outcome type assertions delegated to per-path canonical entries
+- Lock: Refresh/Reuse/Direct each enforce their outcome types at entry points
+- Claim: Claim 12 (No Shared Outcome Production) enforces per-path type definitions
+
+**Gap 2: Field Guarantee Verification (ADDRESSED)**
+- Status: ✓ All transport fields verified in per-path fold routes
+- Lock: Each fold (refresh/reuse/direct) ensures all 3 fields present (Claim 14)
+- Shared responsibility: `presentResultFromOutcomeState[private]` receives pre-computed fields only
+
+**Gap 3: Eligibility-Classification Coupling (NOT APPLICABLE)**
+- Applies to: Direct path only (Claim 9 purity)
+- Shared: No eligibility check at shared layer
+
+**Gap 4: Attachment State Single-Path (ADDRESSED)**
+- Status: ✓ Attachment state computed only via `computeHostSurfaceAttachmentState`
+- Lock: `TerminalPresentationBridge` is sole compute path (`notePresentableAvailability()`)
+- Read path: Single canonical path (`readSharedSurfaceAttachmentReady()`)
+- Claim: Claim 13 (Attachment Consistency) enforced by sole implementer pattern
+
+**Gap 5: Transport Routing Verification (ADDRESSED)**
+- Status: ✓ All transports route through per-path fold helpers
+- Lock: `fold*OutcomeToPresent[private]` (refresh, reuse, direct) are private
+- Generic composition: `presentResultFromOutcomeState[private]` is also private
+- Claim: Claim 14 (Transport Routing Immutability) enforced by privacy
+
+**Gap 6: Outcome Immutability (ADDRESSED)**
+- Status: ✓ Outcome state internal per-path; shared layer receives immutable results
+- Lock: Type privacy prevents mutation; shared layer does not construct or modify outcomes
+- Claim: Outcome immutable enforced by per-path type privacy
+
+**Cross-Path Invariant Locks:**
+- Outcome type freeze (Claims 2, 6, 11): Type enums locked per-path
+- Transport routing (Claims 3, 7, 14): Private fold helpers per-path + private generic composition
+- Field guarantees (Claim 10): Struct type requires all fields; fold routes verify
+
+**Invariant-Lock Coverage:** 5 of 6 gaps apply to shared layer; all 5 are locked via:
+- Type-system enforcement: Gaps 2, 4, 5, 6
+- Cross-path delegation: Gap 1
+
+**Maintenance contract:** Invariant locks remain locked across future modifications to Claims 12-14.
