@@ -167,17 +167,9 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 ## Refresh Path Drift-Guard Summary (CZH-S69)
 
-**Guards preventing drift from determinism rules:**
+All 8 drift-guard standards (per TERMINAL_SURFACE_CONTRACT.md "Drift-Guard Reference Table") apply to refresh claims.
 
-- **Guard 1 (New Claims):** Any new refresh claim requires 6 determinism criteria (naming, lock detail, layer coverage, test binding, cross-path, explicitness) or architect pre-approval
-- **Guard 2 (Lock Detail):** Refresh lock details must follow standardized format (artifact:line[property]); changes require architect review
-- **Guard 3 (Test Binding):** All refresh test bindings must be verifiable file:RANGE or defined category; unverifiable citations require architect pre-approval
-- **Guard 4 (Layer Explicitness):** All 4 refresh claims must have explicit layer coverage table (CT/RT/Test/CR); implicit coverage prohibited
-- **Guard 5 (Cross-Path):** Outcome type freeze claim (shared across refresh, reuse, direct) must maintain variant notation and relationship to other paths
-- **Guard 6 (Authority Sync):** Refresh claims must remain in sync with authority definitions; divergence requires architect pre-approval
-- **Guard 7 (Cross-Refs):** Refresh claims in cross-reference table (shared locks) must be updated when claims change
-- **Guard 8 (Test Staleness):** Test function changes (renames/moves) require synchronous documentation updates across all 4 refresh claims
+**Path-specific drift-guard notes:**
+- **Guard 5 (Cross-Path):** Outcome type freeze claim (Claim 2) shared across refresh, reuse, direct paths; must maintain variant notation (.updated_and_presented | .presented) and relationship to other outcome type freeze variants
 
 **Maintenance gate:** Code review checklist (8 guards) required before any refresh claim addition/modification.
-
-Status: Ready for CZH-1192 (reuse determinism rewrite)
