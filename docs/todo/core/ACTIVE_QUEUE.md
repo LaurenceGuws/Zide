@@ -19,7 +19,7 @@ files, not here.
 - Lane: Android-to-core consolidation, phase 2.
 - Optional tracking IDs: `CZH-B81` / `CZH-S76`
 - Active work source: `docs/todo/core/CZH_S76_TICKETS.md`
-- Current step: `CZH-1253`
+- Current step: `CZH-1254` (proposed)
 
 ## Goal Tags
 
@@ -64,7 +64,9 @@ Status meanings:
 | `CZH-1250` | `done` | Extract Android bridge grid-fit dirty mutation toggles behind a single bridge-local owner API for clearer shell responsibilities. | `src/platform/android_runtime_bridge.zig` | Dirty-flag ownership is explicit; callsites no longer set the flag ad hoc. |
 | `CZH-1251` | `done` | Re-audit Android bridge public API and move one more platform-agnostic lifecycle/presentation operation to shared owner if present. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded ownership extraction or explicit no-op proof with references. |
 | `CZH-1252` | `done` | Consolidate Android bridge presentation-geometry invalidation + redraw request into one local owner helper to remove duplicate callsites. | `src/platform/android_runtime_bridge.zig` | Geometry invalidation/redraw logic is single-owner with no behavior drift. |
-| `CZH-1253` | `doing` | Run focused bridge API ownership audit and map any remaining extractable non-platform seams into a bounded next batch. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig`, `docs/todo/core/CZH_S76_TICKETS.md` | Next extraction batch is code-targeted and bounded; no doc-only drift. |
+| `CZH-1253` | `done` | Run focused bridge API ownership audit and map any remaining extractable non-platform seams into a bounded next batch. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig`, `docs/todo/core/CZH_S76_TICKETS.md` | Next extraction batch is code-targeted and bounded; no doc-only drift. |
+| `CZH-1254` | `ready` | Consolidate repeated renderer status null-fallback checks in Android bridge query API into one local helper seam. | `src/platform/android_runtime_bridge.zig` | Renderer query API keeps behavior but removes repeated fallback ownership code. |
+| `CZH-1255` | `ready` | Evaluate and extract one more platform-agnostic lifecycle/presentation primitive into shared owner, or close phase with explicit no-op proof. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded extraction or explicit closure proof with callsite references. |
 
 ## Work Item Rules
 
@@ -129,6 +131,8 @@ Latest validation checkpoint (`CZH-1251`, 2026-04-21):
   - `97a51d32` (`CZH-1247`)
   - `190c6b47` (`CZH-1249`)
   - `f4e6c0a7` (`CZH-1250`)
+  - `e7300f12` (`CZH-1251`)
+  - `582dfb4b` (`CZH-1252`)
 - Android startup sanity:
   - `python3 ops/android_terminal_host.py deploy` passed
   - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` showed no runtime crash entries

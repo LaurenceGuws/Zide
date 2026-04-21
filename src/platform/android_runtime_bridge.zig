@@ -360,53 +360,53 @@ pub fn scrollbackOffset() i32 {
 pub fn setScrollbackOffset(offsetRows: i32) i32 {
     if (offsetRows < 0) return @intFromEnum(android_shell_session.ScrollbackStatus.failed);
     const status = android_shell_session.setScrollbackOffset(@intCast(offsetRows));
-    if (status == .ok) refreshShellSurfaceAfterScrollbackChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
 pub fn followLiveBottom() i32 {
     const status = android_shell_session.followLiveBottom();
-    if (status == .ok) refreshShellSurfaceAfterScrollbackChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
 pub fn beginWordSelectionAtCell(row: i32, col: i32) i32 {
     if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
     const status = android_shell_session.beginWordSelectionAtVisibleCell(@intCast(row), @intCast(col));
-    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
 pub fn extendSelectionGestureToCell(row: i32, col: i32) i32 {
     if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
     const status = android_shell_session.extendSelectionGestureToVisibleCell(@intCast(row), @intCast(col));
-    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
 pub fn finishSelectionGesture() i32 {
     const status = android_shell_session.finishSelectionGesture();
-    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
 pub fn clearSelection() i32 {
     const status = android_shell_session.clearSelection();
-    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
 pub fn updateSelectionStartAtCell(row: i32, col: i32) i32 {
     if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
     const status = android_shell_session.updateSelectionEndpointAtVisibleCell(.start, @intCast(row), @intCast(col));
-    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
 pub fn updateSelectionEndAtCell(row: i32, col: i32) i32 {
     if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
     const status = android_shell_session.updateSelectionEndpointAtVisibleCell(.end, @intCast(row), @intCast(col));
-    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    if (status == .ok) invalidateWidgetPresentationCacheAndRequestRedraw();
     return @intFromEnum(status);
 }
 
@@ -473,14 +473,6 @@ pub fn selectionTextAlloc(allocator: std.mem.Allocator) !?[]u8 {
 /// loop instead of submitting a frame inline on the input path.
 fn refreshShellSurfaceAfterInput() void {
     android_shell_session.poll() catch return;
-    invalidateWidgetPresentationCacheAndRequestRedraw();
-}
-
-fn refreshShellSurfaceAfterScrollbackChange() void {
-    invalidateWidgetPresentationCacheAndRequestRedraw();
-}
-
-fn refreshShellSurfaceAfterSelectionChange() void {
     invalidateWidgetPresentationCacheAndRequestRedraw();
 }
 
