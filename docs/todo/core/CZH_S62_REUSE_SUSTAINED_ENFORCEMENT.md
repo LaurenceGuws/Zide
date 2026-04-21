@@ -31,18 +31,7 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** Reuse eligibility decision determines outcome type deterministically; no re-evaluation or mutation of outcome type after decision.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Runtime | `reuseSuccessOutcome():112` | Outcome constructed deterministically from eligibility decision only; no alternate paths |
-| Test | test_presentation_runtime.zig:41-47 | "Reuse success outcome invariants hold" validates deterministic construction |
-
-**Enforcement verification:** ✓ VERIFIED
-- Runtime: Outcome construction logic determined solely by eligibility input (no re-evaluation)
-- Test: Invariant test confirms decision-determines-outcome property
-- Code-review: Outcome construction changes require review
-
-**Ambiguity status:** ✓ NONE (2/4 layers: RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 5 (Reuse: RT+Test, reuseSuccessOutcome():112).
 
 ---
 
@@ -50,37 +39,15 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** Reuse outcome type set is frozen at compile-time to `.reused | .skipped`.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `ReusePresentOutcomeState[enum_frozen]` | Zig enum type definition (outcome variant set immutable) |
-| Test | test_presentation_runtime.zig (outcome type tests) | Outcome type tests validate only .reused and .skipped produced |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Enum definition locked by type system
-- Test: Type tests confirm only valid variants produced
-- Code-review: Type changes require architect approval
-
-**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 6 (Reuse variant: .reused | .skipped, CT+Test).
 
 ---
 
 ### Claim 7: Transport Consistency (Reuse Variant)
 
-**Statement:** Transport fields (cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready) are consistent for both reused and non-reused paths.
+**Statement:** Transport fields are consistent for both reused and non-reused paths.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Runtime | `reuseTransportFromOutcome()` | Transport mapping logic for both .reused and .skipped outcomes; all paths preserve required fields |
-| Test | test_presentation_runtime.zig | "Reuse fold helper preserves non-reused transport" + boundary test validates both paths |
-
-**Enforcement verification:** ✓ VERIFIED
-- Runtime: Transport mapping deterministic per outcome type (both paths covered)
-- Test: Boundary test confirms consistency across both branches
-- Code-review: Transport mapping changes require review
-
-**Ambiguity status:** ✓ NONE (2/4 layers: RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 7 (Reuse: RT+Test, reuseTransportFromOutcome()).
 
 ---
 
@@ -88,18 +55,7 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** Only outcome type `.reused` signals reuse success; no alternate success indicators exist.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `ReusePresentOutcomeState[enum_set]` | Outcome type enum constrains outcomes to exactly .reused (success) and .skipped (not success) |
-| Test | test_presentation_runtime.zig:41-47 | "Reuse success outcome invariants" validates success signal uniqueness |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Type enum prevents additional success signals
-- Test: Invariant test confirms .reused is only success path
-- Code-review: Outcome type additions prohibited without architect approval
-
-**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 8 (Reuse: CT+Test, ReusePresentOutcomeState[enum_set]).
 
 ---
 
