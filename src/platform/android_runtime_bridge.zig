@@ -126,7 +126,7 @@ pub fn onSurfaceAvailable(width: i32, height: i32) u64 {
         .display_scale = 1.0,
         .pixel_density = 1.0,
     });
-    bridge_state.productGridFitDirty = true;
+    markProductFitGridDirty();
     return nextSequence();
 }
 
@@ -138,7 +138,7 @@ pub fn onVisibleViewport(width: i32, height: i32, imeVisible: bool) u64 {
         height,
         imeVisible,
     );
-    bridge_state.productGridFitDirty = true;
+    markProductFitGridDirty();
     return nextSequence();
 }
 
@@ -148,7 +148,7 @@ pub fn applyPinchZoom(scale_factor: f32) i32 {
     const now = app_shell.getTime();
     const changed = renderer.applyPinchZoomForExternalHost(scale_factor, now) catch return 2;
     if (changed) {
-        bridge_state.productGridFitDirty = true;
+        markProductFitGridDirty();
         if (bridge_state.terminal_widget) |*widget| {
             widget.invalidatePresentationGeometry();
         }
@@ -162,7 +162,7 @@ pub fn setPinchActive(active: bool) i32 {
     if (!active) {
         if (bridge_state.renderer) |renderer| {
             if (renderer.settleExternalHostTerminalFontScale()) {
-                bridge_state.productGridFitDirty = true;
+                markProductFitGridDirty();
             }
         }
         if (bridge_state.terminal_widget) |*widget| {
@@ -286,7 +286,7 @@ pub fn currentRendererTextureHeight() i32 {
 
 pub fn restartSession() i32 {
     destroyTerminalWidget();
-    bridge_state.productGridFitDirty = true;
+    markProductFitGridDirty();
     android_shell_session.restart() catch return @intFromEnum(android_shell_session.lastStartStatus());
     return @intFromEnum(android_shell_session.lastStartStatus());
 }
@@ -309,10 +309,10 @@ pub fn tickFrame() i32 {
         if (bridge_state.renderer) |renderer| {
             pending_zoom_changed = renderer.applyPendingZoomForExternalHost(app_shell.getTime()) catch false;
             if (pending_zoom_changed) {
-                bridge_state.productGridFitDirty = true;
+                markProductFitGridDirty();
             }
             if (renderer.settleExternalHostTerminalFontScale()) {
-                bridge_state.productGridFitDirty = true;
+                markProductFitGridDirty();
                 if (bridge_state.terminal_widget) |*widget| {
                     widget.invalidatePresentationGeometry();
                 }
@@ -327,7 +327,7 @@ pub fn tickFrame() i32 {
         }
     }
 
-    if (bridge_state.productGridFitDirty) {
+    if (isProductFitGridDirty()) {
         flushDirtyProductFitGridBeforeFrame();
     }
 
@@ -510,6 +510,18 @@ fn invalidateWidgetPresentationCacheAndRequestRedraw() void {
     bridge_state.render_host.noteRedrawRequested();
 }
 
+fn markProductFitGridDirty() void {
+    bridge_state.productGridFitDirty = true;
+}
+
+fn clearProductFitGridDirty() void {
+    bridge_state.productGridFitDirty = false;
+}
+
+fn isProductFitGridDirty() bool {
+    return bridge_state.productGridFitDirty;
+}
+
 fn productFitGridCommitInputs() ?ProductGridFitCommitInputs {
     const renderer = bridge_state.renderer orelse return null;
     const widget = ensureTerminalWidget() orelse return null;
@@ -521,11 +533,11 @@ fn productFitGridCommitInputs() ?ProductGridFitCommitInputs {
 
 fn commitDirtyProductFitTerminalGrid(inputs: ProductGridFitCommitInputs) !void {
     try ensureProductFitTerminalGrid(inputs.renderer, inputs.widget);
-    bridge_state.productGridFitDirty = false;
+    clearProductFitGridDirty();
 }
 
 fn commitDirtyProductFitTerminalGridIfReady() void {
-    if (!bridge_state.productGridFitDirty) return;
+    if (!isProductFitGridDirty()) return;
     const inputs = productFitGridCommitInputs() orelse return;
     commitDirtyProductFitTerminalGrid(inputs) catch return;
 }
@@ -534,7 +546,7 @@ fn commitDirtyProductFitTerminalGridIfReady() void {
 /// the renderer if needed and flush the pending grid commit before any frame
 /// draw/submission path enters live widget rendering.
 fn flushDirtyProductFitGridBeforeFrame() void {
-    if (!bridge_state.productGridFitDirty) return;
+    if (!isProductFitGridDirty()) return;
     _ = ensureAndroidGlesRenderer() catch return;
     commitDirtyProductFitTerminalGridIfReady();
 }

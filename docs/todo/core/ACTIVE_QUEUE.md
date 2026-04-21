@@ -19,7 +19,7 @@ files, not here.
 - Lane: Android-to-core consolidation, phase 2.
 - Optional tracking IDs: `CZH-B81` / `CZH-S76`
 - Active work source: `docs/todo/core/CZH_S76_TICKETS.md`
-- Current step: `CZH-1250`
+- Current step: `CZH-1251`
 
 ## Goal Tags
 
@@ -61,8 +61,8 @@ Status meanings:
 | `CZH-1247` | `done` | Thin one platform-agnostic responsibility out of `android_runtime_bridge.zig`. | `src/platform/android_runtime_bridge.zig`, selected shared owner | Bridge loses one non-platform responsibility without behavior or ABI drift. |
 | `CZH-1248` | `done` | Validate and leave the next queue state clear. | active queue, handoff if next focus changes | Validation recorded briefly; no historical ledger update. |
 | `CZH-1249` | `done` | Consolidate repeated terminal-surface invalidation helpers into one shared local owner in Android bridge runtime flow. | `src/platform/android_runtime_bridge.zig` | Duplicate invalidation helper code removed without behavior drift. |
-| `CZH-1250` | `doing` | Extract Android bridge grid-fit dirty mutation toggles behind a single bridge-local owner API for clearer shell responsibilities. | `src/platform/android_runtime_bridge.zig` | Dirty-flag ownership is explicit; callsites no longer set the flag ad hoc. |
-| `CZH-1251` | `ready` | Re-audit Android bridge public API and move one more platform-agnostic lifecycle/presentation operation to shared owner if present. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded ownership extraction or explicit no-op proof with references. |
+| `CZH-1250` | `done` | Extract Android bridge grid-fit dirty mutation toggles behind a single bridge-local owner API for clearer shell responsibilities. | `src/platform/android_runtime_bridge.zig` | Dirty-flag ownership is explicit; callsites no longer set the flag ad hoc. |
+| `CZH-1251` | `doing` | Re-audit Android bridge public API and move one more platform-agnostic lifecycle/presentation operation to shared owner if present. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded ownership extraction or explicit no-op proof with references. |
 
 ## Work Item Rules
 
