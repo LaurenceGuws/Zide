@@ -127,3 +127,41 @@ All 8 drift-guard standards (per TERMINAL_SURFACE_CONTRACT.md "Drift-Guard Refer
 - **Guard 5 (Cross-Path):** Outcome type freeze claim (Claim 2) shared across refresh, reuse, direct paths; must maintain variant notation (.updated_and_presented | .presented) and relationship to other outcome type freeze variants
 
 **Maintenance gate:** Code review checklist (8 guards) required before any refresh claim addition/modification.
+
+## Refresh Path Invariant-Lock Tightening (CZH-S72)
+
+Per TERMINAL_SURFACE_CONTRACT.md "Invariant-Lock Tightening Requirements", the following gap categories apply to refresh:
+
+**Gap 1: Outcome Type Assertions (ADDRESSED)**
+- Status: ✓ Present at `refreshPresentEntry():168`
+- Assertion: `result.outcome == .updated_and_presented or result.outcome == .presented`
+- Lock: Outcome type set frozen (Claim 2) enforced by assertion at entry point
+
+**Gap 2: Field Guarantee Verification (ADDRESSED)**
+- Status: ✓ Fields computed deterministically in `refreshTransportFromResult():145-165`
+- Lock: All 3 fields (cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready) always assigned unconditionally
+- Claim: Claim 3 (Transport Determinism) guarantees no conditional logic
+
+**Gap 3: Eligibility Check Coupling (NOT APPLICABLE)**
+- Applies to: Direct path only (Claim 9 purity)
+- Refresh: No eligibility check in refresh path
+
+**Gap 4: Attachment State Single-Path (NOT APPLICABLE)**
+- Applies to: Shared path only (Claim 13)
+- Refresh: Widget uses `readSharedSurfaceAttachmentReady()` from bridge (canonical path)
+
+**Gap 5: Transport Routing Verification (ADDRESSED)**
+- Status: ✓ All transports route through `foldRefreshOutcomeToPresent[private]`
+- Lock: Fold helper is private (`fn` not `pub fn`); type system prevents alternate routes
+- Claim: Claim 1 (No-Bypass Invariant) enforced by type privacy
+
+**Gap 6: Outcome Immutability (ADDRESSED)**
+- Status: ✓ Outcome state internal to terminal layer
+- Lock: `RefreshOutcomeState[internal]` not exported; widget cannot construct
+- Claim: Claim 4 (Outcome State Isolation) enforced by module exports
+
+**Invariant-Lock Coverage:** 4 of 6 gaps apply to refresh; all 4 are locked (type-system or assertion)
+- Type-system locks: Gaps 1, 5, 6
+- Runtime assertion: Gap 2
+
+**Maintenance contract:** Invariant locks remain locked across future modifications to Claims 1-4.
