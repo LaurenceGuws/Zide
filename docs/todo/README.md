@@ -18,7 +18,7 @@ Do not use it for:
 
 Ownership split:
 
-- `docs/todo/core/implementation.md` — active core Zig stability/hygiene queue
+- `docs/todo/core/ACTIVE_QUEUE.md` — active core queue
 - `docs/todo/linux/implementation.md` — temporary Linux-native catch-up coordination queue after the Win11 sprint
 - `docs/todo/macos/implementation.md` — first-class macOS implementation journey and milestone tracker
 - `docs/todo/ui/renderer.md` — active renderer backend abstraction campaign

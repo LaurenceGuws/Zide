@@ -47,5 +47,5 @@ Acceptance:
 Scope: run validation ladder and publish completion state for active mode.
 
 Acceptance:
-- validation ladder recorded in `docs/todo/core/implementation.md`
-- board updated to mode-appropriate completion state
+- validation result recorded as a short note in `docs/todo/core/ACTIVE_QUEUE.md`
+- handoff still points at the next real product focus

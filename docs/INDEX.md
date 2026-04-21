@@ -23,8 +23,7 @@ Quick reading guide:
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
 - `docs/WORKFLOW.md` — doc roles and update rules.
-- `docs/todo/core/implementation.md` — active core Zig stability/hygiene queue; the
-  current default product board.
+- `docs/todo/core/ACTIVE_QUEUE.md` — current core work focus and next steps.
 - `app_architecture/platform/android/RENDER_BACKEND.md` — Android host/backend
   authority for the Android platform lane.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md` — current-state audit
@@ -32,7 +31,7 @@ Quick reading guide:
 
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
-  - `docs/todo/core/implementation.md` — active core Zig stability/hygiene queue.
+  - `docs/todo/core/ACTIVE_QUEUE.md` — active core queue.
   - `docs/todo/android/implementation.md` — active Android terminal execution queue.
   - `docs/todo/linux/implementation.md` — temporary Linux-native catch-up queue after the Win11 integration sprint.
   - `docs/todo/macos/implementation.md` — first-class macOS implementation journey and milestone tracker.

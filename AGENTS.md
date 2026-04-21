@@ -27,8 +27,8 @@ Roles:
 Flow:
 
 1. User and Architect define a focused goal.
-2. Architect reads implementation/docs/reference repos and writes a ticketed day
-   plan (Jira-like).
+2. Architect reads implementation/docs/reference repos and writes a bounded day
+   plan.
 3. User starts Engineer session with explicit instruction to read authority docs
    and execute the ticket list.
 4. Engineer loops with user through the day plan and must report per response:
@@ -44,9 +44,9 @@ Flow:
 7. Architect review bar must match VT-core rigor used in
    `src/terminal/core/**` review depth.
 8. After gate acceptance, Architect must immediately:
-   - refocus queue + handoff docs to the next milestone/batch
-   - produce a new engineer handoff prompt aligned to that refocus
-   - ensure queue, handoff, and engineer entrypoint all point to the same active milestone so users do not need to restate workflow mechanics
+   - refocus `docs/AGENT_HANDOFF.md`
+   - update the lane's active queue
+   - produce a new engineer handoff prompt aligned to that focus
 
 Mode discipline:
 
@@ -60,10 +60,10 @@ Follow this workflow for every feature/task in Single Operation Mode:
 
 1. Read `docs/AGENT_HANDOFF.md`.
 2. Use the handoff to confirm current focus and constraints.
-3. Read the current todo file(s), reference implementations, and Zide's current implementation to learn best practices and feature-specific guidance.
+3. Read the active queue named by the handoff, reference implementations, and Zide's current implementation to learn best practices and feature-specific guidance.
 4. If the lane is a broad architecture/performance/refactor campaign, perform the full audit and queue-shaping work before code changes start.
 5. Implement the next logical-sized cut from the audited queue.
-6. Update all relevant docs to reflect changes and progress.
+6. Update only the docs needed to preserve current focus or future technical decisions.
 7. Inform the user how to test changes and debug until approved.
 8. Default: do not commit until tests have been run and the user explicitly approves.
 9. If the user explicitly says to commit, treat that instruction as approval and comply without blocking on test approval.
@@ -77,7 +77,53 @@ Follow this workflow for every feature/task in Single Operation Mode:
 17. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
 18. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
 19. Prefer **small, scoped commits**: one logical change per commit when practical, each leaving the tree **buildable** (`zig build` at minimum; run `zig build test` when the lane touches test-covered code). Split doc-only updates from code. When a change cannot be split without a broken intermediate tree or a compatibility shim you are explicitly avoiding, use **one atomic commit** for that refactor rather than landing partial steps.
-20. Return to the todo and suggest 3 next changes.
+20. Return to the active queue and suggest the next changes.
+
+## Active Tracking Policy
+
+Active tracking must stay small.
+
+- `docs/AGENT_HANDOFF.md` is the first-session pointer: current focus, read order,
+  and hard constraints.
+- Each lane may have one active queue file. For core work this is
+  `docs/todo/core/ACTIVE_QUEUE.md`.
+- The active queue is a small work board, not a ledger. Each item should name
+  status, intent, primary files, and exit check.
+- Long historical ledgers are archive evidence, not active work surfaces.
+- Do not append routine ticket progress to `implementation.md` files.
+- Commit messages and short checkpoint files are enough evidence for normal
+  completed work.
+- Update `app_architecture/` only when future code needs a durable technical
+  rule or design reason.
+- Do not let the tracking system become the work. A progress-doc-only commit
+  needs an explicit user or architect reason.
+
+## Strategic Goal Tags
+
+Core strategic goal tags:
+
+- `G1-HYGIENE`
+- `G2-TOPOLOGY`
+- `G3-CONSOLIDATION`
+- `G4-VT`
+
+Every commit must include at least one goal tag in the subject.
+Untagged commits are not allowed.
+
+## Delegation Standard
+
+Delegated work must be executable without another planning pass.
+
+Every work item handed to an Engineer agent should include:
+
+- the target files or subsystem
+- the allowed change type
+- explicit non-goals
+- validation commands
+- stop conditions
+
+Use dual-agent mode for throughput, not paperwork. If the batch is patch-sized,
+run it in single-agent mode.
 
 ## War-Campaign Discipline
 
@@ -96,7 +142,7 @@ Implementation loop:
 1. take the next logical-sized cut from the audited queue
 2. implement it
 3. validate it
-4. record todo/authority progress
+4. record only the minimal active-queue or authority update needed
 5. restart the loop from the audited queue
 
 The audit should lead the code cuts, not trail them.
@@ -150,7 +196,8 @@ Current default priority rule:
 - `app_architecture/` is **current technical authority**: designs, boundaries, and technical reasoning.
 - `docs/review/` is **historical evidence**: audits, investigations, and past reviews.
 - `docs/AGENT_HANDOFF.md` is **high-level only**: focus, constraints, and entrypoint pointers for a fresh session.
-- All task progress, checkpoints, and detailed changes live in the relevant `docs/todo/` files and `app_architecture/` docs.
+- Active task state lives in the relevant active queue. Normal progress evidence
+  lives in commit messages. Durable design rules live in `app_architecture/`.
 - If research was done to create or update a TODO item, capture it in the relevant `app_architecture/` authority doc or `docs/research/` writeup (not in handoff).
 - See `docs/WORKFLOW.md` for the normative doc-placement and docs-usage guide.
 

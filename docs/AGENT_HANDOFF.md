@@ -8,39 +8,45 @@ Session entrypoint only. Keep this file short and current.
 - Mode policy: dual-agent mode is for sprint-scale batches; patch-sized cuts run in single operation mode.
 - Product lane: **Core Zig freeze + hygiene**.
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`).
-- Active phase sequence, in product order:
-  1. product hot-path hygiene: baseline achieved in `CZH-S73` (audit + measurement; no executable cleanup targets remained)
-  2. naming and module topology normalization for future widget extraction (completed in `CZH-S74`)
-  3. Android progress consolidation into shared core seams (active)
-  4. return to VT core correctness
-- Current active batch: `CZH-B81` in `docs/todo/core/implementation.md`.
-- Current sprint: `CZH-S76` in `docs/todo/core/CZH_S76_TICKETS.md`.
-- Active board: `docs/todo/core/JIRA_BOARD.md`.
-- Previous gate: `CZH-GATE-133` / `CZH-S74` closed and accepted; do not re-open naming/topology cuts without a new scoped ticket.
+- Active queue: `docs/todo/core/ACTIVE_QUEUE.md`.
+- Active detail, if needed: `docs/todo/core/CZH_S76_TICKETS.md`.
+- Legacy progress ledgers are archived and are not part of normal read order.
 
 ## Active Focus
 
-`CZH-B81` continues Android-to-core consolidation by removing residual Android-specialized lifecycle ownership and thinning bridge code to platform-shell responsibilities.
+Continue Android-to-core consolidation by removing residual Android-specialized lifecycle ownership and thinning bridge code to platform-shell responsibilities.
+
+## Strategic Goals
+
+Use this order as the long-term navigation map:
+
+1. `G1-HYGIENE` - hot-path hygiene and stable performance baseline
+2. `G2-TOPOLOGY` - naming and module-topology normalization for extraction
+3. `G3-CONSOLIDATION` - fold Android progress into shared core maturity
+4. `G4-VT` - return to VT core correctness
+
+Commit-tag rule:
+
+- Every commit must include at least one goal tag in the commit subject.
+- Commits without a goal tag are not allowed.
 
 ## First Read Order
 
-1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+1. `docs/todo/core/ACTIVE_QUEUE.md`
 2. `docs/todo/core/CZH_S76_TICKETS.md`
-3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/implementation.md`
-5. `app_architecture/ENGINEERING.md`
-6. `app_architecture/tools/STRUCTURED_LOGGING.md`
-7. `app_architecture/platform/android/ANDROID_RENDER_THREAD_CONTRACT.md`
-8. `app_architecture/terminal/VT_CORE_DESIGN.md`
-9. relevant source files named by the active ticket
+3. `docs/WORKFLOW.md`
+4. `app_architecture/ENGINEERING.md`
+5. `app_architecture/platform/android/ANDROID_RENDER_THREAD_CONTRACT.md`
+6. relevant source files named by the active queue
 
 ## Anti-Drift Rules
 
-- No documentation-only implementation tickets in `CZH-S76` unless the ticket is explicitly labelled `doc-only` by Architect before execution.
-- Each implementation ticket must change product code, tests, or both.
-- Documentation updates are secondary evidence only: update the smallest owning doc after code/test movement.
-- Do not optimize wording, trace matrices, or historical checkpoint structure while product-path hygiene remains open.
-- If a ticket cannot name a concrete product path and a measurable cleanup result, stop and return to Architect.
+- Active docs must stay small; do not revive the old 5000-line progress ledger.
+- The active queue is the delegation board: each item needs target files and an exit check.
+- Product code or tests must move for implementation work.
+- Documentation updates are secondary: update only handoff, active queue, or durable architecture authority.
+- Do not use dual-agent review wording in single-agent work.
+- If a task cannot name a concrete product path and result, stop and re-scope.
 
 ## Validation Baseline
 
