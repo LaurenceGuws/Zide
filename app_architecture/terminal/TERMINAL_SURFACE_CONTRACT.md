@@ -1035,6 +1035,69 @@ Authority policies to prevent drift from determinism rules during maintenance an
 
 ---
 
+### Coverage Evidence Consolidated Table (CZH-S71)
+
+| Claim ID | Principle | Artifact(s) | CT | RT | Test | CR | Test Citation | Variant/Notes | Status |
+|----------|-----------|-------------|----|----|------|----|----|--------------|--------|
+| 1 | No-Bypass (Refresh) | foldRefreshOutcomeToPresent[private] | ✓ | | ✓ | ✓ | test:14-28 | Refresh canonical | ✓ |
+| 2 | Outcome Freeze (Refresh) | RefreshOutcomeState[enum_frozen] | ✓ | ✓ | ✓ | ✓ | test:14-28 | .updated_and_presented \| .presented | ✓ |
+| 3 | Transport Determinism (Refresh) | refreshTransportFromResult():145-165 | | ✓ | ✓ | ✓ | test:95-111 | Refresh variant | ✓ |
+| 4 | Outcome Isolation (Refresh) | RefreshOutcomeState[internal] | ✓ | | ✓ | ✓ | (binding tests) | Refresh variant | ✓ |
+| 5 | Eligibility Immutability (Reuse) | reuseSuccessOutcome():112 | | ✓ | ✓ | ✓ | test:41-47 | Reuse canonical | ✓ |
+| 6 | Outcome Freeze (Reuse) | ReusePresentOutcomeState[enum_frozen] | ✓ | | ✓ | ✓ | (outcome type tests) | .reused \| .skipped | ✓ |
+| 7 | Transport Consistency (Reuse) | reuseTransportFromOutcome() | | ✓ | ✓ | ✓ | (boundary test) | Reuse variant | ✓ |
+| 8 | Success Signal Unique (Reuse) | ReusePresentOutcomeState[enum_set] | ✓ | | ✓ | ✓ | test:41-47 | Reuse variant | ✓ |
+| 9 | Updated Flag Determinism (Direct) | classifyDirectPresentOutcome():103-115 | | ✓ | ✓ | ✓ | test:30-39 | Direct canonical | ✓ |
+| 10 | Field Guarantees (Direct) | TerminalPresentResult[field_set] | ✓ | ✓ | ✓ | ✓ | test:80-93 | Direct variant | ✓ |
+| 11 | Outcome Freeze (Direct) | DirectPresentOutcomeState[enum_frozen] | ✓ | | ✓ | ✓ | test:30-39 | .updated_and_presented \| .presented | ✓ |
+| 12 | No Shared Outcome (Shared) | OutcomeTypes[internal_per_path] | ✓ | | ✓ | ✓ | (outcome type tests) | Shared principle | ✓ |
+| 13 | Attachment Consistency (Shared) | computeHostSurfaceAttachmentState[sole_implementer] | ✓ | ✓ | ✓ | ✓ | (integration tests) | Shared principle | ✓ |
+| 14 | Transport Routing Immutable (Shared) | fold*OutcomeToPresent[private] | ✓ | ✓ | ✓ | ✓ | (fold routes test) | Shared principle | ✓ |
+
+**Table legend:**
+- **Claim ID:** Enforcement claim number (1-14)
+- **Principle:** What is being enforced
+- **Artifact(s):** Zig source elements being used as locks
+- **CT/RT/Test/CR:** Layer coverage (✓ = covered, blank = not applicable)
+- **Test Citation:** Test file:RANGE or test category
+- **Variant/Notes:** Cross-path relationship or path-specific detail
+- **Status:** ✓ = verified complete and locked
+
+---
+
+### Guard-to-Claim Mapping Table (CZH-S71)
+
+| Guard | Prevents | Path(s) | Claims Protected | Enforcement |
+|-------|----------|---------|-----------------|--------------|
+| 1 | New claim format violations | All 4 | 1-14 (any new) | Code review gate |
+| 2 | Lock detail regressions | All 4 | 1-14 | Format verification |
+| 3 | Test binding vagueness | All 4 | 1-14 | Citation validation |
+| 4 | Layer coverage implicit | All 4 | 1-14 | Explicit table requirement |
+| 5 | Cross-path relationships obscured | Multi-path | 2/6/11 (outcome), 3/7/14 (transport), 10 (field) | Variant notation + grouping |
+| 6 | Authority ↔ per-path divergence | All 4 | 1-14 | Sync verification gate |
+| 7 | Cross-ref table staleness | All 4 | 1-14 (shared mappings) | Cross-ref maintenance |
+| 8 | Test citation staleness | All 4 | 1-14 | Test binding validation |
+
+---
+
+### Claim Grouping Table: Cross-Path Principles (CZH-S71)
+
+| Principle | Claims | Variant Notation | Paths | Integration |
+|-----------|--------|------------------|-------|-------------|
+| Outcome Type Freeze | 2, 6, 11 | Refresh: .updated_and_presented \| .presented; Reuse: .reused \| .skipped; Direct: .updated_and_presented \| .presented | 3 | Grouped by Guard 5 |
+| Transport Routing Determinism | 3, 7, 14 | Refresh: refreshTransportFromResult; Reuse: reuseTransportFromOutcome; Shared: fold*OutcomeToPresent | 3 | Grouped by Guard 7 |
+| Field Guarantees | 10 | Direct-specific: cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready | 1 | Cross-path reference (all claims use TerminalPresentResult) |
+| Canonical Entry Points | 1, 5, 9 | Refresh: refreshPresentEntry; Reuse: reuseEligibilityEntry; Direct: directPresentEntry | 3 | Single-path per principle |
+| Eligibility Decision / No-Bypass | 1, 5, 9 | No-Bypass (Refresh, Direct), Eligibility Immutability (Reuse) | 3 | Single-path per principle |
+
+**Cross-path relationship:**
+- Outcome Type Freeze (Claims 2, 6, 11): Variants of outcome type freezing across paths; variant notation preserves path-specific outcome types
+- Transport Routing (Claims 3, 7, 14): All paths route transport through private fold helpers; determinism preserved per-path
+- Field Guarantees (Claim 10): Shared principle; all paths use TerminalPresentResult with all 3 fields guaranteed
+- Shared principles (Claims 12, 13, 14): No variants; apply uniformly to all paths via shared layer
+
+---
+
 ## Evidence Format Reference (CZH-S66)
 
 Authority policy and format definitions for enforcement evidence artifacts (checkpoints, audits, verifications, implementations).
