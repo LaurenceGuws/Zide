@@ -7,7 +7,7 @@ const terminal_selection = @import("../../terminal/core/selection.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
-const open_mod = @import("terminal_widget_open.zig");
+const open_mod = @import("terminal_widget_command/open.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
 pub const PendingOpen = open_mod.PendingOpen;

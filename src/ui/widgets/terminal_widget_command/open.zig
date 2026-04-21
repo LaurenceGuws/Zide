@@ -1,14 +1,18 @@
+//! Terminal command subsystem: handles user-initiated commands like Ctrl+Click open.
+//! This module owns path/URI extraction from terminal content and command resolution
+//! (split/relocate preparation for future command subsystem extraction).
+
 const std = @import("std");
 const builtin = @import("builtin");
-const app_logger = @import("../../app_logger.zig");
+const app_logger = @import("../../../app_logger.zig");
 
-const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
-const input_adapter_mod = @import("terminal_widget_input_bridge.zig");
-const hover_mod = @import("terminal_widget_hover.zig");
-const common = @import("common.zig");
+const terminal_publication = @import("../../../terminal/core/publication/terminal_publication.zig");
+const input_adapter_mod = @import("../terminal_widget_input_bridge.zig");
+const hover_mod = @import("../terminal_widget_hover.zig");
+const common = @import("../common.zig");
 
 const Cell = terminal_publication.Cell;
-const TerminalViewGeometry = @import("../../types/mod.zig").layout.TerminalViewGeometry;
+const TerminalViewGeometry = @import("../../../types/mod.zig").layout.TerminalViewGeometry;
 
 pub const PendingOpen = struct {
     path: []u8,
