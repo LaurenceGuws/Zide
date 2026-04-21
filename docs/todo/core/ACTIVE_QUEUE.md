@@ -19,7 +19,7 @@ files, not here.
 - Lane: Android-to-core consolidation, phase 2.
 - Optional tracking IDs: `CZH-B81` / `CZH-S76`
 - Active work source: `docs/todo/core/CZH_S76_TICKETS.md`
-- Current step: `CZH-1248`
+- Current step: `CZH-1249` (proposed)
 
 ## Goal Tags
 
@@ -59,7 +59,10 @@ Status meanings:
 | `CZH-1245` | `done` | Remove or justify residual Android lifecycle wrappers. | `src/platform/android_host.zig`, `src/platform/sdl_android_host.zig`, `src/platform/host_lifecycle_runtime.zig` | Direct users route through the shared owner, or wrapper ownership is explicitly justified. |
 | `CZH-1246` | `done` | Normalize shared lifecycle API names so they describe owned behavior, not caller context. | `src/platform/host_lifecycle_runtime.zig`, migrated callsites | Shared API names are owner-driven and tests pass. |
 | `CZH-1247` | `done` | Thin one platform-agnostic responsibility out of `android_runtime_bridge.zig`. | `src/platform/android_runtime_bridge.zig`, selected shared owner | Bridge loses one non-platform responsibility without behavior or ABI drift. |
-| `CZH-1248` | `doing` | Validate and leave the next queue state clear. | active queue, handoff if next focus changes | Validation recorded briefly; no historical ledger update. |
+| `CZH-1248` | `done` | Validate and leave the next queue state clear. | active queue, handoff if next focus changes | Validation recorded briefly; no historical ledger update. |
+| `CZH-1249` | `ready` | Consolidate repeated terminal-surface invalidation helpers into one shared local owner in Android bridge runtime flow. | `src/platform/android_runtime_bridge.zig` | Duplicate invalidation helper code removed without behavior drift. |
+| `CZH-1250` | `ready` | Extract Android bridge grid-fit dirty mutation toggles behind a single bridge-local owner API for clearer shell responsibilities. | `src/platform/android_runtime_bridge.zig` | Dirty-flag ownership is explicit; callsites no longer set the flag ad hoc. |
+| `CZH-1251` | `ready` | Re-audit Android bridge public API and move one more platform-agnostic lifecycle/presentation operation to shared owner if present. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded ownership extraction or explicit no-op proof with references. |
 
 ## Work Item Rules
 
@@ -111,6 +114,17 @@ Required before closing this slice:
 
 Run Android deploy/log smoke only when the change touches Android runtime,
 bridge, Java/Kotlin host code, or shared Android-proving behavior.
+
+Latest validation checkpoint (`CZH-1248`, 2026-04-21):
+
+- `zig build` passed
+- `zig build test` passed
+- `zig build -Dmode=terminal` passed
+- `zig build -Dmode=editor` passed
+- Code commits validated in this slice:
+  - `f42306c8` (`CZH-1245`)
+  - `9b2812d7` (`CZH-1246`)
+  - `97a51d32` (`CZH-1247`)
 
 ## Archive
 
