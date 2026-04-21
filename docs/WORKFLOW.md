@@ -23,6 +23,10 @@ This repo supports two operating modes. Use one mode per session.
 Use this mode when the user explicitly wants a split between planning/review and
 execution.
 
+Use dual mode only for sprint-scale batches. If the active work is patch-sized
+(for example one or two bounded renames/moves/callsite edits), execute it in
+Single Operation Mode instead of opening a second agent loop.
+
 Roles:
 
 - User: sets product direction and approves ticket priorities.

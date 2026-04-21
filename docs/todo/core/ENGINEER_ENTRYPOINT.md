@@ -1,8 +1,10 @@
 # Core Engineer Entrypoint
 
+Use this entrypoint only when the user explicitly requests dual-agent mode for a sprint-scale batch. Patch-sized cuts should run in single operation mode.
+
 Read in this exact order:
 
-1. `docs/todo/core/CZH_S74_TICKETS.md`
+1. `docs/todo/core/CZH_S75_TICKETS.md`
 2. `docs/todo/core/JIRA_BOARD.md`
 3. `docs/todo/core/implementation.md`
 4. `docs/AGENT_HANDOFF.md`
@@ -13,10 +15,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B79` — `in_progress` toward `CZH-GATE-133`
-- Sprint: `CZH-S74`
-- Ticket source: `docs/todo/core/CZH_S74_TICKETS.md`
-- Focus: code-first naming and module-topology normalization for widget extraction readiness.
+- `CZH-B80` — `in_progress` toward `CZH-GATE-134`
+- Sprint: `CZH-S75`
+- Ticket source: `docs/todo/core/CZH_S75_TICKETS.md`
+- Focus: Android-to-core consolidation so shared contracts own runtime/presentation seams.
 
 ## Hard Rules
 
