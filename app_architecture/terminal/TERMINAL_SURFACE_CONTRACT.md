@@ -1098,6 +1098,58 @@ Authority policies to prevent drift from determinism rules during maintenance an
 
 ---
 
+### Invariant-Lock Tightening Requirements (CZH-S72)
+
+**Definition:** Runtime or compile-time invariants that enforce coverage claims cannot be violated without explicit assertion or type-system error.
+
+**Six gap categories identified:**
+
+1. **Outcome Type Assertions:** All paths must assert outcome types match expected set per claim
+   - Refresh: assertion at `refreshPresentEntry():168` present ✓
+   - Reuse: assertion needed for .reused | .skipped set
+   - Direct: assertion needed for .updated_and_presented | .presented set
+   - Shared: assertion needed per-path outcome production (internal only)
+
+2. **Field Guarantee Verification:** All transports must verify all 3 fields present (cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready)
+   - Applicable to Claims: 3 (refresh), 7 (reuse), 10 (direct shared), 14 (shared)
+   - Form: Runtime assertions in field assignment functions
+
+3. **Eligibility-Classification Coupling:** Direct path must assert classification depends only on `updated` flag (Claim 9 purity)
+   - Applicable to: Direct path, Claim 9
+   - Form: Assertion or pure-function verification
+
+4. **Attachment State Single-Path:** Shared attachment computation must not be re-derived by widget
+   - Applicable to: Shared, Claim 13
+   - Form: Type-system enforcement (private functions, immutable results)
+
+5. **Transport Routing Verification:** All transport fields must originate from canonical fold helpers
+   - Applicable to: All paths, Claims 3/7/14
+   - Form: Runtime assertions on result construction
+
+6. **Outcome Immutability:** Outcome objects cannot be mutated post-classification
+   - Applicable to: All paths
+   - Form: Type-system const/private or mutation assertions
+
+**Tightening patterns:**
+
+| Gap | Pattern | Examples | Priority |
+|-----|---------|----------|----------|
+| Type assertions | `assert(outcome == expected_set)` | Reuse/Direct/Shared entry points | High |
+| Field checks | `assert(field != null && field == expected)` | Transport mapping functions | High |
+| Purity locks | Pure-function annotation or test | Direct classification | Medium |
+| Private enforcement | Type privacy or access control | Shared helpers, result construction | High |
+| Routing verification | Source assertion | Fold composition | Medium |
+| Immutability locks | Const types or mutation assertions | Result objects | Medium |
+
+**Enforcement gates:**
+- Code review checklist: All 6 gap categories checked before claim-related changes
+- Architect approval: Any gap closure requires review
+- Test coverage: Assertions must not be skipped in any code path
+
+**Maintenance contract:** Invariant locks must be maintained alongside claims (Claim 9-14 modifications require lock updates).
+
+---
+
 ## Evidence Format Reference (CZH-S66)
 
 Authority policy and format definitions for enforcement evidence artifacts (checkpoints, audits, verifications, implementations).
