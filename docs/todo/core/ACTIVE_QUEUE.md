@@ -19,7 +19,7 @@ files, not here.
 - Lane: Android-to-core consolidation, phase 2.
 - Optional tracking IDs: `CZH-B81` / `CZH-S76`
 - Active work source: `docs/todo/core/CZH_S76_TICKETS.md`
-- Current step: `CZH-1255`
+- Current step: `CZH-1256` (proposed transition cut)
 
 ## Goal Tags
 
@@ -66,7 +66,8 @@ Status meanings:
 | `CZH-1252` | `done` | Consolidate Android bridge presentation-geometry invalidation + redraw request into one local owner helper to remove duplicate callsites. | `src/platform/android_runtime_bridge.zig` | Geometry invalidation/redraw logic is single-owner with no behavior drift. |
 | `CZH-1253` | `done` | Run focused bridge API ownership audit and map any remaining extractable non-platform seams into a bounded next batch. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig`, `docs/todo/core/CZH_S76_TICKETS.md` | Next extraction batch is code-targeted and bounded; no doc-only drift. |
 | `CZH-1254` | `done` | Consolidate repeated renderer status null-fallback checks in Android bridge query API into one local helper seam. | `src/platform/android_runtime_bridge.zig` | Renderer query API keeps behavior but removes repeated fallback ownership code. |
-| `CZH-1255` | `doing` | Evaluate and extract one more platform-agnostic lifecycle/presentation primitive into shared owner, or close phase with explicit no-op proof. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded extraction or explicit closure proof with callsite references. |
+| `CZH-1255` | `done` | Evaluate and extract one more platform-agnostic lifecycle/presentation primitive into shared owner, or close phase with explicit no-op proof. | `src/platform/android_runtime_bridge.zig`, `src/platform/host_lifecycle_runtime.zig` | One bounded extraction or explicit closure proof with callsite references. |
+| `CZH-1256` | `ready` | Prepare transition slice from `G3-CONSOLIDATION` to next primary goal with code-first queue continuity. | `docs/todo/core/ACTIVE_QUEUE.md`, `docs/AGENT_HANDOFF.md`, selected code targets for next goal | Next lane starts with executable code tickets and no process drift. |
 
 ## Work Item Rules
 

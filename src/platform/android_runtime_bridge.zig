@@ -179,10 +179,11 @@ pub fn onSurfaceAvailableFromJava(
 
 pub fn onSurfaceDestroyed() u64 {
     swapNativeWindow(null);
-    host_lifecycle_runtime.onSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
-    if (bridge_state.renderer) |renderer| {
-        renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
-    }
+    host_lifecycle_runtime.onSurfaceDestroyedAndSyncRenderer(
+        &bridge_state.app_host,
+        &bridge_state.render_host,
+        bridge_state.renderer,
+    );
     bridge_state.last_renderer_status = .surface_destroyed;
     return nextSequence();
 }

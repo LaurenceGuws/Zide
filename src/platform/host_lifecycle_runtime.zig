@@ -1,4 +1,5 @@
 const native_host = @import("native_host.zig");
+const renderer_mod = @import("../ui/renderer.zig");
 const sdl_api = @import("sdl_api.zig");
 const sdl_native_host = @import("sdl_native_host.zig");
 
@@ -56,6 +57,17 @@ pub fn onSurfaceDestroyed(
     render_host.noteSurfaceUnavailable();
     app_host.noteSurfaceFocused(false);
     app_host.noteTextInputActive(false);
+}
+
+pub fn onSurfaceDestroyedAndSyncRenderer(
+    app_host: *native_host.PlatformAppHost,
+    render_host: *native_host.PlatformRenderHost,
+    renderer: ?*renderer_mod.Renderer,
+) void {
+    onSurfaceDestroyed(app_host, render_host);
+    if (renderer) |value| {
+        value.syncExternalHostState(app_host.*, render_host.*);
+    }
 }
 
 fn positiveScaleOrDefault(value: f32) f32 {
@@ -148,6 +160,37 @@ test "surface destruction clears host and render state" {
     };
 
     onSurfaceDestroyed(&app_host, &render_host);
+    try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, render_host.surface_availability);
+    try std.testing.expect(!app_host.surface_focused);
+    try std.testing.expect(!app_host.text_input_active);
+}
+
+test "surface destruction with null renderer keeps lifecycle cleanup behavior" {
+    const std = @import("std");
+
+    var app_host = native_host.PlatformAppHost{
+        .kind = .android_activity,
+        .lifecycle_state = .resumed,
+        .surface_focused = true,
+        .text_input_active = true,
+    };
+    var render_host = native_host.PlatformRenderHost{
+        .binding = .opengl,
+        .surface_availability = .available,
+        .surface_metrics = .{
+            .logical_width = 100,
+            .logical_height = 50,
+            .drawable_width = 200,
+            .drawable_height = 100,
+            .display_scale = 2.0,
+            .pixel_density = 2.0,
+        },
+        .native_handles = .{
+            .android_native_window = @ptrFromInt(1),
+        },
+    };
+
+    onSurfaceDestroyedAndSyncRenderer(&app_host, &render_host, null);
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, render_host.surface_availability);
     try std.testing.expect(!app_host.surface_focused);
     try std.testing.expect(!app_host.text_input_active);
