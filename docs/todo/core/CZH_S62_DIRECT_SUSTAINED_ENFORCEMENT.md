@@ -128,3 +128,44 @@ All 8 drift-guard standards (per TERMINAL_SURFACE_CONTRACT.md "Drift-Guard Refer
 - **Guard 7 (Cross-Refs):** Direct claims in shared lock mappings must be updated when shared claims change
 
 **Maintenance gate:** Code review checklist (8 guards) required before any direct claim addition/modification.
+
+## Direct Path Invariant-Lock Tightening (CZH-S72)
+
+Per TERMINAL_SURFACE_CONTRACT.md "Invariant-Lock Tightening Requirements", the following gap categories apply to direct:
+
+**Gap 1: Outcome Type Assertions (ADDRESSED)**
+- Status: ✓ Outcome types locked by `DirectPresentOutcomeState[enum_frozen]`
+- Lock: Enum definition constrains outcomes to .updated_and_presented | .presented (Claim 11)
+- Assertion: Type system prevents other values at compile time
+
+**Gap 2: Field Guarantee Verification (ADDRESSED)**
+- Status: ✓ All 3 transport fields guaranteed present and correct
+- Lock: `TerminalPresentResult[field_set]` struct requires all fields by type definition (Claim 10)
+- Fields: cache_state_advanced (always true), host_surface_target_available (always true), shared_surface_attachment_ready (always false for direct)
+- Claim: Claim 10 (Field Guarantees) enforced by struct type
+
+**Gap 3: Eligibility-Classification Coupling (ADDRESSED)**
+- Status: ✓ Classification depends only on `updated` boolean flag
+- Lock: `classifyDirectPresentOutcome()` is pure function (Claim 9)
+- Assertion: No other state influences classification outcome
+- Claim: Claim 9 (Updated Flag Determinism) enforced by function purity
+
+**Gap 4: Attachment State Single-Path (NOT APPLICABLE)**
+- Applies to: Shared path only (Claim 13)
+- Direct: Uses canonical bridge path via shared attachment state
+
+**Gap 5: Transport Routing Verification (ADDRESSED)**
+- Status: ✓ All transports route through `foldDirectOutcomeToPresent[private]`
+- Lock: Fold helper is private; type system prevents bypass (Claim 11)
+- Field computation: `directTransportFromUpdated()` deterministically sets all fields (Claim 10)
+
+**Gap 6: Outcome Immutability (ADDRESSED)**
+- Status: ✓ Outcome state internal to terminal layer
+- Lock: `DirectPresentOutcomeState[internal]` not exported; widget cannot construct or modify
+- Claim: Type privacy enforces immutability
+
+**Invariant-Lock Coverage:** 5 of 6 gaps apply to direct; all 5 are locked
+- Type-system locks: Gaps 1, 2, 4, 5, 6
+- Function purity lock: Gap 3
+
+**Maintenance contract:** Invariant locks remain locked across future modifications to Claims 9-11.
