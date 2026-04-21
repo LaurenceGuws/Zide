@@ -492,20 +492,18 @@ pub fn selectionTextAlloc(allocator: std.mem.Allocator) !?[]u8 {
 /// loop instead of submitting a frame inline on the input path.
 fn refreshShellSurfaceAfterInput() void {
     android_shell_session.poll() catch return;
-    if (bridge_state.terminal_widget) |*widget| {
-        widget.invalidatePresentationCache();
-    }
-    bridge_state.render_host.noteRedrawRequested();
+    invalidateWidgetPresentationCacheAndRequestRedraw();
 }
 
 fn refreshShellSurfaceAfterScrollbackChange() void {
-    if (bridge_state.terminal_widget) |*widget| {
-        widget.invalidatePresentationCache();
-    }
-    bridge_state.render_host.noteRedrawRequested();
+    invalidateWidgetPresentationCacheAndRequestRedraw();
 }
 
 fn refreshShellSurfaceAfterSelectionChange() void {
+    invalidateWidgetPresentationCacheAndRequestRedraw();
+}
+
+fn invalidateWidgetPresentationCacheAndRequestRedraw() void {
     if (bridge_state.terminal_widget) |*widget| {
         widget.invalidatePresentationCache();
     }
