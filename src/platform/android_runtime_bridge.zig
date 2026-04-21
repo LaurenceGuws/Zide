@@ -1,6 +1,5 @@
 const builtin = @import("builtin");
 const android_gles_surface_status = @import("android_gles_surface_status.zig");
-const android_host = @import("android_host.zig");
 const android_shell_session = @import("android_shell_session.zig");
 const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
@@ -11,6 +10,7 @@ const renderer_mod = @import("../ui/renderer.zig");
 const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
 const renderer_terminal_draw_host = @import("../ui/renderer/renderer_terminal_draw_host.zig");
 const shared_types = @import("../types/mod.zig");
+const host_lifecycle_runtime = @import("host_lifecycle_runtime.zig");
 const std = @import("std");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const terminal_session_runtime_factory = @import("../app/terminal/terminal_session_runtime_factory.zig");
@@ -97,32 +97,32 @@ pub fn onCreate() u64 {
 }
 
 pub fn onStart() u64 {
-    _ = android_host.onWillEnterForeground(&bridge_state.app_host);
+    host_lifecycle_runtime.noteWillEnterForeground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onResume() u64 {
-    _ = android_host.onDidEnterForeground(&bridge_state.app_host, &bridge_state.render_host);
+    host_lifecycle_runtime.noteDidEnterForeground(&bridge_state.app_host, &bridge_state.render_host);
     return nextSequence();
 }
 
 pub fn onPause() u64 {
-    _ = android_host.onWillEnterBackground(&bridge_state.app_host);
+    host_lifecycle_runtime.noteWillEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onStop() u64 {
-    _ = android_host.onDidEnterBackground(&bridge_state.app_host);
+    host_lifecycle_runtime.noteDidEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onWindowFocusChanged(focused: bool) u64 {
-    _ = android_host.onSurfaceFocus(&bridge_state.app_host, focused);
+    host_lifecycle_runtime.noteWindowFocusFromInputRuntime(&bridge_state.app_host, focused);
     return nextSequence();
 }
 
 pub fn onSurfaceAvailable(width: i32, height: i32) u64 {
-    _ = android_host.onSurfaceMetrics(&bridge_state.app_host, &bridge_state.render_host, .{
+    host_lifecycle_runtime.noteSurfaceMetrics(&bridge_state.render_host, .{
         .logical_width = width,
         .logical_height = height,
         .drawable_width = width,
@@ -201,7 +201,7 @@ pub fn onSurfaceAvailableFromJava(
 
 pub fn onSurfaceDestroyed() u64 {
     swapNativeWindow(null);
-    _ = android_host.onSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
+    host_lifecycle_runtime.noteSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
     if (bridge_state.renderer) |renderer| {
         renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
     }

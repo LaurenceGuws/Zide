@@ -1,12 +1,13 @@
+const host_lifecycle_runtime = @import("host_lifecycle_runtime.zig");
 const native_host = @import("native_host.zig");
 
 pub fn usesAndroidActivityHost(app_host: native_host.PlatformAppHost) bool {
-    return app_host.kind == .android_activity;
+    return host_lifecycle_runtime.usesAndroidActivityHost(app_host);
 }
 
 pub fn onWillEnterForeground(app_host: *native_host.PlatformAppHost) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
-    app_host.noteStarted();
+    host_lifecycle_runtime.noteWillEnterForeground(app_host);
     return true;
 }
 
@@ -15,20 +16,19 @@ pub fn onDidEnterForeground(
     render_host: *native_host.PlatformRenderHost,
 ) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
-    app_host.noteResumed();
-    render_host.noteRedrawRequested();
+    host_lifecycle_runtime.noteDidEnterForeground(app_host, render_host);
     return true;
 }
 
 pub fn onWillEnterBackground(app_host: *native_host.PlatformAppHost) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
-    app_host.notePaused();
+    host_lifecycle_runtime.noteWillEnterBackground(app_host);
     return true;
 }
 
 pub fn onDidEnterBackground(app_host: *native_host.PlatformAppHost) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
-    app_host.noteStopped();
+    host_lifecycle_runtime.noteDidEnterBackground(app_host);
     return true;
 }
 
@@ -38,8 +38,7 @@ pub fn onSurfaceMetrics(
     metrics: native_host.RenderSurfaceMetrics,
 ) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
-    render_host.noteSurfaceAvailable(metrics);
-    render_host.noteRedrawRequested();
+    host_lifecycle_runtime.noteSurfaceMetrics(render_host, metrics);
     return true;
 }
 
@@ -48,16 +47,13 @@ pub fn onSurfaceDestroyed(
     render_host: *native_host.PlatformRenderHost,
 ) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
-    render_host.noteSurfaceUnavailable();
-    app_host.noteSurfaceFocused(false);
-    app_host.noteTextInputActive(false);
+    host_lifecycle_runtime.noteSurfaceDestroyed(app_host, render_host);
     return true;
 }
 
 pub fn onSurfaceFocus(app_host: *native_host.PlatformAppHost, focused: bool) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
-    app_host.noteSurfaceFocused(focused);
-    if (!focused) app_host.noteTextInputActive(false);
+    host_lifecycle_runtime.noteWindowFocusFromInputRuntime(app_host, focused);
     return true;
 }
 

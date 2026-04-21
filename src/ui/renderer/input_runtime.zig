@@ -1,9 +1,8 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
-const android_host = @import("../../platform/android_host.zig");
+const host_lifecycle_runtime = @import("../../platform/host_lifecycle_runtime.zig");
 const native_host = @import("../../platform/native_host.zig");
 const sdl_native_host = @import("../../platform/sdl_native_host.zig");
-const sdl_android_host = @import("../../platform/sdl_android_host.zig");
 const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
 const iface = @import("interface.zig");
@@ -77,19 +76,16 @@ fn handleEvent(
             domain.app_host.noteTerminationRequested();
         },
         sdl_api.EVENT_APP_WILL_ENTER_FOREGROUND => {
-            if (!android_host.onWillEnterForeground(domain.app_host)) domain.app_host.noteStarted();
+            host_lifecycle_runtime.noteWillEnterForeground(domain.app_host);
         },
         sdl_api.EVENT_APP_DID_ENTER_FOREGROUND => {
-            if (!android_host.onDidEnterForeground(domain.app_host, domain.render_host)) {
-                domain.app_host.noteResumed();
-                domain.render_host.noteRedrawRequested();
-            }
+            host_lifecycle_runtime.noteDidEnterForeground(domain.app_host, domain.render_host);
         },
         sdl_api.EVENT_APP_WILL_ENTER_BACKGROUND => {
-            if (!android_host.onWillEnterBackground(domain.app_host)) domain.app_host.notePaused();
+            host_lifecycle_runtime.noteWillEnterBackground(domain.app_host);
         },
         sdl_api.EVENT_APP_DID_ENTER_BACKGROUND => {
-            if (!android_host.onDidEnterBackground(domain.app_host)) domain.app_host.noteStopped();
+            host_lifecycle_runtime.noteDidEnterBackground(domain.app_host);
         },
         sdl_api.EVENT_APP_TERMINATING => {
             domain.should_close_flag.* = true;
@@ -274,16 +270,10 @@ fn applyWindowFocusState(
     if (focused) {
         sdl_api.startTextInput(domain.window);
         text_input.reapplyRect(domain.text_input_state, domain.window);
-        if (!android_host.onSurfaceFocus(domain.app_host, true)) {
-            domain.app_host.noteSurfaceFocused(true);
-            domain.app_host.noteTextInputActive(true);
-        }
+        host_lifecycle_runtime.noteWindowFocusFromInputRuntime(domain.app_host, true);
     } else {
         sdl_api.stopTextInput(domain.window);
-        if (!android_host.onSurfaceFocus(domain.app_host, false)) {
-            domain.app_host.noteSurfaceFocused(false);
-            domain.app_host.noteTextInputActive(false);
-        }
+        host_lifecycle_runtime.noteWindowFocusFromInputRuntime(domain.app_host, false);
     }
     domain.window_focused.* = focused;
     window_log.logf(.info, "window focus source={s} focused={d}", .{
@@ -325,7 +315,7 @@ fn handleWindowEvent(
     if (change.any()) {
         window_changes.merge(change);
         if (change.affectsWindowRefresh()) {
-            if (!sdl_android_host.noteWindowRefresh(app_host, render_host, window)) {
+            if (!host_lifecycle_runtime.noteSdlWindowRefresh(app_host, render_host, window)) {
                 render_host.noteSurfaceAvailable(sdl_native_host.captureWindowSurfaceMetrics(window));
                 render_host.noteRedrawRequested();
             }
