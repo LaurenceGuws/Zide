@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B74` (in_progress, super-gate `CZH-GATE-128`). Sprint `CZH-S69` in progress.
+- Current active macro batch: `CZH-B75` (in_progress, super-gate `CZH-GATE-129`). Sprint `CZH-S70` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -32,6 +32,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S66` (`CZH-B71`, `CZH-GATE-125`). Checkpoint: `docs/todo/core/CZH_S66_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S67` (`CZH-B72`, `CZH-GATE-126`). Checkpoint: `docs/todo/core/CZH_S67_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S68` (`CZH-B73`, `CZH-GATE-127`). Checkpoint: `docs/todo/core/CZH_S68_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S69` (`CZH-B74`, `CZH-GATE-128`). Checkpoint: `docs/todo/core/CZH_S69_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
@@ -4859,7 +4860,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B74` Enforcement Matrix Drift-Guard Tightening (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B74` Enforcement Matrix Drift-Guard Tightening (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4880,5 +4881,30 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S69_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+### `CZH-B75` Drift-Guard Verification Surface Simplification (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- simplify drift-guard verification surface while preserving complete enforcement coverage and traceability
+
+Acceptance:
+
+- verification surface is simplified without reducing drift-guard coverage
+- refresh/reuse/direct/shared simplifications preserve guard clarity and ownership
+- regression + integration verification confirms full coverage preservation
+- docs align with verification-surface vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-129`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S70_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
