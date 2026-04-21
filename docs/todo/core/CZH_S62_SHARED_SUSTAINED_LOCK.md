@@ -11,62 +11,25 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 ### Claim 12: No Shared Outcome Production (Shared Variant)
 
-**Statement:** Outcome types are produced only per-path (refresh, reuse, direct); no shared outcome construction helper exists; no outcome produced outside canonical path-specific entries.
+**Statement:** Outcome types are produced only per-path (refresh, reuse, direct); no shared outcome construction helper exists.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `OutcomeTypes[internal_per_path]` | RefreshOutcomeState, ReusePresentOutcomeState, DirectPresentOutcomeState are internal per-path only; no shared outcome type exists |
-| Test | test_presentation_runtime.zig (outcome type tests) | Outcome type tests validate per-path production only |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Outcome types defined per-path in terminal layer; no shared constructor
-- Test: Outcome tests confirm canonical-entry-only production per path
-- Code-review: Outcome type additions prohibited without architect approval
-
-**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 12 (Shared: CT+Test, OutcomeTypes[internal_per_path]).
 
 ---
 
 ### Claim 13: Attachment Consistency (Shared Variant)
 
-**Statement:** Attachment state (full conjunction of pipeline ∧ host target) is computed via single canonical path only; no re-derivation or alternate computation exists.
+**Statement:** Attachment state is computed via single canonical path only; no re-derivation or alternate computation exists.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `computeHostSurfaceAttachmentState[sole_implementer]` | Single function is only attachment state computation; no alternate helpers |
-| Runtime | `TerminalPresentationBridge` (canonical) | Bridge provides single read/write path for attachment state via `notePresentableAvailability()` and `readSharedSurfaceAttachmentReady()` |
-| Test | test_presentation_runtime.zig (integration tests) | Integration tests verify single computation path, no re-derivation |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Single-function uniqueness enforced by architecture
-- Runtime: Bridge owns all attachment state reads/writes
-- Test: Integration tests confirm no alternate computation paths
-- Code-review: New attachment functions require architect approval
-
-**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 13 (Shared: CT+RT+Test, computeHostSurfaceAttachmentState[sole_implementer]).
 
 ---
 
 ### Claim 14: Transport Routing Immutability (Shared Variant)
 
-**Statement:** All transport fields route through canonical fold paths only; no alternate transport construction or routing allowed; fold helpers are private per-path.
+**Statement:** All transport fields route through canonical fold paths only; no alternate transport construction or routing allowed.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `fold*OutcomeToPresent[private]` (all 3: refresh, reuse, direct) | All fold helpers are fn not pub fn; type system prevents direct calls |
-| Runtime | `presentResultFromOutcomeState[private]:125` | Generic fold composition private; only fold helpers call it |
-| Test | test_presentation_runtime.zig | "Fold routes consume contracted transport carrier" validates single routing path |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Fold helper privacy prevents alternate routes
-- Runtime: Generic fold composition private; no direct calls possible
-- Test: Routing test confirms all transports flow through canonical paths
-- Code-review: Fold helper exposure changes prohibited
-
-**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 14 (Shared: CT+RT+Test, fold*OutcomeToPresent[private]).
 
 ---
 
