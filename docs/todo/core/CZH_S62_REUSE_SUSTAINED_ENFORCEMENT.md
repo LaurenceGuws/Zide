@@ -135,3 +135,42 @@ All 8 drift-guard standards (per TERMINAL_SURFACE_CONTRACT.md "Drift-Guard Refer
 - **Guard 7 (Cross-Refs):** Reuse claims in shared lock mappings must be updated when shared claims change
 
 **Maintenance gate:** Code review checklist (8 guards) required before any reuse claim addition/modification.
+
+## Reuse Path Invariant-Lock Tightening (CZH-S72)
+
+Per TERMINAL_SURFACE_CONTRACT.md "Invariant-Lock Tightening Requirements", the following gap categories apply to reuse:
+
+**Gap 1: Outcome Type Assertions (ADDRESSED)**
+- Status: ✓ Outcome types locked by `ReusePresentOutcomeState[enum_frozen]`
+- Lock: Enum definition constrains outcomes to .reused | .skipped (Claim 6)
+- Assertion: Type system prevents other values at compile time
+
+**Gap 2: Field Guarantee Verification (ADDRESSED)**
+- Status: ✓ Transport fields computed in both `.reused` and `.skipped` paths
+- Lock: `reuseTransportFromOutcome()` maps both branches; all fields always present (Claim 7)
+- Claim: Claim 7 (Transport Consistency) guarantees consistency across paths
+
+**Gap 3: Eligibility-Classification Coupling (ADDRESSED)**
+- Status: ✓ Outcome determined solely by eligibility decision
+- Lock: `reuseSuccessOutcome()` construction depends only on eligibility input (Claim 5)
+- Claim: Claim 5 (Eligibility Decision Immutability) ensures deterministic mapping
+
+**Gap 4: Attachment State Single-Path (NOT APPLICABLE)**
+- Applies to: Shared path only (Claim 13)
+- Reuse: Uses canonical bridge path for attachment state
+
+**Gap 5: Transport Routing Verification (ADDRESSED)**
+- Status: ✓ All transports route through `foldReuseOutcomeToPresent[private]`
+- Lock: Fold helper is private; type system prevents bypass
+- Claim: Claim 7 (Transport Consistency) enforced by routing lock
+
+**Gap 6: Outcome Immutability (ADDRESSED)**
+- Status: ✓ Outcome state internal; widget cannot construct
+- Lock: `ReusePresentOutcomeState[internal]` not exported
+- Claim: Outcome immutable after construction (direct flow)
+
+**Invariant-Lock Coverage:** 5 of 6 gaps apply to reuse; all 5 are locked
+- Type-system locks: Gaps 1, 3, 5, 6
+- Determinism lock: Gap 2
+
+**Maintenance contract:** Invariant locks remain locked across future modifications to Claims 5-8.
