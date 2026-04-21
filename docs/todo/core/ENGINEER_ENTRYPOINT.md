@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B76` — **`in_progress`** toward **`CZH-GATE-130`** (sprint `CZH-S71`):
-  drift-guard coverage evidence consolidation: reduce duplication while preserving integrity and traceability.
-  Ticket source: `docs/todo/core/CZH_S71_TICKETS.md`.
+- `CZH-B77` — **`in_progress`** toward **`CZH-GATE-131`** (sprint `CZH-S72`):
+  coverage evidence invariant-lock tightening: close invariant gaps while preserving full enforcement coverage.
+  Ticket source: `docs/todo/core/CZH_S72_TICKETS.md`.
 
 ## Hard Rules
 
@@ -46,8 +46,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S71` tickets `CZH-1213`..`CZH-1220` are active; run to
-  **`CZH-GATE-130`** unless blocked.
+- Sprint `CZH-S72` tickets `CZH-1221`..`CZH-1228` are active; run to
+  **`CZH-GATE-131`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 - Atomic-group commits are forbidden unless explicitly pre-approved by Architect in writing before execution.
 

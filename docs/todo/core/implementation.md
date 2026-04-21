@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B76` (in_progress, super-gate `CZH-GATE-130`). Sprint `CZH-S71` in progress.
+- Current active macro batch: `CZH-B77` (in_progress, super-gate `CZH-GATE-131`). Sprint `CZH-S72` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -34,6 +34,7 @@ stable, reviewable, and ready for the next expansion phase.
 - Accepted sprint: `CZH-S68` (`CZH-B73`, `CZH-GATE-127`). Checkpoint: `docs/todo/core/CZH_S68_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S69` (`CZH-B74`, `CZH-GATE-128`). Checkpoint: `docs/todo/core/CZH_S69_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S70` (`CZH-B75`, `CZH-GATE-129`). Checkpoint: `docs/todo/core/CZH_S70_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S71` (`CZH-B76`, `CZH-GATE-130`). Checkpoint: `docs/todo/core/CZH_S71_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S65` (`CZH-B70`, `CZH-GATE-124`). Checkpoint: `docs/todo/core/CZH_S65_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S54` (`CZH-B59`, `CZH-GATE-113`). Checkpoint: `docs/todo/core/CZH_S54_CHECKPOINT.md`.
 - Accepted sprint: `CZH-S52` (`CZH-B57`, `CZH-GATE-111`). Checkpoint: `docs/todo/core/CZH_S52_CHECKPOINT.md`.
@@ -4911,7 +4912,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B76` Drift-Guard Coverage Evidence Consolidation (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B76` Drift-Guard Coverage Evidence Consolidation (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4932,5 +4933,30 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S71_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+
+### `CZH-B77` Coverage Evidence Invariant Locks (Larger-Cut Sprint) (`in_progress`)
+
+Queue line (exact):
+
+- tighten invariant locks around consolidated coverage evidence so integrity remains robust under ongoing maintenance
+
+Acceptance:
+
+- invariant locks are explicit across refresh/reuse/direct/shared paths
+- identified invariant gaps are closed without reducing existing coverage guarantees
+- regression + integration verification confirms invariant integrity preservation
+- docs align with invariant-lock vocabulary and ownership
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-131`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S72_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
