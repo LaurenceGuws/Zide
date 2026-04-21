@@ -23,22 +23,22 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S75`
-- Previous Sprint: `CZH-S74` (accepted at `CZH-GATE-133`)
-- Super-gate: `CZH-GATE-134` (`CZH-B80`, in_progress)
-- Ticket source: `docs/todo/core/CZH_S75_TICKETS.md`
+- Sprint ID: `CZH-S76`
+- Previous Sprint: `CZH-S75` (completed in single mode at `CZH-GATE-134`)
+- Super-gate: `CZH-GATE-135` (`CZH-B81`, in_progress)
+- Ticket source: `docs/todo/core/CZH_S76_TICKETS.md`
 
-## Ticket Order (`CZH-S75`)
+## Ticket Order (`CZH-S76`)
 
-1. `CZH-1241`
-2. `CZH-1242`
-3. `CZH-1243`
-4. `CZH-1244`
+1. `CZH-1245`
+2. `CZH-1246`
+3. `CZH-1247`
+4. `CZH-1248`
 
 ## Current State
 
-- `in_progress`: none
-- `todo`: none
+- `in_progress`: `CZH-1245`
+- `todo`: `CZH-1246`, `CZH-1247`, `CZH-1248`
 - `review_gate`: none
 - `blocked`: none
 - `changes_required`: none

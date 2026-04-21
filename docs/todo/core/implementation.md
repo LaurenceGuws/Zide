@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B80` (in_progress, super-gate `CZH-GATE-134`). Sprint `CZH-S75` in progress.
+- Current active macro batch: `CZH-B81` (in_progress, super-gate `CZH-GATE-135`). Sprint `CZH-S76` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -5074,7 +5074,7 @@ Owner docs:
 - `Mode finding:` several cuts were patch-sized; default execution mode is now single operation for patch work. Dual-agent mode remains for sprint-scale batches only.
 - `Next batch opened:` `CZH-B80` / `CZH-S75` for Android-to-core consolidation kickoff.
 
-### `CZH-B80` Android-to-Core Consolidation Kickoff (`in_progress`)
+### `CZH-B80` Android-to-Core Consolidation Kickoff (`completed-single-mode`)
 
 Queue line (exact):
 
@@ -5117,3 +5117,23 @@ Owner docs:
 - `CZH-1244`: ✓ done (validation packet + board completion)
 
 **Single-mode status:** `CZH-B80` / `CZH-S75` execution complete (no dual-mode review gate in this run)
+
+### `CZH-B81` Android-to-Core Consolidation Phase 2 (`in_progress`)
+
+Queue line (exact):
+
+- remove residual Android-specialized lifecycle/presentation ownership and keep Android bridge code as a thin platform shell over shared runtime seams
+
+Acceptance:
+
+- residual lifecycle wrapper ownership is either removed or explicitly justified
+- shared lifecycle API naming is ownership-driven and caller-neutral
+- one additional bridge-thinning extraction lands without behavior or ABI drift
+- validation ladder stays green through `CZH-GATE-135`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S76_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`

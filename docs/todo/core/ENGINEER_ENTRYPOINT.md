@@ -4,7 +4,7 @@ Use this entrypoint only when the user explicitly requests dual-agent mode for a
 
 Read in this exact order:
 
-1. `docs/todo/core/CZH_S75_TICKETS.md`
+1. `docs/todo/core/CZH_S76_TICKETS.md`
 2. `docs/todo/core/JIRA_BOARD.md`
 3. `docs/todo/core/implementation.md`
 4. `docs/AGENT_HANDOFF.md`
@@ -15,10 +15,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B80` — `in_progress` toward `CZH-GATE-134`
-- Sprint: `CZH-S75`
-- Ticket source: `docs/todo/core/CZH_S75_TICKETS.md`
-- Focus: Android-to-core consolidation so shared contracts own runtime/presentation seams.
+- `CZH-B81` — `in_progress` toward `CZH-GATE-135`
+- Sprint: `CZH-S76`
+- Ticket source: `docs/todo/core/CZH_S76_TICKETS.md`
+- Focus: Android-to-core consolidation phase 2 (remove residual platform ownership residue and thin bridge responsibilities).
 
 ## Hard Rules
 

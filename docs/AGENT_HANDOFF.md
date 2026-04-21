@@ -13,19 +13,19 @@ Session entrypoint only. Keep this file short and current.
   2. naming and module topology normalization for future widget extraction (completed in `CZH-S74`)
   3. Android progress consolidation into shared core seams (active)
   4. return to VT core correctness
-- Current active batch: `CZH-B80` in `docs/todo/core/implementation.md`.
-- Current sprint: `CZH-S75` in `docs/todo/core/CZH_S75_TICKETS.md`.
+- Current active batch: `CZH-B81` in `docs/todo/core/implementation.md`.
+- Current sprint: `CZH-S76` in `docs/todo/core/CZH_S76_TICKETS.md`.
 - Active board: `docs/todo/core/JIRA_BOARD.md`.
 - Previous gate: `CZH-GATE-133` / `CZH-S74` closed and accepted; do not re-open naming/topology cuts without a new scoped ticket.
 
 ## Active Focus
 
-`CZH-B80` starts Android-to-core consolidation so Android progress becomes shared core maturity, not a stronger special case. The target is to pull Android-proven contracts into shared seams with behavior-neutral cuts.
+`CZH-B81` continues Android-to-core consolidation by removing residual Android-specialized lifecycle ownership and thinning bridge code to platform-shell responsibilities.
 
 ## First Read Order
 
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
-2. `docs/todo/core/CZH_S75_TICKETS.md`
+2. `docs/todo/core/CZH_S76_TICKETS.md`
 3. `docs/todo/core/JIRA_BOARD.md`
 4. `docs/todo/core/implementation.md`
 5. `app_architecture/ENGINEERING.md`
@@ -36,7 +36,7 @@ Session entrypoint only. Keep this file short and current.
 
 ## Anti-Drift Rules
 
-- No documentation-only implementation tickets in `CZH-S75` unless the ticket is explicitly labelled `doc-only` by Architect before execution.
+- No documentation-only implementation tickets in `CZH-S76` unless the ticket is explicitly labelled `doc-only` by Architect before execution.
 - Each implementation ticket must change product code, tests, or both.
 - Documentation updates are secondary evidence only: update the smallest owning doc after code/test movement.
 - Do not optimize wording, trace matrices, or historical checkpoint structure while product-path hygiene remains open.
