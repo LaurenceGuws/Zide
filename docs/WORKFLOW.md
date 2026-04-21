@@ -108,13 +108,13 @@ Dual-mode cadence rule:
 
 - Prefer macro review chunks over per-milestone pauses.
 - Engineer should continue through the full architect-defined batch unless:
-  - `Blocked by Archtect review needed: true`
+  - `Blocked by Architect review needed: true`
   - the explicit batch super-gate is reached
 
 Blocked-field naming by role:
 
-- Architect reports: `Blocked by humain review needed: true|false`
-- Engineer reports: `Blocked by Archtect review needed: true|false`
+- Architect reports: `Blocked by human review needed: true|false`
+- Engineer reports: `Blocked by Architect review needed: true|false`
 
 End-of-run summary labels (mandatory):
 
@@ -241,6 +241,16 @@ Minimum ticket shape for execution:
 
 If the existing queue item does not provide those answers, improve the queue
 before or while doing the work.
+
+Code-movement rule:
+
+- Implementation tickets must move product code, tests, or both unless the
+  ticket is explicitly marked `doc-only` before execution.
+- Documentation is evidence after implementation, not a substitute for it.
+- If an implementation ticket can be completed by changing only markdown, the
+  ticket is mis-scoped and must return to Architect for re-scope.
+- Architecture campaigns may include one bounded audit/map ticket, but the
+  next tickets must convert findings into code/test movement or stop.
 
 ## Historical Flattening Rule
 

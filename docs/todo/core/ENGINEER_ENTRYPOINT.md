@@ -2,54 +2,39 @@
 
 Read in this exact order:
 
-1. `docs/todo/core/implementation.md`
+1. `docs/todo/core/CZH_S74_TICKETS.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S60_TICKETS.md`
+3. `docs/todo/core/implementation.md`
 4. `docs/AGENT_HANDOFF.md`
-5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
-6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
-7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
-8. `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
-9. `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
-
-## Active Batch Rule
-
-- Execute only the macro batch marked `in_progress` in
-  `docs/todo/core/implementation.md`.
-- If batch is `architect_review_pending`, stop and return a super-gate packet.
+5. `app_architecture/ENGINEERING.md`
+6. `app_architecture/tools/STRUCTURED_LOGGING.md`
+7. `app_architecture/platform/android/ANDROID_RENDER_THREAD_CONTRACT.md`
+8. source files named by the active ticket
 
 ## Current Active Batch
 
-- `CZH-B77` — **`in_progress`** toward **`CZH-GATE-131`** (sprint `CZH-S72`):
-  coverage evidence invariant-lock tightening: close invariant gaps while preserving full enforcement coverage.
-  Ticket source: `docs/todo/core/CZH_S72_TICKETS.md`.
+- `CZH-B79` — `in_progress` toward `CZH-GATE-133`
+- Sprint: `CZH-S74`
+- Ticket source: `docs/todo/core/CZH_S74_TICKETS.md`
+- Focus: code-first naming and module-topology normalization for widget extraction readiness.
 
 ## Hard Rules
 
-- Behavior freeze unless the batch explicitly permits behavior change.
-- Startup/runtime regressions are correctness fixes; repair them directly and
-  document the behavior impact.
-- No stale debug/probe caller residue in tracked product code.
-- Keep changes single-path (no fallback compatibility framing).
-- No compatibility shims, migration leftovers, or preservation-only fallbacks.
-- Current FFI/caller placement is not frozen; callers may move if the mature
-  ownership split requires it.
-- Audit file/module doc strings and important function doc strings in the
-  touched layer set; if they lie about ownership, record it explicitly.
-- Source comments must not carry ticket/sprint/progress history. Keep them to
-  current ownership, invariants, and constraints.
-- Android lane is paused except blocker regressions; the connected device
-  `RF8M74JDWEK` is available for this checkpoint.
-- Windows/macOS validation is non-blocking unless their platform code is touched.
+- Code/test movement is mandatory for every ticket except an explicitly labelled `doc-only` ticket.
+- Do not create documentation-only commits for implementation tickets.
+- No behavior or ABI changes unless the ticket explicitly identifies a correctness bug.
+- No compatibility shims, fallback branches, or preservation-only seams.
+- Classify every touched logging/probe/counter/capture artifact as correctness contract, operator telemetry, or probe/debug capture; remove anything that does not fit.
+- Product hot paths must not update debug capture state or execute investigation logging by default.
+- Tests and temporary inline debugging may use debug helpers; real app paths may not retain investigation scaffolding.
+- Keep naming/topology changes scoped to ticket boundaries; no broad folder reshuffle.
 
 ## Engineer Cadence
 
-- Target **8–14 validated commits** inside the batch before super-gate.
-- Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S72` tickets `CZH-1221`..`CZH-1228` are active; run to
-  **`CZH-GATE-131`** unless blocked.
-- Keep one ticket per commit (historical sprint rule).
-- Atomic-group commits are forbidden unless explicitly pre-approved by Architect in writing before execution.
+- Execute tickets in board order.
+- One ticket per commit unless Architect explicitly approves otherwise before execution.
+- Keep commits code-first and reviewable.
+- If the next ticket appears to require mostly markdown, stop and ask Architect for re-scope.
 
 ## Validation Ladder
 
@@ -57,14 +42,8 @@ Read in this exact order:
 - `zig build test`
 - `zig build -Dmode=terminal`
 - `zig build -Dmode=editor`
-- Bounded Linux GUI startup smoke for terminal mode: launch, verify init gets
-  past the targeted assertion failure, then terminate; do not leave a GUI open
-  as a test process.
-- Android regression guard when seam-touching:
-  - `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
-  - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
-  - `python3 ops/android_terminal_host.py deploy`
-  - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+- Bounded terminal startup smoke when presentation/runtime paths are touched.
+- Android deploy/log smoke only when Android or Android-proving shared seams are touched.
 
 ## Required Response Format
 
@@ -73,4 +52,4 @@ Read in this exact order:
 - `#OUTSTANDING`
 - `COMMITS`
 - `VALIDATION`
-- `Blocked by Archtect review needed: true|false`
+- `Blocked by Architect review needed: true|false`

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const app_logger = @import("../../app_logger.zig");
-const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const input_adapter_mod = @import("terminal_widget_input_bridge.zig");
 
 pub fn pasteSystemClipboard(
     widget: anytype,

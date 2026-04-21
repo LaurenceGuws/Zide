@@ -7,7 +7,7 @@ const session_runtime = @import("../terminal/core/session/runtime.zig");
 const terminal_session_runtime_factory = @import("terminal/terminal_session_runtime_factory.zig");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
 const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
-const input_adapter_mod = @import("../ui/widgets/terminal_widget_input_adapter.zig");
+const input_adapter_mod = @import("../ui/widgets/terminal_widget_input_bridge.zig");
 const shared_types = @import("../types/mod.zig");
 
 pub fn run(allocator: std.mem.Allocator) !void {

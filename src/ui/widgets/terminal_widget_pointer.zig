@@ -3,7 +3,7 @@ const std = @import("std");
 const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
-const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const input_adapter_mod = @import("terminal_widget_input_bridge.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
 const common = @import("common.zig");
 

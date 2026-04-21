@@ -1,6 +1,6 @@
 const terminal_types = @import("../../terminal/model/types.zig");
 const shared_types = @import("../../types/mod.zig");
-const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const input_adapter_mod = @import("terminal_widget_input_bridge.zig");
 const common = @import("common.zig");
 
 pub const MouseReportingParams = struct {

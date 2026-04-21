@@ -15,7 +15,7 @@ const session_interaction = @import("../../terminal/core/session/interaction.zig
 const shared_types = @import("../../types/mod.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
-const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const input_bridge_mod = @import("terminal_widget_input_bridge.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
 const controller_state_mod = @import("terminal_widget_controller_state.zig");
@@ -137,7 +137,7 @@ pub const TerminalWidget = struct {
         defer if (html) |buf| self.session.allocator.free(buf);
         defer if (uri_list) |buf| self.session.allocator.free(buf);
         defer if (png) |buf| self.session.allocator.free(buf);
-        const input_adapter = input_adapter_mod.TerminalInputAdapter.init(self.session);
+        const input_adapter = input_bridge_mod.TerminalInputAdapter.init(self.session);
         return paste_mod.pasteSystemClipboard(self, &input_adapter, clip_opt, html, uri_list, png);
     }
 

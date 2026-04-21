@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B77` (in_progress, super-gate `CZH-GATE-131`). Sprint `CZH-S72` in progress.
+- Current active macro batch: `CZH-B79` (in_progress, super-gate `CZH-GATE-133`). Sprint `CZH-S74` in progress.
 - Previous batch: `CZH-B59` (accepted, `CZH-GATE-113`). Sprint `CZH-S54` accepted.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
@@ -4659,8 +4659,8 @@ Every batch update must include:
 - `#OUTSTANDING`
 - `COMMITS`
 - `VALIDATION`
-- `Blocked by Archtect review needed: true|false` (Engineer)
-- `Blocked by humain review needed: true|false` (Architect)
+- `Blocked by Architect review needed: true|false` (Engineer)
+- `Blocked by human review needed: true|false` (Architect)
 
 
 ### `CZH-B66` Governance Enforcement Tightening (Larger-Cut Sprint) (`accepted`)
@@ -4937,7 +4937,7 @@ Owner docs:
 - `docs/AGENT_HANDOFF.md`
 
 
-### `CZH-B77` Coverage Evidence Invariant Locks (Larger-Cut Sprint) (`in_progress`)
+### `CZH-B77` Coverage Evidence Invariant Locks (Larger-Cut Sprint) (`accepted`)
 
 Queue line (exact):
 
@@ -4960,3 +4960,90 @@ Owner docs:
 - `docs/todo/core/CZH_S72_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
+
+#### Architect gate result
+
+- `Review chunk: CZH-B77`
+- `Verdict: accepted as terminal documentation-hardening stop point, not as a precedent for further doc-only sprinting`
+- `Engineer commits reviewed:` `e6e9cc30`, `0d3e84fe`, `10d3eda7`, `697b3a7c`, `8c4835ac`, `161b5062`, `f188de7b`, `0ffd01fe`
+- `Scope reality:` `CZH-S72` was documentation-only invariant-lock hardening: 673 inserted lines across authority/checkpoint/audit docs and no product code movement.
+- `Process finding:` the lane drifted because governance/ticket compliance was allowed to substitute for product-path progress. This closes the enforcement-doc loop and bars further documentation-only hardening unless explicitly pre-approved.
+- `Residual risk:` the real product goals remain: hot-path logging/probe/copy hygiene, naming/topology normalization, Android-to-core consolidation, then VT correctness.
+
+### `CZH-B78` Product Hot-Path Hygiene Baseline (`in_progress`)
+
+Queue line (exact):
+
+- remove stale investigation logging, debug capture, raw pointer telemetry, and avoidable copy churn from real app paths so performance baselines are meaningful
+
+Acceptance:
+
+- active tickets produce code/test movement, not documentation-only churn
+- real app paths do not retain investigation-only logging/probe/debug capture work by default
+- retained telemetry is classified as correctness contract or operator telemetry with defensible disabled cost
+- at least two bounded hot-path cleanup cuts land before the gate
+- tests or assertions replace removed probe reliance where correctness still needs protection
+- no behavior or ABI changes unless a concrete correctness bug is found and documented
+- docs record only landed code/test evidence and active residual risks
+- Linux validation ladder stays green through `CZH-GATE-132`
+
+Non-goals:
+
+- broad widget folder moves
+- repo-wide naming normalization
+- Android feature reopening
+- VT correctness feature work
+- enforcement-matrix/documentation optimization
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S73_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Anti-drift gate:
+
+- If an implementation ticket can be completed by markdown alone, it is mis-scoped and must return to Architect before execution.
+- Every non-audit implementation commit must change product source or tests.
+- The final checkpoint may update docs, but it cannot be the dominant output of the sprint.
+
+#### Architect status update (`CZH-S73`)
+
+- `CZH-1229` accepted: audit confirms product hot paths are already clean for unconditional investigation logging/debug contamination under current scope.
+- Consequence: hygiene-only phrasing in `CZH-1230`/`CZH-1231` was underspecified for execution.
+- Re-scope: `CZH-1230` is now an explicit architect-approved `doc-only` measurement attribution ticket to identify one defensible runtime-cost target.
+- `CZH-1231` and `CZH-1232` remain code/test tickets and must land measured cleanup cuts.
+
+#### Architect closure (`CZH-B78` / `CZH-GATE-132`)
+
+- `Verdict: accepted`
+- `Reason:` phase-1 hygiene baseline reached; audit (`CZH-1229`) and measurement (`CZH-1230`) found no executable unconditional hot-path cleanup targets within hygiene scope.
+- `Scope disposition:` `CZH-1231`..`CZH-1234` closed without execution for this batch; moved to next-phase planning as needed.
+- `Next batch opened:` `CZH-B79` / `CZH-S74` for naming and module-topology normalization.
+
+### `CZH-B79` Naming + Module Topology Normalization (`in_progress`)
+
+Queue line (exact):
+
+- normalize naming and module boundaries in `src/ui/widgets/` to improve ownership clarity and extraction readiness without behavior change
+
+Acceptance:
+
+- one bounded architect-approved map ticket may be doc-only; remaining tickets are code/test movement
+- renamed symbols and moved concerns are ownership-clear and behavior-neutral
+- no broad folder reshuffle; cuts remain reviewable and bounded
+- no compatibility shim residue remains after renamed/moved seams
+- validation ladder stays green through `CZH-GATE-133`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S74_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+#### Architect status update (`CZH-S74`)
+
+- `CZH-1235` accepted: widget naming/topology map is concrete and executable after import-site correction.
+- `CZH-1236` opened as active execution ticket.

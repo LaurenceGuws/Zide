@@ -8,7 +8,7 @@ const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const alt_probe = @import("../../terminal/input/alternate_probe.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
-const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const input_adapter_mod = @import("terminal_widget_input_bridge.zig");
 const Shell = app_shell.Shell;
 
 pub const InputResult = struct {

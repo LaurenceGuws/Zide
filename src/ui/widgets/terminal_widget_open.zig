@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
 
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
-const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const input_adapter_mod = @import("terminal_widget_input_bridge.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const common = @import("common.zig");
 

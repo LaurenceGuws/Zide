@@ -4,11 +4,11 @@ const app_shell = @import("../../app_shell.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const shared_types = @import("../../types/mod.zig");
 
-const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const input_adapter_mod = @import("terminal_widget_input_bridge.zig");
 const open_mod = @import("terminal_widget_open.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const keyboard_mod = @import("terminal_widget_keyboard.zig");
-const mouse_reporting_mod = @import("terminal_widget_mouse_reporting.zig");
+const mouse_reporting_mod = @import("terminal_widget_output_protocol_mouse.zig");
 const pointer_mod = @import("terminal_widget_pointer.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const common = @import("common.zig");
