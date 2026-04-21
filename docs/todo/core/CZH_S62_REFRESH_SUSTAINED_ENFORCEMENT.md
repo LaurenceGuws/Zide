@@ -31,18 +31,7 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** Widget refresh path flows only through `refreshPresentEntry`; no alternate fold routing exists.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `foldRefreshOutcomeToPresent[private]` | fn not pub fn; type system prevents widget access |
-| Test | test_presentation_runtime.zig:14-28 | "outcome classification from refresh cycle is pure" |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Type checker enforces `fn` privacy (cannot be called from widget code)
-- Test: Classification test validates pure outcome production
-- Code-review: Canonical entry locked per CZH-S59 approval
-
-**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 1 (Refresh: CT+Test, foldRefreshOutcomeToPresent[private]).
 
 ---
 
@@ -50,39 +39,15 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** Refresh outcome type set is frozen at compile-time to `.updated_and_presented | .presented`.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `RefreshOutcomeState[enum_frozen]` | Zig enum type definition (outcome variant set immutable) |
-| Runtime | `refreshPresentEntry():168` | Assertion: `result.outcome == .updated_and_presented or result.outcome == .presented` |
-| Test | test_presentation_runtime.zig:14-28 | "outcome classification from refresh cycle is pure" validates outcome types |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Enum definition locked by type system
-- Runtime: Assertion at line 168 validates outcome type at entry point
-- Test: Classification test confirms only valid types produced
-- Code-review: Type changes require architect approval
-
-**Ambiguity status:** ✓ NONE (3/4 layers: CT+RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 2 (Refresh variant: .updated_and_presented | .presented, CT+RT+Test).
 
 ---
 
 ### Claim 3: Transport Determinism (Refresh Variant)
 
-**Statement:** Transport fields (cache_state_advanced, host_surface_target_available, shared_surface_attachment_ready) are always computed deterministically with no conditional logic.
+**Statement:** Transport fields are always computed deterministically with no conditional logic.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Runtime | `refreshTransportFromResult():145-165` | Deterministic field assignment logic; all fields assigned unconditionally |
-| Test | test_presentation_runtime.zig:95-111 | "Refresh result helper preserves transport fields" validates all fields present |
-
-**Enforcement verification:** ✓ VERIFIED
-- Runtime: Transport mapping logic always computes all fields (no branches)
-- Test: Field preservation test confirms transport completeness
-- Code-review: Field mapping changes require review
-
-**Ambiguity status:** ✓ NONE (2/4 layers: RT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 3 (Refresh: RT+Test, refreshTransportFromResult():145-165).
 
 ---
 
@@ -90,18 +55,7 @@ Authority reference: TERMINAL_SURFACE_CONTRACT.md "Enforcement Claims Binding Re
 
 **Statement:** `RefreshOutcomeState` is internal to terminal layer; widget layer cannot construct or manipulate outcome state.
 
-**Lock Specification (Determinism Format):**
-| Layer | Artifact | Detail |
-|-------|----------|--------|
-| Compile-time | `RefreshOutcomeState[internal]` | Type not exported; no pub fn constructors visible to widget |
-| Test | test_presentation_runtime.zig (binding tests) | 3 per-path binding tests verify outcomes produced only by canonical entry |
-
-**Enforcement verification:** ✓ VERIFIED
-- Compile-time: Type privacy enforced by module exports
-- Test: Binding tests confirm canonical-entry-only production
-- Code-review: Type export changes prohibited without architect approval
-
-**Ambiguity status:** ✓ NONE (2/4 layers: CT+Test)
+**Coverage:** See TERMINAL_SURFACE_CONTRACT.md "Coverage Evidence Consolidated Table" Claim 4 (Refresh: CT+Test, RefreshOutcomeState[internal]).
 
 ---
 
