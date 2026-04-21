@@ -51,10 +51,6 @@ const ProductGridFitCommitInputs = struct {
 
 var bridge_state = BridgeState{};
 
-fn scaleOrDefault(value: f32) f32 {
-    return if (value > 0.0) value else 1.0;
-}
-
 fn nextSequence() u64 {
     bridge_state.seq += 1;
     return bridge_state.seq;
@@ -135,19 +131,14 @@ pub fn onSurfaceAvailable(width: i32, height: i32) u64 {
 }
 
 pub fn onVisibleViewport(width: i32, height: i32, imeVisible: bool) u64 {
-    bridge_state.app_host.noteTextInputActive(imeVisible);
-
-    const surface = bridge_state.render_host.surface_metrics;
-    bridge_state.render_host.noteVisibleViewport(.{
-        .logical_width = @max(width, 1),
-        .logical_height = @max(height, 1),
-        .drawable_width = @max(width, 1),
-        .drawable_height = @max(height, 1),
-        .display_scale = scaleOrDefault(surface.display_scale),
-        .pixel_density = scaleOrDefault(surface.pixel_density),
-    });
+    host_lifecycle_runtime.onVisibleViewportChanged(
+        &bridge_state.app_host,
+        &bridge_state.render_host,
+        width,
+        height,
+        imeVisible,
+    );
     bridge_state.productGridFitDirty = true;
-    bridge_state.render_host.noteRedrawRequested();
     return nextSequence();
 }
 

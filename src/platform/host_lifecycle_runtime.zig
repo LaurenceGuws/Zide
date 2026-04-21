@@ -43,6 +43,30 @@ pub fn onSurfaceDestroyed(
     app_host.noteTextInputActive(false);
 }
 
+fn positiveScaleOrDefault(value: f32) f32 {
+    return if (value > 0.0) value else 1.0;
+}
+
+pub fn onVisibleViewportChanged(
+    app_host: *native_host.PlatformAppHost,
+    render_host: *native_host.PlatformRenderHost,
+    width: i32,
+    height: i32,
+    ime_visible: bool,
+) void {
+    app_host.noteTextInputActive(ime_visible);
+    const surface = render_host.surface_metrics;
+    render_host.noteVisibleViewport(.{
+        .logical_width = @max(width, 1),
+        .logical_height = @max(height, 1),
+        .drawable_width = @max(width, 1),
+        .drawable_height = @max(height, 1),
+        .display_scale = positiveScaleOrDefault(surface.display_scale),
+        .pixel_density = positiveScaleOrDefault(surface.pixel_density),
+    });
+    render_host.noteRedrawRequested();
+}
+
 pub fn onWindowFocusChanged(
     app_host: *native_host.PlatformAppHost,
     focused: bool,
@@ -165,4 +189,34 @@ test "lifecycle transition helpers update app and render host state" {
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, app_host.lifecycle_state);
     try std.testing.expect(!app_host.surface_focused);
     try std.testing.expect(!app_host.text_input_active);
+}
+
+test "visible viewport updates host-visible metrics and redraw request" {
+    const std = @import("std");
+
+    var app_host = native_host.PlatformAppHost{
+        .kind = .android_activity,
+        .lifecycle_state = .resumed,
+    };
+    var render_host = native_host.PlatformRenderHost{
+        .binding = .none,
+        .surface_availability = .available,
+        .surface_metrics = .{
+            .logical_width = 800,
+            .logical_height = 400,
+            .drawable_width = 1600,
+            .drawable_height = 800,
+            .display_scale = 2.0,
+            .pixel_density = 2.0,
+        },
+        .native_handles = .{},
+    };
+
+    onVisibleViewportChanged(&app_host, &render_host, 400, 120, true);
+    try std.testing.expect(app_host.text_input_active);
+    try std.testing.expect(render_host.redraw_requested);
+    try std.testing.expectEqual(@as(i32, 400), render_host.visible_viewport_metrics.logical_width);
+    try std.testing.expectEqual(@as(i32, 120), render_host.visible_viewport_metrics.logical_height);
+    try std.testing.expectEqual(@as(f32, 2.0), render_host.visible_viewport_metrics.display_scale);
+    try std.testing.expectEqual(@as(f32, 2.0), render_host.visible_viewport_metrics.pixel_density);
 }
