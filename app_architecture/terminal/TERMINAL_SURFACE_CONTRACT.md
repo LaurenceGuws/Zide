@@ -165,7 +165,7 @@ Bridge conjunction computation (`TerminalPresentationBridge.notePresentableAvail
 
 ## Widget presentation storage (dominant field names, `CZH-B25`)
 
-**Storage ownership:** `PresentationState` (`src/ui/widgets/terminal_widget_presentation_state.zig`)
+**Storage ownership:** `PresentationState` (`src/ui/widgets/terminal_widget_presentation_cache_state.zig`)
 stores the two attachment legs as **`terminal_presentable_pipeline_ready`** (pipeline only) and
 **`host_surface_target_available`** (host drawable target). These names match the
 `SharedSurfaceAttachmentPipelinePair` contract; full attachment is never computed or stored locally.

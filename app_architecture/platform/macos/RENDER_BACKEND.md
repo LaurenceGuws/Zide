@@ -1017,7 +1017,7 @@ What this does and does not mean:
   presentable path rather than a retained texture-backed present path
 - the same correction now reaches the storage module/file center too: terminal
   presentation state now lives in
-  `terminal_widget_presentation_state.zig` instead of a retained-state file,
+  `terminal_widget_presentation_cache_state.zig` instead of a retained-state file,
   so the direct Metal lane no longer depends on a retained-era module name for
   its primary widget presentation cache
 - the renderer-facing terminal policy seam is less texture-era now too:
@@ -1028,7 +1028,7 @@ What this does and does not mean:
   contract around texture publication even though the active Metal lane
   presents directly
 - the terminal planning helper file center matches that contract now too:
-  `terminal_widget_draw_presentation.zig` replaces the old texture-named
+  `terminal_widget_draw_plan.zig` replaces the old texture-named
   helper module, which is more honest because the file mostly owns
   presentation update/shift policy rather than texture-specific behavior
 - the terminal presenter also depends on a terminal-owned presentation-target

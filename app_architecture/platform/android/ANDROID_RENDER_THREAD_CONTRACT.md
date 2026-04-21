@@ -548,7 +548,7 @@ Scope:
 
 - `src/ui/widgets/terminal_widget.zig`
 - `src/ui/widgets/terminal_widget_surface_state.zig`
-- `src/ui/widgets/terminal_widget_presentation_state.zig`
+- `src/ui/widgets/terminal_widget_presentation_cache_state.zig`
 - `src/ui/widgets/terminal_widget_presentation_runtime.zig`
 - all current callers of `invalidatePresentationCache()`
 

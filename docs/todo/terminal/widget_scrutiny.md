@@ -154,7 +154,7 @@ Likely file pressure:
 - `src/ui/widgets/terminal_widget.zig`
 - `src/ui/widgets/terminal_widget_draw.zig`
 - `src/ui/widgets/terminal_widget_input.zig`
-- `src/ui/widgets/terminal_widget_open.zig`
+- `src/ui/widgets/terminal_widget_command/open.zig`
 - `src/ui/widgets/terminal_widget_hover.zig`
 
 Completion bar:
@@ -231,9 +231,9 @@ Likely file pressure:
 - `src/ui/widgets/terminal_widget_input.zig`
 - `src/ui/widgets/terminal_widget_keyboard.zig`
 - `src/ui/widgets/terminal_widget_pointer.zig`
-- `src/ui/widgets/terminal_widget_mouse_reporting.zig`
+- `src/ui/widgets/terminal_widget_output_protocol_mouse.zig`
 - `src/ui/widgets/terminal_widget_paste.zig`
-- `src/ui/widgets/terminal_widget_open.zig`
+- `src/ui/widgets/terminal_widget_command/open.zig`
 
 Completion bar:
 
@@ -432,9 +432,9 @@ Completion bar:
     - [terminal_widget_input.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_input.zig)
     - [terminal_widget_keyboard.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_keyboard.zig)
     - [terminal_widget_pointer.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_pointer.zig)
-    - [terminal_widget_mouse_reporting.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_mouse_reporting.zig)
+    - [terminal_widget_output_protocol_mouse.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_output_protocol_mouse.zig)
     - [terminal_widget_paste.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_paste.zig)
-    - [terminal_widget_open.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_open.zig)
+    - [terminal_widget_command/open.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_command/open.zig)
     - [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig)
   - What changed:
     - keyboard, pointer, mouse reporting, paste, ctrl-open, and OSC clipboard
