@@ -989,6 +989,52 @@ Authority policies to prevent drift from determinism rules during maintenance an
 
 **Maintenance contract:** No claim may be added or modified without code review against all 8 guards. Architect pre-approval required for any non-conformance.
 
+### Drift-Guard Reference Table (CZH-S70)
+
+| Guard | Name | Definition (Path-Agnostic) | Application | Enforcement Layer | Coverage |
+|-------|------|---------------------------|-------------|-------------------|----------|
+| 1 | New Claims | New claims must follow 6 determinism criteria or require architect pre-approval | Applies to all new enforcement claims across all 4 paths | Code review gate | All paths |
+| 2 | Lock Detail | Lock details must follow standardized format (artifact:line[property]); updates require architect review | Applies to all claim lock specifications and updates | Code review gate | All paths |
+| 3 | Test Binding | All test bindings must be verifiable file:RANGE "name" or reference explicitly defined category | Applies to all claims with test bindings | Code review gate | All paths |
+| 4 | Layer Explicitness | All claims must have explicit CT/RT/Test/CR layer coverage tables; implicit coverage prohibited | Applies to all enforcement claims | Code review gate | All paths |
+| 5 | Cross-Path | Claims appearing in multiple paths must explicitly state relationship (variant of / distinct principle) | Applies to outcome type freeze, transport routing, and field guarantees claims | Code review gate | Multi-path claims only |
+| 6 | Authority Sync | Authority document and per-path enforcement docs must remain synchronized | Applies when authority policies change or per-path claims diverge | Code review + diff verification | All paths |
+| 7 | Cross-Refs | Cross-reference tables must be updated when claims are added/renamed/deleted | Applies to lock-to-claims mapping maintenance | Code review gate | All paths |
+| 8 | Test Staleness | Test function renames/moves require simultaneous documentation updates across all citations | Applies when tests are modified that are cited in claims | Code review gate + optional script | All paths |
+
+---
+
+### Policy-to-Guard Binding Table (CZH-S70)
+
+| Authority Policy (Guard) | Prevents Drift Vector | Enforcement Gate(s) | Per-Path Application | Coverage Status |
+|-------------------------|----------------------|-------------------|----------------------|-----------------|
+| Guard 1 (New Claims) | New claim addition without standardized format | Code review checklist; architect pre-approval for non-conforming claims | Refresh, Reuse, Direct, Shared | ✓ All paths implemented |
+| Guard 2 (Lock Detail) | Lock detail regression to non-standard format | Format verification gate; architect review required | Refresh, Reuse, Direct, Shared | ✓ All paths implemented |
+| Guard 3 (Test Binding) | Test binding citation becomes vague/unverifiable | Test binding validation gate; architect pre-approval for vague citations | Refresh, Reuse, Direct, Shared | ✓ All paths implemented |
+| Guard 4 (Layer Explicitness) | Layer coverage made implicit instead of explicit | Mandatory layer coverage table per claim; architect gate for implicit coverage | Refresh, Reuse, Direct, Shared | ✓ All paths implemented |
+| Guard 5 (Cross-Path) | Cross-path relationships obscured or undefined | Variant notation requirement; grouping table maintenance; architect gate | Refresh, Reuse, Direct, Shared | ✓ Multi-path claims tracked |
+| Guard 6 (Authority Sync) | Authority document diverges from per-path docs | Sync verification gate; diff check before merge; architect pre-approval for divergence | Refresh, Reuse, Direct, Shared | ✓ All paths synchronized |
+| Guard 7 (Cross-Refs) | Cross-reference table staleness (claims not tracked) | Cross-reference update requirement; architect gate for untracked claims | Refresh, Reuse, Direct, Shared | ✓ All paths cross-referenced |
+| Guard 8 (Test Staleness) | Test citation becomes invalid (test moved/renamed) | Test binding validation; architect pre-approval for stale citations | Refresh, Reuse, Direct, Shared | ✓ All paths updated |
+
+---
+
+### Vector-to-Guard Coverage Matrix (CZH-S70)
+
+| Drift Vector | Guard 1 | Guard 2 | Guard 3 | Guard 4 | Guard 5 | Guard 6 | Guard 7 | Guard 8 | Protected By |
+|--------------|---------|---------|---------|---------|---------|---------|---------|---------|--------------|
+| New claim format violation | ✓ | | | | | | | | Guard 1 |
+| Lock detail format regression | | ✓ | | | | | | | Guard 2 |
+| Test binding vagueness | | | ✓ | | | | | | Guard 3 |
+| Layer coverage implicit | | | | ✓ | | | | | Guard 4 |
+| Cross-path relationship obscured | | | | | ✓ | | | | Guard 5 |
+| Authority ↔ per-path divergence | | | | | | ✓ | | | Guard 6 |
+| Cross-reference table staleness | | | | | | | ✓ | | Guard 7 |
+| Test citation staleness | | | | | | | | ✓ | Guard 8 |
+| **Total Coverage** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | **8/8 Vectors Covered** |
+
+---
+
 ## Evidence Format Reference (CZH-S66)
 
 Authority policy and format definitions for enforcement evidence artifacts (checkpoints, audits, verifications, implementations).
