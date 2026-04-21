@@ -22,7 +22,7 @@
 //! **report** for conjunction when no `PresentationPresentState` snapshot applies (e.g., diagnostics
 //! outside the refreshed-present path). The canonical conjunction is `PresentationPresentState.shared_surface_attachment_ready`.
 const kitty_mod = @import("terminal_widget_kitty.zig");
-const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
+const presentation_state_mod = @import("terminal_widget_presentation_cache_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const std = @import("std");

@@ -1,3 +1,8 @@
+//! Draw planning and execution selection: reuse/refresh/direct decision logic (before GPU work).
+//!
+//! This module owns the planning phase that decides whether to reuse a cached
+//! presentable, refresh with a new render, or perform direct drawing. Planning happens
+//! before GPU submission; execution is owned by `terminal_widget_presentation_runtime.zig`.
 const std = @import("std");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 const screen_mod = @import("../../terminal/model/screen.zig");
